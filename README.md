@@ -1,4 +1,4 @@
-# TopToken
+# EASYCOINS
 
 פרויקט זה נוצר עם [Angular CLI](https://github.com/angular/angular-cli) גרסה 16.2.16.
 

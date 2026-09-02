@@ -120,6 +120,10 @@ export interface ValuePoint {
     .strip--compact .plate { inline-size: 38px; block-size: 38px; }
     .strip--compact .point__text span { display: none; }
 
+    @media (max-width: 900px) {
+      .strip:not(.strip--compact) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
     /* Two across on a phone rather than one: four full-width rows of a glyph
        and two words is a lot of screen for very little. */
     @media (max-width: 620px) {

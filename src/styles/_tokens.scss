@@ -231,3 +231,11 @@
   --tt-shadow-2: 0 10px 30px rgba(23, 21, 15, 0.1);
   --tt-shadow-3: 0 24px 60px rgba(23, 21, 15, 0.14);
 }
+
+// A shorter bar on a phone. The hero and the main area both size themselves
+// from this, so the bar's height lives here rather than in the header alone.
+@media (max-width: 560px) {
+  :root {
+    --tt-header-height: 60px;
+  }
+}

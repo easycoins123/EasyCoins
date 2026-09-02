@@ -1,6 +1,6 @@
 # QA harnesses
 
-Browser QA for Top Token. Each script builds nothing itself — run `ng build`
+Browser QA for EASYCOINS. Each script builds nothing itself — run `ng build`
 first, or use the `npm run qa:*` wrappers which build for you. Each starts its
 own static server over `dist/top-token` (SPA history fallback), so nothing has to
 be running beforehand.

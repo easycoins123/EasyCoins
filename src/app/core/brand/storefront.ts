@@ -18,6 +18,16 @@ export const STOREFRONT = {
   focusGameName: 'EA SPORTS FC',
 
   /**
+   * The coin product the shop is built around. Matches a `products.slug`.
+   *
+   * Named here so the pages that lead with it (the store shelf, the hero, the
+   * drawer) can fetch it in one request instead of resolving it through the
+   * game's product list first. If the slug ever fails to load, every caller
+   * falls back to showing the product as an ordinary card.
+   */
+  focusProductSlug: 'ea-fc-ultimate-team-coins',
+
+  /**
    * Whether to surface game browsing at all. False collapses the game routes
    * out of navigation; the routes still resolve, so an existing link keeps
    * working.
