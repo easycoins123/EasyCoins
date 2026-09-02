@@ -12,6 +12,6 @@
     { "source": "/(.*)", "destination": "/api" }
   ],
   "crons": [
-    { "path": "/api/v1/internal/housekeeping", "schedule": "*/5 * * * *" }
+    { "path": "/api/v1/internal/housekeeping", "schedule": "0 3 * * *" }
   ]
 }
