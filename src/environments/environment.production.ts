@@ -14,7 +14,7 @@ export const environment: AppEnvironment = {
   production: true,
   apiBaseUrl: '/api',
   apiVersion: 'v1',
-  apiMode: 'mock',
+  apiMode: 'http',
   requestTimeoutMs: 15_000,
   paymentsEnabled: true,
   analyticsEnabled: false,
