@@ -108,7 +108,7 @@ import {
                 אנחנו לעולם לא מבקשים סיסמה, קוד אימות או קודי גיבוי, בשום שלב.
               </p>
 
-              <button type="submit" class="tt-btn tt-btn--primary tt-btn--block pay" [disabled]="checkout.busy()">
+              <button type="submit" class="tt-btn tt-btn--buy tt-btn--lg tt-btn--block pay" [disabled]="checkout.busy()">
                 <span>המשך לתשלום</span>
                 <span class="pay__sum tt-numeric">{{ cart.totals().total | money }}</span>
               </button>

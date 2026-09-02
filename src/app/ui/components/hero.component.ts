@@ -3,37 +3,47 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
 import { STOREFRONT } from '../../core/brand';
-import { rankByValue } from '../../core/value';
-import { ProductDetail } from '../../domain';
+import { LocalizePipe } from '../../core/i18n';
+import { formatQuantity, rankByValue } from '../../core/value';
+import { Platform, ProductDetail } from '../../domain';
 import { HeroSceneComponent } from './hero-scene.component';
 import { IconComponent } from './icon.component';
+
+/** A real tier, pinned to the artwork as a price tag. */
+interface PriceTag {
+  readonly quantity: string;
+  readonly price: string;
+}
 
 /**
  * The opening screen.
  *
- * Built around one claim the catalog can actually back: what a million coins
- * costs at the best tier. That number is the business, so it is set at display
- * size and everything else arranges around it.
+ * It has four things to say, in the order a first-time visitor needs them:
+ * what this is, what it promises, what it costs, and what to press. The
+ * headline names the product and carries the brand's one promise; a single
+ * line under it says how buying works; the price is a figure the catalog can
+ * back; and the action is gold because it is the moment money is involved.
  *
- * The composition is deliberately not headline / paragraph / button. That
- * arrangement is the default shape of a generated landing page, and it makes a
- * shop look like a brochure for a shop. Here the price sits in a rule-bound
- * block with its own unit and its own supporting line, the way a figure is set
- * in print, and three plain facts run along the bottom edge with no cards
- * around them.
+ * The artwork is the focal point, and two price tags are pinned to it so the
+ * object reads as merchandise rather than as decoration. Both are real tiers at
+ * real prices. If the catalog has not loaded, the figure and the tags are
+ * absent rather than placeholders.
  *
- * Everything is real. The figure is computed from priced offers; if the catalog
- * has not loaded, the block is absent rather than showing a placeholder.
+ * Desktop and phone are two compositions. On a wide screen the copy and the
+ * object share a row. On a phone the object gets a short band of its own at
+ * full strength, and the message is set centred beneath it with a full-width
+ * action, so the first screen is a poster and not a shrunken desktop.
  */
 @Component({
   selector: 'tt-hero',
   standalone: true,
-  imports: [CommonModule, RouterLink, HeroSceneComponent, IconComponent],
+  imports: [CommonModule, RouterLink, LocalizePipe, HeroSceneComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="hero">
       <div class="hero__ground" aria-hidden="true">
         <span class="wash"></span>
+        <span class="wash wash--warm"></span>
         <!-- Diagonal bands cut at the same angle as the brand mark. Cheap,
              original, and it gives the ground a direction instead of a blur. -->
         <span class="bands"></span>
@@ -41,12 +51,20 @@ import { IconComponent } from './icon.component';
 
       <div class="tt-container hero__inner">
         <div class="copy">
-          <p class="kicker"><span class="kicker__dot"></span>{{ gameName }}</p>
+          <p class="kicker">
+            <tt-icon name="football" [size]="15"></tt-icon>
+            <span>{{ gameName }} · Ultimate Team</span>
+          </p>
 
           <h1>
-            יותר קוינס.
-            <span class="hl">פחות כסף.</span>
+            <span class="h1__what">קוינס ל־<span class="latin" dir="ltr">Ultimate Team</span></span>
+            <span class="hl">בלי כאב ראש.</span>
           </h1>
+
+          <p class="lede">
+            בוחרים כמות, משלמים בתשלום מאובטח ומקבלים דף מעקב עד האספקה.
+            הפלטפורמה ואזור החנות מוצגים לפני שמשלמים.
+          </p>
 
           <!-- The price block: a figure, its unit, and what it is a price of. -->
           <div class="deal" *ngIf="best as price">
@@ -63,15 +81,32 @@ import { IconComponent } from './icon.component';
 
           <div class="cta">
             <a class="tt-btn tt-btn--buy tt-btn--lg" routerLink="/store">
-              קנייה עכשיו <tt-icon name="arrow" [size]="18" dir="auto"></tt-icon>
+              לבחירת חבילה <tt-icon name="arrow" [size]="18" dir="auto"></tt-icon>
             </a>
-            <a class="compare" href="#bundles">השוואת כל החבילות</a>
+            <a class="tt-btn tt-btn--ghost tt-btn--lg" routerLink="/delivery">איך זה עובד</a>
           </div>
 
+          <!-- Where it works. Read from the product's offers, never typed in. -->
+          <ul class="facts" *ngIf="platforms.length > 0">
+            <li class="facts__label">
+              <tt-icon name="platform" [size]="15"></tt-icon>
+              זמין ל־
+            </li>
+            <li class="facts__chip" *ngFor="let platform of platforms">{{ platform.shortName | t }}</li>
+          </ul>
         </div>
 
         <div class="art" aria-hidden="true">
           <tt-hero-scene tier="hero"></tt-hero-scene>
+
+          <span class="tag tag--a" *ngIf="tags[0] as tag">
+            <span class="tag__qty tt-numeric">{{ tag.quantity }}</span>
+            <span class="tag__price tt-numeric">{{ tag.price }}</span>
+          </span>
+          <span class="tag tag--b" *ngIf="tags[1] as tag">
+            <span class="tag__qty tt-numeric">{{ tag.quantity }}</span>
+            <span class="tag__price tt-numeric">{{ tag.price }}</span>
+          </span>
         </div>
       </div>
     </section>
@@ -82,38 +117,43 @@ import { IconComponent } from './icon.component';
       isolation: isolate;
       overflow: hidden;
       margin-block-start: calc(var(--tt-header-height) * -1);
-      padding-block: calc(var(--tt-header-height) + var(--tt-space-6)) var(--tt-space-6);
+      padding-block: calc(var(--tt-header-height) + var(--tt-space-7)) var(--tt-space-7);
       border-block-end: 1px solid var(--tt-border);
     }
 
     .hero__ground { position: absolute; inset: 0; z-index: -1; }
     .wash {
       position: absolute;
-      inset-block-start: -45%;
-      inset-inline-end: -12%;
-      inline-size: min(72vw, 720px);
-      block-size: min(72vw, 720px);
+      inset-block-start: -40%;
+      inset-inline-end: -10%;
+      inline-size: min(70vw, 760px);
+      block-size: min(70vw, 760px);
       border-radius: 50%;
       background: var(--tt-brand-500);
-      opacity: 0.13;
+      opacity: 0.14;
       filter: blur(130px);
     }
-    /* Repeating sheared bands, fading downward. The angle is the mark's. */
+    /* A second, warmer pool behind the object, so the metal has light to catch. */
+    .wash--warm {
+      inset-block-start: 10%;
+      inset-inline-end: auto;
+      inset-inline-start: -6%;
+      inline-size: min(48vw, 520px);
+      block-size: min(48vw, 520px);
+      background: var(--tt-gold-500);
+      opacity: 0.07;
+    }
     .bands {
       position: absolute;
       inset: 0;
-      background-image: repeating-linear-gradient(
-        99deg,
-        var(--tt-border) 0 1px,
-        transparent 1px 74px
-      );
+      background-image: repeating-linear-gradient(99deg, var(--tt-border) 0 1px, transparent 1px 74px);
       -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,0.85), transparent 78%);
       mask-image: linear-gradient(180deg, rgba(0,0,0,0.85), transparent 78%);
     }
 
     .hero__inner {
       display: grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
       align-items: center;
       gap: var(--tt-space-6);
     }
@@ -124,33 +164,37 @@ import { IconComponent } from './icon.component';
       display: inline-flex;
       align-items: center;
       gap: var(--tt-space-2);
-      margin: 0 0 var(--tt-space-3);
+      margin: 0 0 var(--tt-space-4);
+      padding: 0.3rem 0.7rem;
+      border: 1px solid var(--tt-border-strong);
+      border-radius: var(--tt-radius-pill);
       font-size: var(--tt-text-xs);
       font-weight: 700;
-      letter-spacing: var(--tt-tracking-eyebrow);
+      letter-spacing: 0.06em;
       color: var(--tt-text-muted);
     }
-    /* Lime is liveness in this system, and this is its only appearance up here. */
-    .kicker__dot {
-      inline-size: 6px;
-      block-size: 6px;
-      border-radius: 50%;
-      background: var(--tt-accent-500);
-      flex: none;
-    }
+    .kicker tt-icon { color: var(--tt-gold-400); }
 
     h1 {
       margin: 0;
-      font-size: clamp(2.6rem, 11vw, 4.2rem);
-      line-height: 0.98;
-      letter-spacing: -0.035em;
+      font-size: clamp(2.1rem, 3.7vw, 3.4rem);
+      line-height: 1.02;
+      letter-spacing: -0.03em;
       font-weight: 900;
     }
-    /* Not gold. The fold had the headline, the price and the buy button all in
-       the value colour, which spends gold on a slogan and leaves the actual
-       number no louder than the words above it. Gold is money here, so the
-       fold carries exactly two: the price, and the button that spends it. */
-    .hl { display: block; color: var(--tt-text); opacity: 0.62; }
+    /* Gold is money here, so the fold carries exactly two gold things: the
+       price and the button that spends it. The promise steps back a shade. */
+    .h1__what { display: block; }
+    .latin { white-space: nowrap; unicode-bidi: isolate; }
+    .hl { display: block; color: var(--tt-text); opacity: 0.6; }
+
+    .lede {
+      margin: var(--tt-space-4) 0 0;
+      max-inline-size: 46ch;
+      color: var(--tt-text-muted);
+      font-size: var(--tt-text-md);
+      line-height: var(--tt-leading);
+    }
 
     /* The figure and its explanation, joined by a rule rather than boxed. */
     .deal {
@@ -164,17 +208,13 @@ import { IconComponent } from './icon.component';
     .deal__figure { display: flex; align-items: baseline; gap: 2px; }
     .deal__from { color: var(--tt-text-faint); font-size: var(--tt-text-sm); }
     .deal__value {
-      font-size: clamp(2.8rem, 10vw, 4rem);
+      font-size: clamp(2.6rem, 5vw, 3.8rem);
       font-weight: 900;
       line-height: 0.86;
       letter-spacing: -0.045em;
       color: var(--tt-gold-400);
     }
-    .deal__currency {
-      font-size: var(--tt-text-xl);
-      font-weight: 700;
-      color: var(--tt-gold-400);
-    }
+    .deal__currency { font-size: var(--tt-text-xl); font-weight: 700; color: var(--tt-gold-400); }
     .deal__note { display: flex; flex-direction: column; gap: 2px; }
     .deal__unit { font-size: var(--tt-text-sm); font-weight: 700; }
     .deal__sub {
@@ -192,104 +232,98 @@ import { IconComponent } from './icon.component';
     }
     .cta .tt-btn { white-space: nowrap; }
 
-    /* The secondary action is a link, not a second button. Two full-width
-       rectangles stacked on a phone gave the screen no primary action and cost
-       seventy pixels above the fold to say so. */
-    .compare {
-      align-self: center;
-      color: var(--tt-text-muted);
-      font-size: var(--tt-text-sm);
-      font-weight: 600;
-      text-decoration: underline;
-      text-underline-offset: 4px;
-      text-decoration-color: var(--tt-border-strong);
-    }
-    .compare:hover { color: var(--tt-text); }
-
     .facts {
       display: flex;
+      align-items: center;
       flex-wrap: wrap;
-      gap: var(--tt-space-2) var(--tt-space-4);
+      gap: var(--tt-space-2);
       margin: var(--tt-space-5) 0 0;
-      padding-block-start: var(--tt-space-3);
-      border-block-start: 1px solid var(--tt-border);
-      inline-size: 100%;
+      padding: 0;
       list-style: none;
-      color: var(--tt-text-faint);
       font-size: var(--tt-text-xs);
     }
-    .facts li { display: flex; align-items: center; gap: 6px; }
-    .facts tt-icon { color: var(--tt-text-faint); flex: none; }
-    .facts li + li::before {
-      content: '';
-      inline-size: 3px;
-      block-size: 3px;
-      border-radius: 50%;
-      background: currentColor;
-      margin-inline-end: var(--tt-space-2);
+    .facts__label {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--tt-text-faint);
+      font-weight: 600;
+      margin-inline-end: var(--tt-space-1);
+    }
+    .facts__chip {
+      padding: 0.2rem 0.55rem;
+      border: 1px solid var(--tt-border);
+      border-radius: var(--tt-radius-sm);
+      background: var(--tt-surface);
+      color: var(--tt-text-muted);
+      font-weight: 700;
+      letter-spacing: 0.02em;
     }
 
-    /* On a phone the row wrapped and the separator dot landed at the start of
-       the second line, where it read as a bullet list. Three columns instead,
-       with no separators to misplace. */
-    @media (max-width: 620px) {
-      .facts {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: var(--tt-space-2);
-        text-align: center;
-      }
-      .facts li {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-        line-height: var(--tt-leading-snug);
-      }
-      .facts li + li::before { content: none; }
+    .art { position: relative; display: flex; justify-content: center; }
+    .art tt-hero-scene { inline-size: min(100%, 470px); }
+
+    /* Price tags pinned to the object. They sit at the same skew as the brand
+       and are the only two pieces of type in the picture. */
+    .tag {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      padding: 0.45rem 0.7rem;
+      border: 1px solid var(--tt-border-strong);
+      border-radius: var(--tt-radius-md);
+      background: color-mix(in srgb, var(--tt-bg-elevated) 84%, transparent);
+      backdrop-filter: blur(10px);
+      box-shadow: var(--tt-shadow-2);
+      line-height: 1;
+      direction: ltr;
+    }
+    .tag__qty { font-size: var(--tt-text-md); font-weight: 900; }
+    .tag__price { font-size: var(--tt-text-xs); font-weight: 700; color: var(--tt-gold-400); }
+    .tag--a { inset-block-start: 22%; inset-inline-start: 4%; }
+    .tag--b { inset-block-end: 26%; inset-inline-end: 4%; border-color: var(--tt-gold-500); }
+
+    /* --- Tablet: two columns, the object a little smaller ------------------ */
+    @media (max-width: 1100px) {
+      .hero__inner { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); }
     }
 
-    .art { display: flex; justify-content: center; }
-    .art tt-hero-scene { inline-size: min(100%, 440px); }
+    /* --- Phone: a poster ---------------------------------------------------- */
+    @media (max-width: 760px) {
+      .hero {
+        padding-block: calc(var(--tt-header-height) + var(--tt-space-2)) var(--tt-space-6);
+      }
+      .hero__inner { display: flex; flex-direction: column; gap: 0; }
 
-    @media (max-width: 900px) {
-      .hero { padding-block: calc(var(--tt-header-height) + var(--tt-space-4)) var(--tt-space-5); }
-      .hero__inner { grid-template-columns: 1fr; display: flex; flex-direction: column; }
+      /* The object first, whole and at full strength, on a short band. */
+      .art { order: -1; inline-size: 100%; margin-block-end: var(--tt-space-2); }
+      .art tt-hero-scene { inline-size: min(100%, 360px); }
+      .tag { display: none; }
 
-      /* The artwork bleeds off the trailing edge behind the copy, so the price
-         and the button still land on the first screen. Cropping it is what
-         makes it read as art direction rather than as a picture dropped into a
-         box below the text. */
-      /* A band above the message, not a crop behind it.
-         Pushed off the trailing edge the object was cut through its middle and
-         sat behind the headline at reduced contrast, which made the one piece
-         of real artwork on the page read as a stain. On a phone it gets its own
-         register instead: full width, whole object, nothing overlapping it. */
-      .art {
-        position: static;
-        order: -1;
+      .copy { align-items: center; text-align: center; }
+      .kicker { margin-block-end: var(--tt-space-3); }
+      h1 { font-size: clamp(1.9rem, 8.6vw, 2.6rem); }
+      .lede { font-size: var(--tt-text-sm); max-inline-size: 34ch; margin-block-start: var(--tt-space-3); }
+
+      .deal {
+        align-items: baseline;
+        justify-content: center;
+        gap: var(--tt-space-3);
+        margin-block-start: var(--tt-space-4);
+        padding: var(--tt-space-3) 0 0;
+        border-inline-start: 0;
+        border-block-start: 1px solid var(--tt-border);
         inline-size: 100%;
-        margin-block-end: var(--tt-space-3);
-        opacity: 1;
       }
-      .art tt-hero-scene { inline-size: 100%; }
+      .deal__note { text-align: start; }
+      .deal__sub { display: none; }
 
-      .copy { position: relative; }
-
-      .art { opacity: 0.5; }
-
-      .deal { gap: var(--tt-space-3); }
-      /* Kept on a phone. Hiding it left a large gold number with no statement
-         of what it was the price of. */
-      .deal__sub { max-inline-size: 18ch; }
-    }
-
-    /* Full-width action on a phone only. Stretched across a 768px tablet the
-       button ran the whole measure and stopped reading as a control. */
-    @media (max-width: 620px) {
-      .cta { inline-size: 100%; flex-direction: column; align-items: stretch; }
+      .cta { inline-size: 100%; flex-direction: column; align-items: stretch; margin-block-start: var(--tt-space-4); }
       .cta .tt-btn { inline-size: 100%; }
-      .compare { align-self: center; }
+      .cta .tt-btn--ghost { min-block-size: 44px; }
+
+      .facts { justify-content: center; }
     }
   `],
 })
@@ -299,8 +333,15 @@ export class HeroComponent {
   /** Cheapest price per million in the catalog, in whole shekels. */
   best: string | null = null;
 
+  /** Smallest and largest tier, for the tags on the artwork. */
+  tags: readonly PriceTag[] = [];
+
+  /** The platforms the coin product is sold on, resolved by the page. */
+  @Input() platforms: readonly Platform[] = [];
+
   @Input() set ladder(detail: ProductDetail | null | undefined) {
     this.best = this.cheapestPerMillion(detail);
+    this.tags = this.tagsFor(detail);
   }
 
   private cheapestPerMillion(detail: ProductDetail | null | undefined): string | null {
@@ -319,5 +360,30 @@ export class HeroComponent {
     // Whole shekels: a headline figure carrying agorot reads as precision
     // nobody asked for.
     return Math.round(Math.min(...rates) / 100).toLocaleString('he-IL');
+  }
+
+  private tagsFor(detail: ProductDetail | null | undefined): readonly PriceTag[] {
+    if (!detail) {
+      return [];
+    }
+    const first = detail.offers[0];
+    if (!first) {
+      return [];
+    }
+    const rows = rankByValue(
+      detail.offers.filter((offer) => offer.platformId === first.platformId && offer.regionId === first.regionId),
+      detail.product.variants,
+    )
+      .filter((row) => row.perUnitMinor !== undefined)
+      .sort((a, b) => (a.variant.quantityValue ?? 0) - (b.variant.quantityValue ?? 0));
+
+    if (rows.length < 2) {
+      return [];
+    }
+    const tag = (row: (typeof rows)[number]): PriceTag => ({
+      quantity: formatQuantity(row.variant.quantityValue) || row.variant.name.he,
+      price: `₪${Math.round(row.offer.price.current.amountMinor / 100).toLocaleString('he-IL')}`,
+    });
+    return [tag(rows[0]), tag(rows[rows.length - 1])];
   }
 }

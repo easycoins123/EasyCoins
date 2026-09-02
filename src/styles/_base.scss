@@ -459,3 +459,63 @@ img { max-width: 100%; display: block; }
     scroll-behavior: auto !important;
   }
 }
+
+// --- Range -------------------------------------------------------------------
+//
+// A real control, not the browser's. The thumb is the coin colour and the track
+// is a hairline, so the position reads as an amount rather than as a widget.
+// A numeric range reads low on the left in every script, so it stays LTR.
+
+.tt-range {
+  inline-size: 100%;
+  direction: ltr;
+  block-size: 34px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.tt-range::-webkit-slider-runnable-track {
+  block-size: 6px;
+  border-radius: var(--tt-radius-pill);
+  background: var(--tt-surface-3);
+}
+
+.tt-range::-moz-range-track {
+  block-size: 6px;
+  border-radius: var(--tt-radius-pill);
+  background: var(--tt-surface-3);
+}
+
+.tt-range::-moz-range-progress {
+  block-size: 6px;
+  border-radius: var(--tt-radius-pill);
+  background: var(--tt-gold-500);
+}
+
+.tt-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  inline-size: 24px;
+  block-size: 24px;
+  margin-block-start: -9px;
+  border: 2px solid var(--tt-bg);
+  border-radius: 50%;
+  background: linear-gradient(160deg, var(--tt-gold-300), var(--tt-gold-600));
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.tt-range::-moz-range-thumb {
+  inline-size: 24px;
+  block-size: 24px;
+  border: 2px solid var(--tt-bg);
+  border-radius: 50%;
+  background: linear-gradient(160deg, var(--tt-gold-300), var(--tt-gold-600));
+}
+
+.tt-range:focus-visible {
+  outline: 2px solid var(--tt-brand-400);
+  outline-offset: 4px;
+}

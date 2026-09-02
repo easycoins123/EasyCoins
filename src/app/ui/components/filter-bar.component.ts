@@ -63,8 +63,10 @@ export interface FilterChange {
         <span class="count" *ngIf="activeCount > 0">{{ activeCount }}</span>
       </button>
 
-      <div class="groups" [class.groups--open]="open()">
-        <div class="sheet">
+      <!-- Closed on a phone, the sheet is off-screen and inert, so its chips are
+           out of the focus order without being hidden from the page. -->
+      <div class="groups" [class.groups--open]="open()" [attr.inert]="isSheet() && !open() ? '' : null">
+        <div class="sheet" role="dialog" aria-modal="true" aria-label="סינון">
           <header class="sheet__head">
             <strong>סינון</strong>
             <button type="button" class="sheet__close" (click)="open.set(false)" aria-label="סגירה">
@@ -306,6 +308,16 @@ export class FilterBarComponent {
   @Output() readonly clear = new EventEmitter<void>();
 
   readonly open = signal(false);
+
+  /** Whether the groups are a bottom sheet at this width, or open on the page. */
+  readonly isSheet = signal(
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 859px)').matches,
+  );
+
+  @HostListener('window:resize')
+  onResize(): void {
+    this.isSheet.set(window.matchMedia('(max-width: 859px)').matches);
+  }
 
   pick(key: string, value: string): void {
     this.changed.emit({ key, value });

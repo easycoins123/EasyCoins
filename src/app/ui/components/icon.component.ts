@@ -15,6 +15,9 @@ import { CommonModule } from '@angular/common';
  * mark, and the octagon that the coins and the pack are built from shows up
  * here too, so a coin in a menu row is the same object as a coin in the hero.
  *
+ * The set is drawn on a 24 grid and is used at 16, 20, 24 and 32. Stroked
+ * detail thickens slightly at the smallest size so it does not thin out.
+ *
  * Colour still comes from `currentColor`, so an icon always matches the text
  * beside it and the palette stays in one place.
  *
@@ -50,7 +53,17 @@ export type IconName =
   | 'refresh'
   | 'filter'
   | 'coins'
-  | 'crown';
+  | 'crown'
+  // The names the storefront vocabulary uses. Some are their own drawing, some
+  // resolve to an existing one, so a template can say what it means.
+  | 'coin'
+  | 'football'
+  | 'platform'
+  | 'controller'
+  | 'delivery'
+  | 'support'
+  | 'lightning'
+  | 'home';
 
 interface IconArt {
   /** The silhouette. Drawn filled, and it is what reads at small sizes. */
@@ -80,13 +93,29 @@ function coin(cx: number, cy: number, r: number, squash = 0.62): string {
   return `M${points.join('L')}Z`;
 }
 
-const ART: Record<IconName, IconArt> = {
+/**
+ * The brand E, as one outline on the 24 grid.
+ *
+ * Leaning on the mark's eight degrees and centred, so it can be knocked out of
+ * a coin face. One outline rather than four bars: overlapping subpaths under
+ * the even-odd rule would punch holes back into the letter.
+ */
+const BRAND_E = 'M9.16 8L15.96 8L15.68 10L10.88 10L10.74 11L13.94 11L13.66 13L10.46 13'
+  + 'L10.32 14L15.12 14L14.84 16L8.04 16Z';
+
+const ART: Record<string, IconArt> = {
   // --- Commerce ------------------------------------------------------------
   cart: {
     fill: 'M2.4 3h2.6a1 1 0 0 1 .98.8L6.3 6H20.4a1 1 0 0 1 .97 1.25l-1.6 6.2A2 2 0 0 1 17.83 15H8.6a2 2 0 0 1-1.96-1.6L4.6 5H2.4Z',
     stroke: 'M9.6 19.4h.01M17 19.4h.01',
   },
   coins: { fill: `${coin(9, 13.5, 6.4)}${coin(15.5, 9.5, 5.6)}` },
+  /* A single struck face, front on, carrying the E. The currency object at its
+     most compact: the same octagon as the pack medallion and the ladder art. */
+  coin: {
+    fill: `${coin(12, 12, 10, 1)}`,
+    knockout: BRAND_E,
+  },
   tag: {
     fill: 'M3 3h7.6a2 2 0 0 1 1.42.6l8.4 8.4a2 2 0 0 1 0 2.82l-6.6 6.6a2 2 0 0 1-2.82 0L3.6 13A2 2 0 0 1 3 11.6Z',
     knockout: 'M7.4 8.6m-1.6 0a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0',
@@ -129,6 +158,28 @@ const ART: Record<IconName, IconArt> = {
     knockout: 'M11 6.4h2v6.2l4 2.4-1 1.7-5-3Z',
   },
 
+  // --- Game ----------------------------------------------------------------
+  gamepad: {
+    fill: 'M8.4 5.6h7.2a5.6 5.6 0 0 1 5.5 6.6l-.6 3.4a3 3 0 0 1-5.5 1.1l-.7-1h-4.6l-.7 1a3 3 0 0 1-5.5-1.1l-.6-3.4a5.6 5.6 0 0 1 5.5-6.6Z',
+    knockout: 'M6.4 10.2h1.6V8.6h1.6v1.6h1.6v1.6H9.6v1.6H8V11.8H6.4Zm9 0h1.6v1.6h-1.6Zm2.2-1.6h1.6v1.6h-1.6Z',
+  },
+  /* A ball drawn as geometry: the panel at the centre is solid, the seams run
+     from its corners to the rim. Nothing cartoonish, and it holds at 16px. */
+  football: {
+    fill: 'M12 8.2L15.23 10.55L14 14.35L10 14.35L8.77 10.55Z',
+    stroke: 'M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19ZM12 8.2V3.7M15.23 10.55 19.9 9M14 14.35 16.9 18.3M10 14.35 7.1 18.3M8.77 10.55 4.1 9',
+  },
+  /* A screen on a foot. The shape every platform shares. */
+  platform: {
+    fill: 'M3.4 3.6h17.2A1.8 1.8 0 0 1 22.4 5.4v9.8a1.8 1.8 0 0 1-1.8 1.8H3.4a1.8 1.8 0 0 1-1.8-1.8V5.4a1.8 1.8 0 0 1 1.8-1.8Z',
+    knockout: 'M3.8 5.8h16.4v9H3.8Z',
+    stroke: 'M12 17v3.2M7.8 20.6h8.4',
+  },
+  home: {
+    fill: 'M12 2.6 21.6 10.4V21a1 1 0 0 1-1 1H3.4a1 1 0 0 1-1-1V10.4Z',
+    knockout: 'M9.6 13.4h4.8V22H9.6Z',
+  },
+
   // --- Navigation ----------------------------------------------------------
   menu: { stroke: 'M3.4 6.6h17.2M3.4 12h17.2M3.4 17.4h17.2' },
   close: { stroke: 'M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4' },
@@ -160,10 +211,6 @@ const ART: Record<IconName, IconArt> = {
     knockout: 'M2.6 11h18.8v2H2.6Z',
     stroke: 'M12 2.4c2.6 2.6 3.9 6 3.9 9.6s-1.3 7-3.9 9.6c-2.6-2.6-3.9-6-3.9-9.6S9.4 5 12 2.4Z',
   },
-  gamepad: {
-    fill: 'M8.4 5.6h7.2a5.6 5.6 0 0 1 5.5 6.6l-.6 3.4a3 3 0 0 1-5.5 1.1l-.7-1h-4.6l-.7 1a3 3 0 0 1-5.5-1.1l-.6-3.4a5.6 5.6 0 0 1 5.5-6.6Z',
-    knockout: 'M6.4 10.2h1.6V8.6h1.6v1.6h1.6v1.6H9.6v1.6H8V11.8H6.4Zm9 0h1.6v1.6h-1.6Zm2.2-1.6h1.6v1.6h-1.6Z',
-  },
   flask: { fill: 'M9 2.6h6v1.8h-1v5.2l5.4 8.6a2 2 0 0 1-1.7 3H6.3a2 2 0 0 1-1.7-3L10 9.6V4.4H9Z' },
   copy: {
     fill: 'M9 6.6h10.4a2 2 0 0 1 2 2V19a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V8.6a2 2 0 0 1 2-2Z',
@@ -174,6 +221,14 @@ const ART: Record<IconName, IconArt> = {
     stroke: 'M14.6 6.4l3.1 3.1',
   },
   refresh: { stroke: 'M20 12a8 8 0 1 1-2.4-5.7M20.4 4v4.4H16' },
+};
+
+/** Vocabulary names that share a drawing with an existing icon. */
+const ALIASES: Readonly<Partial<Record<IconName, IconName>>> = {
+  controller: 'gamepad',
+  delivery: 'truck',
+  support: 'headset',
+  lightning: 'bolt',
 };
 
 @Component({
@@ -202,7 +257,7 @@ const ART: Record<IconName, IconArt> = {
             [attr.d]="art.stroke"
             fill="none"
             stroke="currentColor"
-            [attr.stroke-width]="strokeWidth"
+            [attr.stroke-width]="weight"
             stroke-linecap="round"
             stroke-linejoin="miter"></path>
     </svg>
@@ -218,18 +273,32 @@ export class IconComponent {
   @Input() size = 20;
 
   /** Only affects stroked detail; filled bodies carry their own weight. */
-  @Input() strokeWidth = 2;
+  @Input() strokeWidth?: number;
 
   /** Set only when the icon is the sole meaning; otherwise the control labels it. */
   @Input() label?: string;
 
   get art(): IconArt {
-    return ART[this.name] ?? {};
+    return ART[ALIASES[this.name] ?? this.name] ?? {};
   }
 
   /** Body plus counters, relying on the even-odd rule to cut the holes. */
   get body(): string {
     const art = this.art;
     return art.knockout ? `${art.fill}${art.knockout}` : (art.fill ?? '');
+  }
+
+  /**
+   * Stroke weight for the size.
+   *
+   * A two-unit stroke on the 24 grid is 1.3px at sixteen pixels, which is where
+   * a menu glyph starts to look frail beside filled ones. Small sizes get a
+   * touch more; large ones a touch less, so a 32px icon does not look bold.
+   */
+  get weight(): number {
+    if (this.strokeWidth !== undefined) {
+      return this.strokeWidth;
+    }
+    return this.size <= 16 ? 2.4 : this.size >= 32 ? 1.8 : 2;
   }
 }

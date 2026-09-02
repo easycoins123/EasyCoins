@@ -1,78 +1,75 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
-import { BehaviorSubject, EMPTY, Observable, combineLatest, concat, of, timer } from 'rxjs';
+import { BehaviorSubject, EMPTY, Observable, combineLatest, of, timer } from 'rxjs';
 import {
-  catchError, debounce, distinctUntilChanged, filter, map, startWith, switchMap,
+  catchError, debounce, distinctUntilChanged, filter, map, shareReplay, startWith, switchMap,
 } from 'rxjs/operators';
 
 import { AnalyticsService } from '../../core/analytics';
 import { STOREFRONT } from '../../core/brand';
-import { CoinPlan } from '../../core/value';
-import { LocalizePipe } from '../../core/i18n';
+import { OfferValue, rankByValue } from '../../core/value';
 import {
-  AppError, CatalogQuery, CatalogSort, DEFAULT_PAGE_SIZE, Page, Platform, Product, ProductType,
-  Region, toAppError,
+  AppError, CatalogQuery, CatalogSort, DEFAULT_PAGE_SIZE, Offer, Page, Platform, Product,
+  ProductDetail, ProductType, toAppError,
 } from '../../domain';
 import { CartFacade, CatalogFacade, CatalogLookups } from '../../state';
 import {
-  AmountSelectorComponent,
-  BundleLadderComponent, EmptyStateComponent, ErrorStateComponent, FilterBarComponent,
-  FilterChange, FilterGroup, ProductCardComponent, SkeletonGridComponent,
-  ValueStripComponent,
+  CoinTierCardComponent, EmptyStateComponent, ErrorStateComponent, FilterBarComponent,
+  FilterChange, FilterGroup, ProductCardComponent, SkeletonGridComponent, ValueStripComponent,
 } from '../../ui';
+
+/** One coin bundle on the shelf, with its position in the range for the art. */
+interface TierRow {
+  readonly row: OfferValue;
+  readonly rank: number;
+}
 
 interface StoreViewModel {
   readonly page: Page<Product>;
   readonly lookups: CatalogLookups;
+  readonly coins: ProductDetail | null;
+  /** The coin product, expanded into one card per bundle. */
+  readonly tiers: readonly TierRow[];
+  /** Everything else on the page. */
+  readonly others: readonly Product[];
 }
 
 /**
- * The catalog.
+ * The shop.
  *
- * Filters are built from domain data — games, platforms, regions and product
- * types all come from the API — so a new game or a new product category appears
- * in the filter bar automatically. There is no coin-amount filter anywhere: that
- * concept belongs to one product category, not to the store.
+ * Title, one line of value, the toolbar, the goods. The coin product is the
+ * shop's reason to exist, so it is not one card reading "100K to 2M": each
+ * bundle is its own card with its own price and a button, and the other
+ * products for the game follow on the same shelf.
+ *
+ * Filters are built from domain data, so a new platform or product category
+ * appears in the bar on its own. Choosing a platform re-prices the bundles
+ * from that platform's offers; sorting by price reorders them. Nothing here
+ * decides a price: it lays out offers the server priced.
  */
 @Component({
   selector: 'tt-store-page',
   standalone: true,
   imports: [
-    CommonModule, LocalizePipe,
-    ProductCardComponent, SkeletonGridComponent, EmptyStateComponent, ErrorStateComponent,
-    BundleLadderComponent, AmountSelectorComponent, FilterBarComponent, ValueStripComponent,
+    CommonModule,
+    ProductCardComponent, CoinTierCardComponent, SkeletonGridComponent, EmptyStateComponent,
+    ErrorStateComponent, FilterBarComponent, ValueStripComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="tt-container tt-section">
-      <!-- One heading. The eyebrow said EA SPORTS FC, the title said it again,
-           and then the selector below asked the real question a third time.
-           The question the customer came to answer is the title. -->
+    <div class="tt-container tt-section store">
       <header class="head">
-        <span class="tt-eyebrow">EA SPORTS FC</span>
-        <h1>כמה קוינס אתם צריכים?</h1>
-        <p class="tt-muted">בחרו סכום. אנחנו מרכיבים אותו מהחבילות שיוצאות הכי משתלם.</p>
-        <!-- Trust belongs in the first screen, not below the fold. Four facts
-             the shop actually keeps; nothing invented. -->
+        <div class="head__text">
+          <span class="tt-eyebrow">{{ gameName }} · Ultimate Team</span>
+          <h1>חנות הקוינס</h1>
+          <p class="tt-muted">
+            חמש חבילות במחיר סופי. הפלטפורמה ואזור החנות מוצגים לפני התשלום, ולכל הזמנה יש דף מעקב.
+          </p>
+        </div>
+        <!-- Trust in the first screen. Facts the shop keeps; nothing invented. -->
         <tt-value-strip class="head__trust" [points]="trustPoints" [compact]="true"></tt-value-strip>
       </header>
-
-      <ng-container *ngIf="ladder$ | async as ladder">
-        <!-- The question the shop exists to answer, before anything else. -->
-        <section class="chooser">
-          <tt-amount-selector [detail]="ladder"
-                              [busy]="adding()"
-                              (confirm)="addPlan($event)">
-          </tt-amount-selector>
-        </section>
-
-        <!-- The fixed bundles, for anyone who would rather just pick one. -->
-        <section class="tiers">
-          <h2 class="tiers__title">או בחרו חבילה מוכנה</h2>
-          <tt-bundle-ladder [detail]="ladder" [productSlug]="ladder.product.slug"></tt-bundle-ladder>
-        </section>
-      </ng-container>
 
       <tt-filter-bar class="filters"
                      [groups]="filterGroups(lookups$ | async)"
@@ -89,18 +86,28 @@ interface StoreViewModel {
 
       <ng-template #content>
         <ng-container *ngIf="vm$ | async as vm; else loading">
-          <p class="count tt-faint">נמצאו {{ vm.page.total }} מוצרים</p>
+          <p class="count tt-faint">{{ countLabel(vm) }}</p>
 
-          <tt-empty-state *ngIf="vm.page.items.length === 0"
+          <tt-empty-state *ngIf="isEmpty(vm)"
                           title="לא נמצאו מוצרים"
                           message="נסו לשנות את החיפוש או לאפס את הסינון."
                           actionLabel="איפוס סינון"
                           (action)="clear()">
           </tt-empty-state>
 
-          <h2 class="tt-visually-hidden">תוצאות החיפוש</h2>
-          <div class="tt-grid" *ngIf="vm.page.items.length > 0">
-            <tt-product-card *ngFor="let product of vm.page.items; trackBy: trackById"
+          <h2 class="tt-visually-hidden">תוצאות</h2>
+          <div class="tt-grid shelf" *ngIf="!isEmpty(vm)">
+            <ng-container *ngIf="vm.coins as coins">
+              <tt-tier-card *ngFor="let tier of vm.tiers; trackBy: trackByOffer"
+                            [row]="tier.row"
+                            [rank]="tier.rank"
+                            [productSlug]="coins.product.slug"
+                            [productName]="coins.product.name"
+                            [busy]="adding()"
+                            (buy)="buyOffer($event)">
+              </tt-tier-card>
+            </ng-container>
+            <tt-product-card *ngFor="let product of vm.others; trackBy: trackById"
                              [product]="product"
                              [lookups]="vm.lookups">
             </tt-product-card>
@@ -116,93 +123,42 @@ interface StoreViewModel {
     </div>
   `,
   styles: [`
-    .head { margin-block-end: var(--tt-space-5); }
-    .head h1 { margin-block: var(--tt-space-1) var(--tt-space-2); }
-    .head__trust {
-      display: block;
-      margin-block-start: var(--tt-space-4);
-      padding-block-start: var(--tt-space-4);
-      border-block-start: 1px solid var(--tt-border);
-    }
-    /* A toolbar, not a panel. The filters used to sit in a bordered card that
-       took two hundred pixels above the first product, which on a catalogue
-       this size meant a customer saw controls and no goods. Now it is a row on
-       a rule and the grid starts immediately under it. */
-    .filters {
-      display: grid;
-      gap: var(--tt-space-3);
-      align-items: end;
-      margin-block-end: var(--tt-space-4);
-      padding-block-end: var(--tt-space-3);
+    .head {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--tt-space-4);
+      margin-block-end: var(--tt-space-5);
+      padding-block-end: var(--tt-space-5);
       border-block-end: 1px solid var(--tt-border);
     }
-    .grow { grid-column: 1 / -1; }
+    .head__text { max-inline-size: 60ch; }
+    .head h1 { margin-block: var(--tt-space-1) var(--tt-space-2); }
+    .head p { margin: 0; font-size: var(--tt-text-sm); }
+    .head__trust { display: block; flex: none; }
 
-    .refine { grid-column: 1 / -1; }
-    .refine > summary {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--tt-space-2);
-      min-block-size: 44px;
-      padding-inline: var(--tt-space-1);
-      cursor: pointer;
-      font-weight: 600;
-      font-size: var(--tt-text-sm);
-      color: var(--tt-text-muted);
-      list-style: none;
-    }
-    .refine > summary::-webkit-details-marker { display: none; }
-    .refine__sign {
-      position: relative;
-      inline-size: 12px;
-      block-size: 12px;
-      color: var(--tt-brand-400);
-    }
-    .refine__sign::before, .refine__sign::after {
-      content: '';
-      position: absolute;
-      inset-block-start: 50%;
-      inline-size: 12px;
-      block-size: 2px;
-      background: currentColor;
-      transform: translateY(-50%);
-      transition: opacity var(--tt-duration-fast) var(--tt-ease);
-    }
-    .refine__sign::after { transform: translateY(-50%) rotate(90deg); }
-    .refine[open] .refine__sign::after { opacity: 0; }
-
-    .refine__body {
-      display: grid;
-      gap: var(--tt-space-3);
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      padding-block-start: var(--tt-space-3);
+    /* A toolbar on a rule, not a panel. The grid starts under it. */
+    .filters {
+      display: block;
+      margin-block-end: var(--tt-space-4);
+      padding-block-end: var(--tt-space-4);
+      border-block-end: 1px solid var(--tt-border);
     }
     .count { margin-block-end: var(--tt-space-3); }
 
-    /* The coin tiers, shown before the grid. A shop that sells one game should
-       open on the thing that game's players are actually choosing between,
-       rather than on three parent products that each hide a price range. */
-    .chooser {
-      margin-block-end: var(--tt-space-7);
-      padding-block-end: var(--tt-space-6);
-      border-block-end: 1px solid var(--tt-border);
-    }
-    .tiers { margin-block-end: var(--tt-space-6); }
-    .tiers__title { font-size: var(--tt-text-lg); margin-block-end: var(--tt-space-3); }
-    /* One skeleton row's worth of space, so the first response does not jump. */
-    .tt-grid { min-block-size: 260px; }
-    .more { display: flex; justify-content: center; margin-block-start: var(--tt-space-5); }
-    @media (max-width: 719px) {
-      .head h1 { font-size: var(--tt-text-2xl); }
-    }
+    /* Two across on a phone, up to five across on a desktop, so the five
+       bundles can sit in one row where there is room for it. */
+    .shelf { min-block-size: 260px; gap: var(--tt-space-3); }
+    @media (min-width: 700px) { .shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--tt-space-4); } }
+    @media (min-width: 1000px) { .shelf { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+    @media (min-width: 1240px) { .shelf { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
 
-    /* Above the phone breakpoint the disclosure is not wanted: the selects are
-       always shown and the summary is hidden. The UA hides a closed details'
-       contents, so this rule has to be specific enough to win. */
-    @media (min-width: 720px) {
-      .refine > summary { display: none; }
-      .refine__body { grid-template-columns: repeat(4, 1fr); padding-block-start: 0; }
+    .more { display: flex; justify-content: center; margin-block-start: var(--tt-space-5); }
+
+    @media (max-width: 719px) {
+      .head { margin-block-end: var(--tt-space-4); padding-block-end: var(--tt-space-4); }
+      .head h1 { font-size: var(--tt-text-2xl); }
+      .head__trust { inline-size: 100%; }
     }
   `],
 })
@@ -211,6 +167,8 @@ export class StorePage {
   private readonly cart = inject(CartFacade);
   private readonly analytics = inject(AnalyticsService);
   private readonly route = inject(ActivatedRoute);
+
+  readonly gameName = STOREFRONT.focusGameName;
 
   private readonly querySubject = new BehaviorSubject<CatalogQuery>({
     sort: 'relevance',
@@ -225,54 +183,33 @@ export class StorePage {
   /** Compact trust row for the store head. Facts only. */
   readonly trustPoints = [
     { icon: 'lock' as const, title: 'תשלום מאובטח', note: 'האשראי עובר לספק הסליקה.' },
-    { icon: 'truck' as const, title: 'מעקב הזמנה', note: 'דף סטטוס לכל הזמנה.' },
-    { icon: 'headset' as const, title: 'תמיכה בעברית', note: 'שאלה על הזמנה או מוצר.' },
+    { icon: 'delivery' as const, title: 'מעקב הזמנה', note: 'דף סטטוס לכל הזמנה.' },
+    { icon: 'support' as const, title: 'תמיכה בעברית', note: 'שאלה על הזמנה או מוצר.' },
   ];
 
   readonly error = signal<AppError | undefined>(undefined);
 
-  /** Set while a plan is being added, so the button cannot be double-pressed. */
+  /** Set while a bundle is being added, so a button cannot be double-pressed. */
   readonly adding = signal(false);
 
-  /**
-   * Adds every bundle in the plan to the cart.
-   *
-   * The plan is a list of real offers the server priced; this just posts them.
-   * Sequential rather than parallel: the cart merges by offer, and firing
-   * several writes at once at the same line is how you get a lost update.
-   */
-  addPlan(plan: CoinPlan): void {
-    if (this.adding()) {
-      return;
-    }
-    this.adding.set(true);
-
-    concat(...plan.lines.map((line) => this.cart.add({
-      offerId: line.offer.id,
-      quantity: line.count,
-    }))).subscribe({
-      complete: () => this.adding.set(false),
-      error: () => this.adding.set(false),
-    });
-  }
-
   readonly lookups$ = this.catalog.lookups$;
+  readonly search$ = this.querySubject.pipe(map((query) => query.search ?? ''));
+
 
   /**
-   * The coin product's tiers, for the ladder above the grid.
+   * The coin product with its offers, for the bundle cards.
    *
-   * Resolved from the catalog rather than hard-coded to a slug, so the block
-   * disappears on its own if the shop stops selling game currency. A failure
-   * here is not an error state: the grid below is the page, and the ladder is
-   * an enhancement on top of it.
+   * Fetched by the slug the storefront names, in one request, so the shelf is
+   * not waiting on the game's product list first. If it fails the shelf simply
+   * shows the product as an ordinary card. Shared, because every filter change
+   * rebuilds the shelf and the detail does not change with the filter.
    */
-  readonly ladder$ = this.catalog.productsForGame(STOREFRONT.focusGameSlug).pipe(
-    map((products) => products.find((product) => product.type === ProductType.GameCurrency)),
-    switchMap((coins) => (coins
-      ? this.catalog.productBySlug(coins.slug).pipe(catchError(() => of(null)))
-      : of(null))),
-  );
-  readonly search$ = this.querySubject.pipe(map((query) => query.search ?? ''));
+  private readonly coins$: Observable<ProductDetail | null> = this.catalog
+    .productBySlug(STOREFRONT.focusProductSlug)
+    .pipe(
+      catchError(() => of(null)),
+      shareReplay({ bufferSize: 1, refCount: true }),
+    );
 
   readonly productTypes: readonly { value: ProductType; label: string }[] = [
     { value: ProductType.GameCurrency, label: 'מטבעות משחק' },
@@ -283,19 +220,14 @@ export class StorePage {
   ];
 
   /**
-   * One stream drives the grid: query changes are debounced, the request is
-   * switched, and the template consumes it through `async` — no manual
-   * subscriptions and nothing to unsubscribe.
+   * One stream drives the shelf: query changes are debounced, the request is
+   * switched, and the template consumes it through `async`.
    */
   readonly vm$: Observable<StoreViewModel> = combineLatest([
     this.querySubject.pipe(
-      // Nothing is requested until the storefront's game has resolved. Without
-      // this the first query runs unscoped and the grid renders the whole
-      // platform catalogue for a frame before correcting itself.
+      // Nothing is requested until the storefront's game has resolved, so the
+      // grid never renders the whole platform catalogue for a frame.
       filter((query) => query.gameIds !== undefined),
-      // The debounce exists to coalesce typing, and the first query is not
-      // typing. Making the initial load wait 200ms on top of resolving the
-      // game meant the grid arrived noticeably late for no benefit.
       debounce(() => {
         const wait = timer(this.firstQuery ? 0 : 200);
         this.firstQuery = false;
@@ -304,9 +236,10 @@ export class StorePage {
       distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
     ),
     this.lookups$,
+    this.coins$,
   ]).pipe(
-    switchMap(([query, lookups]) => this.catalog.search(query).pipe(
-      map((page): StoreViewModel => ({ page, lookups })),
+    switchMap(([query, lookups, coins]) => this.catalog.search(query).pipe(
+      map((page): StoreViewModel => this.shelf(page, lookups, coins, query)),
     )),
     catchError((error: unknown) => {
       this.error.set(toAppError(error));
@@ -316,35 +249,15 @@ export class StorePage {
     startWith(undefined as unknown as StoreViewModel),
   );
 
-  /**
-   * Whether the filter panel is expanded.
-   *
-   * Open by default on a wide screen and closed on a phone, where five selects
-   * would otherwise fill the entire first screen and push every product below
-   * the fold. Bound to the `open` attribute rather than styled open, because
-   * the browser hides a closed `details` body with `content-visibility` and a
-   * CSS override cannot reveal it.
-   */
-  readonly filtersOpen = signal(
-    typeof window !== 'undefined' && window.matchMedia('(min-width: 720px)').matches,
-  );
-
-  onFiltersToggle(event: Event): void {
-    this.filtersOpen.set((event.target as HTMLDetailsElement).open);
-  }
-
   constructor() {
     const params = this.route.snapshot.queryParamMap;
 
-    // The storefront sells one game, so every query is scoped to it. Doing this
-    // here rather than in the facade keeps the catalog service general: the
-    // platform still handles many games, this shop presents one.
+    // The storefront sells one game, so every query is scoped to it.
     this.catalog.gameBySlug(STOREFRONT.focusGameSlug).subscribe((game) => {
       this.patch({ gameIds: [game.id] });
     });
 
-    // The header search navigates here with `?search=`. Without this the box
-    // would appear to work and quietly return the whole catalogue.
+    // The header search navigates here with `?search=`.
     const search = params.get('search');
     if (search) {
       this.patch({ search });
@@ -352,31 +265,69 @@ export class StorePage {
     this.analytics.pageView('/store', 'Store');
   }
 
-  get gameId(): string { return this.querySubject.value.gameIds?.[0] ?? ''; }
+  /**
+   * Lays the page out as a shelf.
+   *
+   * The coin product, when the query returned it, becomes one card per bundle
+   * priced from the offers of the chosen platform (or the first platform when
+   * none is chosen), all in one region so the ranking compares like with like.
+   * Everything else stays a product card.
+   */
+  private shelf(
+    page: Page<Product>,
+    lookups: CatalogLookups,
+    coins: ProductDetail | null,
+    query: CatalogQuery,
+  ): StoreViewModel {
+    const inPage = coins !== null && page.items.some((product) => product.id === coins.product.id);
+    const others = page.items.filter((product) => product.id !== coins?.product.id);
+
+    if (!coins || !inPage) {
+      return { page, lookups, coins: null, tiers: [], others };
+    }
+
+    const platformId = query.platformIds?.[0];
+    const pool = coins.offers.filter((offer) => !platformId || offer.platformId === platformId);
+    const first = pool[0];
+    const comparable = first
+      ? pool.filter((offer) => offer.platformId === first.platformId && offer.regionId === first.regionId)
+      : [];
+
+    const ranked = rankByValue(comparable, coins.product.variants)
+      .filter((row) => row.perUnitMinor !== undefined)
+      .sort((a, b) => (a.variant.quantityValue ?? 0) - (b.variant.quantityValue ?? 0))
+      .map((row, index): TierRow => ({ row, rank: Math.min(5, index + 1) }));
+
+    const tiers = query.sort === 'price-desc' ? [...ranked].reverse() : ranked;
+    return { page, lookups, coins, tiers, others };
+  }
+
+  /** Adds one bundle. The offer is the one the card's price belongs to. */
+  buyOffer(offer: Offer): void {
+    if (this.adding()) {
+      return;
+    }
+    this.adding.set(true);
+    this.cart.add({ offerId: offer.id, quantity: 1 }).subscribe({
+      complete: () => this.adding.set(false),
+      error: () => this.adding.set(false),
+    });
+  }
+
+  isEmpty(vm: StoreViewModel): boolean {
+    return vm.tiers.length === 0 && vm.others.length === 0;
+  }
+
+  countLabel(vm: StoreViewModel): string {
+    const total = vm.tiers.length + vm.others.length;
+    return total === 1 ? 'פריט אחד' : `${total} פריטים`;
+  }
+
   get platformId(): string { return this.querySubject.value.platformIds?.[0] ?? ''; }
-  get regionId(): string { return this.querySubject.value.regionIds?.[0] ?? ''; }
   get type(): string { return this.querySubject.value.types?.[0] ?? ''; }
   get sort(): CatalogSort { return this.querySubject.value.sort ?? 'relevance'; }
 
-  /**
-   * Whether the customer has narrowed anything.
-   *
-   * The storefront's own game scope does not count. It is always applied and is
-   * not the customer's choice, so counting it would leave the reset control
-   * permanently visible with nothing to reset.
-   */
-  get hasFilters(): boolean {
-    const query = this.querySubject.value;
-    return Boolean(query.search || query.platformIds?.length
-      || query.regionIds?.length || query.types?.length);
-  }
-
-  /**
-   * The filter groups, built from whatever the catalog actually offers.
-   *
-   * Options come from the lookups rather than a hard-coded list, so a new
-   * platform or region appears here on its own and a removed one disappears.
-   */
+  /** The filter groups, built from whatever the catalog actually offers. */
   filterGroups(lookups: CatalogLookups | null): readonly FilterGroup[] {
     return [
       {
@@ -435,14 +386,8 @@ export class StorePage {
     return lookups ? [...lookups.platforms.values()] : [];
   }
 
-  regions(lookups: CatalogLookups | null): readonly Region[] {
-    return lookups ? [...lookups.regions.values()] : [];
-  }
-
   setSearch(value: string): void { this.patch({ search: value || undefined }); }
-  setGame(value: string): void { this.patch({ gameIds: value ? [value] : undefined }); }
   setPlatform(value: string): void { this.patch({ platformIds: value ? [value] : undefined }); }
-  setRegion(value: string): void { this.patch({ regionIds: value ? [value] : undefined }); }
   setType(value: string): void { this.patch({ types: value ? [value as ProductType] : undefined }); }
   setSort(value: CatalogSort): void { this.patch({ sort: value }); }
 
@@ -451,12 +396,7 @@ export class StorePage {
     this.patch({});
   }
 
-  /**
-   * Clears the customer's filters, keeping the storefront's game scope.
-   *
-   * Dropping `gameIds` here would silently widen the store to every game on the
-   * platform, which is the one thing this storefront must not show.
-   */
+  /** Clears the customer's filters, keeping the storefront's game scope. */
   clear(): void {
     this.pageSize = DEFAULT_PAGE_SIZE;
     this.querySubject.next({
@@ -473,6 +413,10 @@ export class StorePage {
 
   trackById(_index: number, product: Product): string {
     return product.id;
+  }
+
+  trackByOffer(_index: number, tier: TierRow): string {
+    return tier.row.offer.id;
   }
 
   private patch(partial: Partial<CatalogQuery>): void {
