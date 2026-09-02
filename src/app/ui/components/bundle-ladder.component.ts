@@ -41,8 +41,7 @@ import { IconComponent } from './icon.component';
             *ngFor="let row of rows; let i = index"
             [class.tier--best]="row.isBestValue">
           <a class="tier__link"
-             [routerLink]="['/products', productSlug]"
-             [queryParams]="{ variant: row.variant.id }">
+             [routerLink]="['/products', productSlug, row.variant.id]">
 
             <span class="tier__flag" *ngIf="row.isBestValue">
               <tt-icon name="bolt" [size]="12"></tt-icon> הערך הגבוה ביותר

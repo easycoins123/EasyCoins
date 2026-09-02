@@ -8,7 +8,7 @@ import { AnalyticsEvent, AnalyticsService } from '../../core/analytics';
 import { LocalizePipe } from '../../core/i18n';
 import { formatQuantity } from '../../core/value';
 import {
-  AppError, FulfillmentMethod, Offer, Platform, Product, ProductDetail, ProductVariant, Region,
+  AppError, FulfillmentMethod, Money, Offer, Platform, Product, ProductDetail, ProductType, ProductVariant, Region,
   isPurchasable, toAppError,
 } from '../../domain';
 import { ReviewApiService } from '../../data/api';
@@ -16,7 +16,7 @@ import { CartFacade, CatalogFacade, CatalogLookups } from '../../state';
 import {
   ErrorStateComponent, FulfillmentBadgeComponent, MoneyPipe, PlatformBadgeComponent,
   ProductCardComponent, QuantitySelectorComponent, RegionBadgeComponent, ReviewCardComponent,
-  StarRatingComponent, StockBadgeComponent, CompactNumberPipe, IconComponent
+  StarRatingComponent, StockBadgeComponent, CompactNumberPipe, IconComponent, CoinPackComponent
 } from '../../ui';
 
 interface ProductViewModel {
@@ -41,7 +41,7 @@ interface ProductViewModel {
     CommonModule, RouterLink, LocalizePipe, MoneyPipe, CompactNumberPipe,
     PlatformBadgeComponent, RegionBadgeComponent, FulfillmentBadgeComponent, StockBadgeComponent,
     QuantitySelectorComponent, StarRatingComponent, ReviewCardComponent, ProductCardComponent,
-    ErrorStateComponent, IconComponent],
+    ErrorStateComponent, IconComponent, CoinPackComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-container tt-section">
@@ -56,7 +56,10 @@ interface ProductViewModel {
 
           <div class="layout">
             <div class="media tt-card">
-              <img *ngIf="vm.detail.product.images[0] as image" [src]="image.url" [alt]="image.alt" />
+              <tt-coin-pack *ngIf="packSteps(vm) as steps; else picture" class="media__art" [steps]="steps"></tt-coin-pack>
+              <ng-template #picture>
+                <img *ngIf="vm.detail.product.images[0] as image" [src]="image.url" [alt]="image.alt" />
+              </ng-template>
             </div>
 
             <div class="info">
@@ -80,6 +83,7 @@ interface ProductViewModel {
                     <small *ngIf="showsQuantity(variant)" class="tt-faint">
                       {{ variant.quantityValue | compactNumber }} {{ variant.quantityUnit | t }}
                     </small>
+                    <small class="chip__price tt-numeric" *ngIf="priceFor(vm, variant) as price">{{ price | money }}</small>
                   </button>
                 </div>
               </div>
@@ -148,7 +152,7 @@ interface ProductViewModel {
                                           (valueChange)="quantity.set($event)">
                     </tt-quantity-selector>
 
-                    <button type="button" class="tt-btn tt-btn--primary grow"
+                    <button type="button" class="tt-btn tt-btn--buy grow"
                             [disabled]="!canBuy(offer) || cart.busy()"
                             (click)="addToCart(offer)">
                       הוספה לעגלה
@@ -215,7 +219,7 @@ interface ProductViewModel {
       padding: var(--tt-space-5);
       /* A ratio rather than a fixed floor. At 320px the artwork box took most
          of a phone screen before the name of the product appeared. */
-      aspect-ratio: 16 / 11;
+      aspect-ratio: 4 / 3;
       min-block-size: 0;
       border-radius: var(--tt-radius-lg);
       background:
@@ -225,6 +229,8 @@ interface ProductViewModel {
     }
     .info-skeleton { min-block-size: 520px; }
     .media img { max-block-size: 100%; object-fit: contain; }
+    .media__art { inline-size: 56%; max-inline-size: 260px; }
+    .chip__price { color: var(--tt-gold-400); font-weight: 700; }
     .info { display: flex; flex-direction: column; gap: var(--tt-space-3); }
     h1 { margin: 0; }
     .chooser { display: flex; flex-direction: column; gap: var(--tt-space-2); }
@@ -325,6 +331,18 @@ export class ProductDetailPage {
     return compact.length > 0 && !variant.name.he.includes(compact);
   }
 
+  /**
+   * The price a variant chip shows: the offer for the current platform and
+   * region when there is one, otherwise the variant's first offer.
+   */
+  priceFor(vm: ProductViewModel, variant: ProductVariant): Money | undefined {
+    const candidates = vm.detail.offers.filter((offer) => offer.variantId === variant.id);
+    const match = candidates.find(
+      (offer) => offer.platformId === this.platformId() && offer.regionId === this.regionId(),
+    ) ?? candidates[0];
+    return match?.price.current;
+  }
+
   selectVariant(variant: ProductVariant): void {
     this.variantId.set(variant.id);
     this.analytics.track(AnalyticsEvent.ProductSelected, { variantId: variant.id });
@@ -358,6 +376,26 @@ export class ProductDetailPage {
 
   regionOf(vm: ProductViewModel, offer: Offer): Region | undefined {
     return vm.lookups.regions.get(offer.regionId);
+  }
+
+  /**
+   * Which pack composition to draw for the selected bundle.
+   *
+   * Coin bundles are drawn rather than photographed, at the tier the chosen
+   * variant sits in, so the picture changes with the choice. Anything else
+   * keeps its illustration. Zero means "use the picture".
+   */
+  packSteps(vm: ProductViewModel): number {
+    if (vm.detail.product.type !== ProductType.GameCurrency) {
+      return 0;
+    }
+    const quantities = vm.detail.product.variants
+      .map((variant) => variant.quantityValue)
+      .filter((value): value is number => typeof value === 'number' && value > 0)
+      .sort((a, b) => a - b);
+    const selected = vm.detail.product.variants.find((variant) => variant.id === this.variantId());
+    const index = quantities.indexOf(selected?.quantityValue ?? -1);
+    return index < 0 ? Math.min(5, quantities.length) : Math.min(5, index + 1);
   }
 
   canBuy(offer: Offer): boolean {

@@ -10,7 +10,7 @@ import { TokenStore } from './auth/token.store';
   imports: [RouterOutlet, RouterLink, NgClass, NgIf],
   template: `
     <header *ngIf="tokens.isSignedIn()">
-      <a routerLink="/" class="brand">ZuzCoins · תפעול</a>
+      <a routerLink="/" class="brand">EASYCOINS · תפעול</a>
       <button (click)="signOut()">יציאה</button>
     </header>
 

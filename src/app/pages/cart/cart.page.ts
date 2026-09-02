@@ -110,7 +110,7 @@ import {
               </div>
             </label>
 
-            <button type="button" class="tt-btn tt-btn--primary tt-btn--block"
+            <button type="button" class="tt-btn tt-btn--buy tt-btn--lg tt-btn--block"
                     [disabled]="cart.busy()" (click)="goToCheckout()">
               מעבר לתשלום
             </button>
