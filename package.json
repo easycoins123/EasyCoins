@@ -17,6 +17,9 @@
     "serve:dist": "node qa/serve.mjs"
   },
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "dependencies": {
     "@angular/animations": "^16.2.0",
     "@angular/common": "^16.2.0",
