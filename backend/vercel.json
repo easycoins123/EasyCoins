@@ -2,6 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "buildCommand": "npm ci --include=dev && npx prisma generate && npx prisma migrate deploy && npm run build",
+  "outputDirectory": "public",
   "functions": {
     "api/index.ts": {
       "maxDuration": 60,
@@ -9,9 +10,15 @@
     }
   },
   "rewrites": [
-    { "source": "/(.*)", "destination": "/api" }
+    {
+      "source": "/(.*)",
+      "destination": "/api"
+    }
   ],
   "crons": [
-    { "path": "/api/v1/internal/housekeeping", "schedule": "0 3 * * *" }
+    {
+      "path": "/api/v1/internal/housekeeping",
+      "schedule": "0 3 * * *"
+    }
   ]
 }

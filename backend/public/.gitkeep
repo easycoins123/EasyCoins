@@ -1,0 +1,1 @@
+This backend is an API only; it serves no static files. Vercel requires an output directory to exist, so this one stays empty and every request is routed to the function in api/.
