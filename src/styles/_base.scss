@@ -519,3 +519,140 @@ img { max-width: 100%; display: block; }
   outline: 2px solid var(--tt-brand-400);
   outline-offset: 4px;
 }
+
+// --- Depth and light ---------------------------------------------------------
+//
+// Large dark areas painted in one flat hex read as a template. A film grain at
+// the edge of visibility and a translucent surface for floating things are
+// what give the same palette the depth of a photographed set.
+
+/* Grain over the whole page. Fixed, non-interactive, nearly invisible. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: screen;
+}
+
+/* A translucent surface with a light top edge. */
+.tt-glass {
+  background: var(--tt-glass);
+  border: 1px solid var(--tt-glass-border);
+  box-shadow: var(--tt-glass-highlight), var(--tt-shadow-2);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+}
+
+/* A pill-shaped choice, the shape every toolbar in the product uses. */
+.tt-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-block-size: 38px;
+  padding-inline: var(--tt-space-3);
+  border: 1px solid var(--tt-border);
+  border-radius: var(--tt-radius-pill);
+  background: var(--tt-surface);
+  color: var(--tt-text-muted);
+  font: inherit;
+  font-size: var(--tt-text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--tt-duration-fast) var(--tt-ease),
+              color var(--tt-duration-fast) var(--tt-ease),
+              background-color var(--tt-duration-fast) var(--tt-ease),
+              box-shadow var(--tt-duration-fast) var(--tt-ease);
+}
+.tt-pill:hover { border-color: var(--tt-border-strong); color: var(--tt-text); }
+.tt-pill.on, .tt-pill[aria-pressed='true'] {
+  border-color: var(--tt-brand-500);
+  background: var(--tt-brand-tint);
+  color: #DCE6FF;
+  box-shadow: 0 0 0 3px rgba(46, 95, 240, 0.18);
+}
+
+// --- Display type -------------------------------------------------------------
+//
+// The display face is condensed, so it earns larger sizes than Heebo did at
+// the same width, and it wants a touch of positive tracking on Latin figures.
+
+h1, h2 {
+  font-family: var(--tt-font-display);
+  font-weight: 700;
+  letter-spacing: 0.005em;
+}
+h1 { font-size: clamp(2.6rem, 6vw, 4.4rem); line-height: 0.98; }
+h2 { font-size: clamp(1.9rem, 3.6vw, 2.9rem); line-height: 1.02; }
+
+.tt-price {
+  font-family: var(--tt-font-display);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.tt-price--lg { font-size: 2.1rem; }
+.tt-price--xl { font-size: 2.8rem; }
+
+/* Tier quantities and other big figures. */
+.tt-figure {
+  font-family: var(--tt-font-display);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+// --- Motion ------------------------------------------------------------------
+
+/* Entrance on scroll, driven by the reveal directive. */
+.reveal {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity var(--tt-duration-slow) var(--tt-ease-out),
+              transform var(--tt-duration-slow) var(--tt-ease-out);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal--seen { opacity: 1; transform: none; }
+
+/* A badge or button that just received something. */
+@keyframes tt-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+.tt-pop { animation: tt-pop 420ms var(--tt-ease-out); }
+
+/* A diagonal light crossing a surface once, on hover. */
+.tt-sweep { position: relative; overflow: hidden; }
+.tt-sweep::after {
+  content: '';
+  position: absolute;
+  inset: -40% auto -40% -60%;
+  inline-size: 40%;
+  background: linear-gradient(105deg, transparent, rgba(255, 248, 235, 0.10), transparent);
+  transform: skewX(-18deg) translateX(-120%);
+  pointer-events: none;
+  transition: transform 700ms var(--tt-ease-out);
+}
+.tt-sweep:hover::after { transform: skewX(-18deg) translateX(420%); }
+
+/* The buy button glows a little; it is the one thing that spends money. */
+.tt-btn--buy { box-shadow: 0 6px 22px rgba(242, 179, 61, 0.22); }
+.tt-btn--buy:hover:not(:disabled) { box-shadow: 0 10px 30px rgba(242, 179, 61, 0.34); }
+
+/* The state a buy button takes for a moment after it worked. */
+.tt-btn--done {
+  background: var(--tt-success) !important;
+  color: #062814 !important;
+  box-shadow: 0 6px 22px rgba(67, 209, 138, 0.28) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .tt-sweep::after { display: none; }
+  body::after { display: none; }
+}

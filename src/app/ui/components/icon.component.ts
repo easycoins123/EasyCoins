@@ -63,7 +63,8 @@ export type IconName =
   | 'delivery'
   | 'support'
   | 'lightning'
-  | 'home';
+  | 'home'
+  | 'mark';
 
 interface IconArt {
   /** The silhouette. Drawn filled, and it is what reads at small sizes. */
@@ -110,9 +111,18 @@ const ART: Record<string, IconArt> = {
     stroke: 'M9.6 19.4h.01M17 19.4h.01',
   },
   coins: { fill: `${coin(9, 13.5, 6.4)}${coin(15.5, 9.5, 5.6)}` },
-  /* A single struck face, front on, carrying the E. The currency object at its
-     most compact: the same octagon as the pack medallion and the ladder art. */
+  /* The currency, front on: a thick rim with a football struck into the face,
+     the pentagon panel and its five seams. It says "football game coin" to
+     the audience at a glance, and it is our own drawing: no publisher's coin
+     is traced or borrowed. */
   coin: {
+    fill: 'M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Z',
+    knockout: 'M12 4.8a7.2 7.2 0 1 1 0 14.4 7.2 7.2 0 0 1 0-14.4ZM12 9.2L14.66 11.13L13.65 14.27L10.35 14.27L9.34 11.13Z',
+    stroke: 'M12 9.2V5.6M14.66 11.13 18.1 10M13.65 14.27 15.8 17.2M10.35 14.27 8.2 17.2M9.34 11.13 5.9 10',
+  },
+  /* The brand E struck into an octagon, kept for places that mean "EASYCOINS"
+     rather than "coins": the account menu, the drawer. */
+  mark: {
     fill: `${coin(12, 12, 10, 1)}`,
     knockout: BRAND_E,
   },

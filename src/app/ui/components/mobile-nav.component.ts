@@ -12,6 +12,7 @@ import { formatQuantity, rankByValue } from '../../core/value';
 import { ProductDetail } from '../../domain';
 import { CatalogFacade } from '../../state/catalog.facade';
 import { AuthFacade } from '../../state/customer.facade';
+import { materialForStep } from '../materials';
 import { BrandLogoComponent } from './brand-logo.component';
 import { IconComponent, IconName } from './icon.component';
 
@@ -107,9 +108,10 @@ interface QuickTier {
             <span>קוינס ל־{{ gameName }}</span>
           </p>
           <ul class="quick__list">
-            <li *ngFor="let tier of tiers">
+            <li *ngFor="let tier of tiers; let i = index">
               <a [routerLink]="['/products', tier.slug, tier.variantId]"
                  [class.best]="tier.best"
+                 [style.--mat]="materialColor(i)"
                  (click)="close.emit()">
                 <span class="quick__qty tt-numeric">{{ tier.quantity }}</span>
                 <span class="quick__price tt-numeric">{{ tier.price }}</span>
@@ -287,7 +289,8 @@ interface QuickTier {
       text-decoration: none;
     }
     .quick__list a.best { border-color: var(--tt-gold-500); background: var(--tt-gold-tint); }
-    .quick__qty { font-size: 13px; font-weight: 800; line-height: 1; }
+    .quick__list a { border-block-start: 2px solid var(--mat, var(--tt-border)); }
+    .quick__qty { font-family: var(--tt-font-display); font-size: 17px; font-weight: 700; line-height: 1; color: var(--mat, var(--tt-text)); }
     .quick__price { font-size: 11px; font-weight: 700; color: var(--tt-gold-400); line-height: 1; }
 
     .group { margin: var(--tt-space-3) 0 var(--tt-space-1); padding-inline: var(--tt-space-2); color: var(--tt-text-faint); font-size: 10px; font-weight: 800; letter-spacing: var(--tt-tracking-eyebrow); text-transform: uppercase; }
@@ -386,6 +389,10 @@ export class MobileNavComponent implements OnChanges {
       // into view from its off-screen position.
       setTimeout(() => this.closeButton?.nativeElement.focus(), 40);
     }
+  }
+
+  materialColor(index: number): string {
+    return materialForStep(index + 1).color;
   }
 
   signOut(): void {

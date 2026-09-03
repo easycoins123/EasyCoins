@@ -33,6 +33,11 @@ import {
   template: `
     <div class="tt-container tt-section">
       <h1>תשלום</h1>
+      <ol class="progress" aria-label="שלבי התשלום">
+        <li [class.on]="!checkout.orderId()" [class.done]="checkout.orderId()"><span>1</span> פרטים</li>
+        <li [class.on]="checkout.orderId()"><span>2</span> תשלום</li>
+        <li><span>3</span> אישור</li>
+      </ol>
 
       <div class="layout">
         <div class="main">
@@ -201,7 +206,7 @@ import {
           </section>
         </div>
 
-        <aside class="summary tt-card tt-card--pad" *ngIf="lookups$ | async as lookups">
+        <aside class="summary tt-glass tt-card--pad" *ngIf="lookups$ | async as lookups">
           <h2>מה קונים</h2>
           <ul>
             <li *ngFor="let item of cart.items()">
@@ -249,6 +254,13 @@ import {
 
     /* The amount lives on the action. */
     .pay { justify-content: space-between; padding-inline: var(--tt-space-4); }
+    .progress { display: flex; gap: var(--tt-space-2); margin: calc(var(--tt-space-2) * -1) 0 var(--tt-space-5); padding: 0; list-style: none; font-size: var(--tt-text-xs); font-weight: 700; color: var(--tt-text-faint); }
+    .progress li { display: inline-flex; align-items: center; gap: 6px; padding: 0.3rem 0.7rem 0.3rem 0.4rem; border: 1px solid var(--tt-border); border-radius: var(--tt-radius-pill); }
+    .progress li span { display: grid; place-items: center; inline-size: 20px; block-size: 20px; border-radius: 50%; background: var(--tt-surface-3); font-family: var(--tt-font-display); font-size: var(--tt-text-sm); color: var(--tt-text); }
+    .progress li.on { color: var(--tt-text); border-color: var(--tt-border-brand); background: var(--tt-brand-tint); }
+    .progress li.on span { background: var(--tt-brand-500); color: #fff; }
+    .progress li.done { color: var(--tt-success); border-color: rgba(67, 209, 138, 0.4); }
+    .progress li.done span { background: var(--tt-success); color: #062814; }
     .pay__sum { font-weight: 800; font-variant-numeric: tabular-nums; }
 
     .assure {

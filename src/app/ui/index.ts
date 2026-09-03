@@ -23,3 +23,4 @@ export * from './components/trust-badges.component';
 export * from './components/search-box.component';
 export * from './components/state.component';
 export * from './money.pipe';
+export * from './reveal.directive';

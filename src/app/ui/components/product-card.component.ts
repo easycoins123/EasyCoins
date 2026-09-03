@@ -14,16 +14,11 @@ import { IconComponent } from './icon.component';
 /**
  * A product on the shelf.
  *
- * Built around the order a buyer reads a card in: what is it, how much do I
- * get, what does it cost, and where do I press. The name is a caption, the
- * quantity is the figure, the price is gold, and the action at the foot is a
- * visible "details" affordance rather than a bare chevron. The whole card is
- * one link, so there is exactly one thing to press.
- *
- * Coin bundles draw their own tier art; other products use their illustration
- * on the same stage, so the shelf reads as one family. Nothing here invents a
- * badge: a saving appears only against a real strike-through price the server
- * sent, and the quantity is read from the product's own variants.
+ * The name is a caption, the quantity is the figure in the display face, the
+ * price is gold, and the action at the foot is a visible "details" affordance.
+ * The whole card is one link, so there is exactly one thing to press. Coin
+ * bundles draw their own tier art; other products put their illustration on
+ * the same stage, so the shelf reads as one family.
  */
 @Component({
   selector: 'tt-product-card',
@@ -34,7 +29,7 @@ import { IconComponent } from './icon.component';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <a class="card" [routerLink]="['/products', product.slug]" [attr.aria-label]="product.name | t">
+    <a class="card tt-sweep" [routerLink]="['/products', product.slug]" [attr.aria-label]="product.name | t">
       <div class="media">
         <tt-coin-pack *ngIf="largestQuantity as quantity; else artwork"
                       class="media__art" [steps]="packSteps(quantity)"></tt-coin-pack>
@@ -42,14 +37,13 @@ import { IconComponent } from './icon.component';
           <img *ngIf="product.images[0] as image"
                [src]="image.url" [alt]="image.alt" loading="lazy" decoding="async" />
         </ng-template>
-
         <span class="flag" *ngIf="saved as amount">חוסכים {{ amount | money }}</span>
       </div>
 
       <div class="body">
         <ng-container *ngIf="quantityRange as range; else named">
           <p class="name">{{ product.name | t }}</p>
-          <p class="amount tt-numeric">{{ range }}</p>
+          <p class="amount tt-figure">{{ range }}</p>
         </ng-container>
         <ng-template #named>
           <p class="name">{{ typeLabel }}</p>
@@ -65,7 +59,7 @@ import { IconComponent } from './icon.component';
       <div class="foot">
         <span class="foot__price">
           <span class="foot__from">החל מ־</span>
-          <span class="tt-price tt-numeric">{{ product.fromPrice?.current | money }}</span>
+          <span class="tt-price">{{ product.fromPrice?.current | money }}</span>
           <span class="was tt-numeric" *ngIf="product.fromPrice?.compareAt as was">{{ was | money }}</span>
         </span>
         <span class="go" aria-hidden="true">
@@ -82,7 +76,7 @@ import { IconComponent } from './icon.component';
       block-size: 100%;
       background: var(--tt-surface);
       border: 1px solid var(--tt-border);
-      border-radius: var(--tt-radius-lg);
+      border-radius: var(--tt-radius-xl);
       overflow: hidden;
       color: inherit;
       text-decoration: none;
@@ -90,12 +84,7 @@ import { IconComponent } from './icon.component';
                   border-color var(--tt-duration-fast) var(--tt-ease),
                   box-shadow var(--tt-duration) var(--tt-ease);
     }
-    .card:hover {
-      transform: translateY(-3px);
-      border-color: var(--tt-border-strong);
-      box-shadow: var(--tt-shadow-2);
-      text-decoration: none;
-    }
+    .card:hover { transform: translateY(-4px); border-color: var(--tt-border-brand); box-shadow: var(--tt-ring-brand), 0 22px 50px rgba(0, 0, 0, 0.5); text-decoration: none; }
 
     .media {
       position: relative;
@@ -105,23 +94,18 @@ import { IconComponent } from './icon.component';
       overflow: hidden;
       background:
         radial-gradient(70% 60% at 50% 62%, var(--tt-brand-tint), transparent 72%),
+        repeating-linear-gradient(99deg, rgba(255, 248, 235, 0.03) 0 1px, transparent 1px 22px),
         var(--tt-bg-elevated);
     }
-    .media__art { inline-size: 62%; transition: transform var(--tt-duration-slow) var(--tt-ease-out); }
-    .media img {
-      inline-size: 54%;
-      max-block-size: 78%;
-      object-fit: contain;
-      filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.45));
-      transition: transform var(--tt-duration-slow) var(--tt-ease-out);
-    }
-    .card:hover .media img, .card:hover .media__art { transform: translateY(-3px) scale(1.03); }
+    .media__art { inline-size: 62%; filter: drop-shadow(0 16px 20px rgba(0, 0, 0, 0.5)); transition: transform var(--tt-duration-slow) var(--tt-ease-out); }
+    .media img { inline-size: 54%; max-block-size: 78%; object-fit: contain; filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.45)); transition: transform var(--tt-duration-slow) var(--tt-ease-out); }
+    .card:hover .media img, .card:hover .media__art { transform: translateY(-4px) scale(1.04); }
 
     .flag {
       position: absolute;
       inset-block-start: var(--tt-space-2);
       inset-inline-start: var(--tt-space-2);
-      padding: 0.15rem 0.45rem;
+      padding: 0.15rem 0.5rem;
       border-radius: var(--tt-radius-sm);
       background: var(--tt-gold-500);
       color: var(--tt-text-on-gold);
@@ -129,47 +113,28 @@ import { IconComponent } from './icon.component';
       font-weight: 800;
       line-height: 1.6;
       white-space: nowrap;
+      transform: skewX(-8deg);
     }
 
     .body { display: flex; flex-direction: column; padding: var(--tt-space-3) var(--tt-space-3) var(--tt-space-2); flex: 1; min-block-size: 0; }
     .name { margin: 0; font-size: var(--tt-text-xs); font-weight: 600; color: var(--tt-text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .amount {
-      margin: 2px 0 0;
-      font-size: var(--tt-text-xl);
-      font-weight: 900;
-      line-height: 1.05;
-      letter-spacing: -0.025em;
-      direction: ltr;
-      unicode-bidi: isolate;
-      text-align: end;
-    }
-    .amount--words { direction: rtl; font-size: var(--tt-text-md); letter-spacing: normal; line-height: var(--tt-leading-snug); }
-
+    .amount { margin: 2px 0 0; font-size: 2.1rem; text-align: end; }
+    .amount--words { font-family: var(--tt-font); direction: rtl; font-size: var(--tt-text-md); font-weight: 800; letter-spacing: normal; line-height: var(--tt-leading-snug); text-align: start; }
     .chips { display: flex; flex-wrap: wrap; gap: 3px; margin-block-start: auto; padding-block-start: var(--tt-space-2); }
 
-    .foot {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--tt-space-2);
-      padding: var(--tt-space-2) var(--tt-space-3) var(--tt-space-3);
-      border-block-start: 1px solid var(--tt-border);
-    }
+    .foot { display: flex; align-items: center; justify-content: space-between; gap: var(--tt-space-2); padding: var(--tt-space-2) var(--tt-space-3) var(--tt-space-3); border-block-start: 1px solid var(--tt-border); }
     .foot__price { display: flex; align-items: baseline; gap: 4px; min-inline-size: 0; flex-wrap: wrap; }
     .foot__from { font-size: 10px; color: var(--tt-text-faint); }
+    .foot__price .tt-price { font-size: 1.5rem; }
     .was { font-size: var(--tt-text-xs); color: var(--tt-text-faint); text-decoration: line-through; }
-
-    /* The action, in the interactive colour. It is part of the link, so it
-       says what pressing the card does rather than pretending to be a button
-       of its own. */
     .go {
       display: inline-flex;
       align-items: center;
       gap: 3px;
       flex: none;
-      min-block-size: 32px;
+      min-block-size: 34px;
       padding-inline: var(--tt-space-3) var(--tt-space-2);
-      border-radius: var(--tt-radius-md);
+      border-radius: var(--tt-radius-pill);
       background: var(--tt-brand-tint);
       color: var(--tt-brand-300);
       font-size: var(--tt-text-sm);
@@ -181,7 +146,7 @@ import { IconComponent } from './icon.component';
     @media (max-width: 400px) {
       .chips { display: none; }
       .body { padding: var(--tt-space-2) var(--tt-space-2) var(--tt-space-1); }
-      .amount { font-size: var(--tt-text-lg); }
+      .amount { font-size: 1.8rem; }
       .foot { padding-inline: var(--tt-space-2); }
     }
   `],
@@ -190,7 +155,6 @@ export class ProductCardComponent {
   @Input({ required: true }) product!: Product;
   @Input() lookups?: CatalogLookups;
 
-  /** Which pack composition to draw, from the product's largest bundle. */
   packSteps(quantity: number): number {
     if (quantity <= 250_000) {
       return 1;
@@ -204,7 +168,6 @@ export class ProductCardComponent {
     return quantity <= 2_000_000 ? 4 : 5;
   }
 
-  /** The biggest tier this product sells, which drives the artwork. */
   get largestQuantity(): number | undefined {
     const quantities = this.product.variants
       .map((variant) => variant.quantityValue)
@@ -212,12 +175,10 @@ export class ProductCardComponent {
     return quantities.length > 0 ? Math.max(...quantities) : undefined;
   }
 
-  /** What a real strike-through saves, or undefined when there is not one. */
   get saved(): Money | undefined {
     return this.product.fromPrice ? savedAmount(this.product.fromPrice) : undefined;
   }
 
-  /** A caption for products with no quantity, so the card still has two lines. */
   get typeLabel(): string {
     switch (this.product.type) {
       case ProductType.PlayerService: return 'שירות';
@@ -228,17 +189,14 @@ export class ProductCardComponent {
     }
   }
 
-  /** The span of quantities this product sells, as players say them. */
   get quantityRange(): string | undefined {
     const quantities = this.product.variants
       .map((variant) => variant.quantityValue)
       .filter((value): value is number => typeof value === 'number' && value > 0)
       .sort((a, b) => a - b);
-
     if (quantities.length === 0) {
       return undefined;
     }
-
     const smallest = formatQuantity(quantities[0]);
     const largest = formatQuantity(quantities[quantities.length - 1]);
     return smallest === largest ? smallest : `${smallest}–${largest}`;

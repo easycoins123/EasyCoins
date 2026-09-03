@@ -14,13 +14,10 @@ export interface ValuePoint {
 /**
  * The value strip.
  *
- * The three promises under the hero were a row of small grey glyphs with a line
- * of text each, which is the shape of a footer, not of a reason to buy. Here
- * each point gets a real object: the glyph sits on a sheared plate cut at the
- * brand's nine degrees, lit from behind, with a title and one line under it.
- *
- * Only claims the shop can actually keep. There is no order count, no rating
- * and no delivery statistic, because none of those exist as data.
+ * Each promise gets a real object: the glyph on a glass plate cut at the
+ * brand's nine degrees and lit from behind, with a title and one line under
+ * it. Only claims the shop can keep; there is no order count, no rating and
+ * no delivery statistic because none exists as data.
  */
 @Component({
   selector: 'tt-value-strip',
@@ -32,7 +29,7 @@ export interface ValuePoint {
       <li class="point" *ngFor="let point of points">
         <span class="plate" [class.plate--money]="point.money" aria-hidden="true">
           <span class="plate__face"></span>
-          <tt-icon [name]="point.icon" [size]="22"></tt-icon>
+          <tt-icon [name]="point.icon" [size]="compact ? 20 : 24"></tt-icon>
         </span>
         <span class="point__text">
           <strong>{{ point.title }}</strong>
@@ -43,110 +40,52 @@ export interface ValuePoint {
   `,
   styles: [`
     :host { display: block; }
+    .strip { display: grid; gap: var(--tt-space-4); grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin: 0; padding: 0; list-style: none; }
+    .point { display: flex; align-items: flex-start; gap: var(--tt-space-3); }
 
-    .strip {
-      display: grid;
-      gap: var(--tt-space-4);
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    /* No card. The plate is the object; the text sits beside it on the page. */
-    .point {
-      display: flex;
-      align-items: flex-start;
-      gap: var(--tt-space-3);
-    }
-
-    .plate {
-      position: relative;
-      display: grid;
-      place-items: center;
-      inline-size: 46px;
-      block-size: 46px;
-      flex: none;
-      color: var(--tt-brand-300);
-    }
-    /* The lit face, sheared. Sits behind the glyph rather than around it, so
-       the glyph is never boxed. */
+    .plate { position: relative; display: grid; place-items: center; inline-size: 52px; block-size: 52px; flex: none; color: var(--tt-brand-300); }
     .plate__face {
       position: absolute;
       inset: 0;
       transform: skewX(-9deg);
       border-radius: var(--tt-radius-md);
-      background: linear-gradient(160deg, var(--tt-brand-tint-strong), transparent 70%),
-                  var(--tt-surface-2);
+      background: linear-gradient(160deg, var(--tt-brand-tint-strong), transparent 70%), var(--tt-glass);
       border: 1px solid var(--tt-border-brand);
+      box-shadow: var(--tt-glass-highlight), 0 10px 26px rgba(46, 95, 240, 0.16);
     }
-    .plate tt-icon { position: relative; }
-
-    /* Gold is money, and only the money point gets it. */
+    .plate tt-icon { position: relative; filter: drop-shadow(0 0 8px rgba(110, 147, 255, 0.5)); }
     .plate--money { color: var(--tt-gold-400); }
-    .plate--money .plate__face {
-      background: linear-gradient(160deg, var(--tt-gold-tint), transparent 70%),
-                  var(--tt-surface-2);
-      border-color: var(--tt-gold-500);
-    }
+    .plate--money .plate__face { background: linear-gradient(160deg, var(--tt-gold-tint), transparent 70%), var(--tt-glass); border-color: var(--tt-gold-500); box-shadow: var(--tt-glass-highlight), 0 10px 26px rgba(242, 179, 61, 0.18); }
+    .plate--money tt-icon { filter: drop-shadow(0 0 8px rgba(242, 179, 61, 0.5)); }
 
-    .point__text { display: flex; flex-direction: column; gap: 2px; min-inline-size: 0; }
-    .point__text strong { font-size: var(--tt-text-sm); font-weight: 700; }
-    .point__text span {
-      color: var(--tt-text-muted);
-      font-size: var(--tt-text-xs);
-      line-height: var(--tt-leading-snug);
-    }
+    .point__text { display: flex; flex-direction: column; gap: 3px; min-inline-size: 0; }
+    .point__text strong { font-size: var(--tt-text-md); font-weight: 800; }
+    .point__text span { color: var(--tt-text-muted); font-size: var(--tt-text-xs); line-height: var(--tt-leading-snug); }
 
-    /* A row of facts sized to their content, not stretched across the page.
-       At full width three equal columns put four hundred pixels between each
-       glyph and read as three unrelated things. */
-    .strip--compact {
-      grid-template-columns: none;
-      grid-auto-flow: column;
-      grid-auto-columns: max-content;
-      justify-content: start;
-      gap: var(--tt-space-7);
-    }
-    @media (max-width: 620px) {
-      .strip--compact {
-        grid-auto-flow: row;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        justify-content: stretch;
-        gap: var(--tt-space-3);
-      }
-    }
-    .strip--compact .point { flex-direction: column; align-items: center; text-align: center; gap: var(--tt-space-2); }
-    .strip--compact .plate { inline-size: 38px; block-size: 38px; }
+    .strip--compact { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: max-content; justify-content: start; gap: var(--tt-space-6); }
+    .strip--compact .point { flex-direction: row; align-items: center; gap: var(--tt-space-2); }
+    .strip--compact .plate { inline-size: 40px; block-size: 40px; }
+    .strip--compact .point__text strong { font-size: var(--tt-text-sm); }
     .strip--compact .point__text span { display: none; }
 
-    @media (max-width: 900px) {
-      .strip:not(.strip--compact) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-
-    /* Two across on a phone rather than one: four full-width rows of a glyph
-       and two words is a lot of screen for very little. */
+    @media (max-width: 900px) { .strip:not(.strip--compact) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 620px) {
-      .strip:not(.strip--compact) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--tt-space-3); }
-      .strip:not(.strip--compact) .plate { inline-size: 38px; block-size: 38px; }
+      .strip--compact { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); justify-content: stretch; gap: var(--tt-space-2); }
+      .strip--compact .point { flex-direction: column; text-align: center; }
+      .strip:not(.strip--compact) { gap: var(--tt-space-3); }
+      .strip:not(.strip--compact) .plate { inline-size: 42px; block-size: 42px; }
       .strip:not(.strip--compact) .point { gap: var(--tt-space-2); }
+      .strip:not(.strip--compact) .point__text strong { font-size: var(--tt-text-sm); }
     }
   `],
 })
 export class ValueStripComponent {
-  /**
-   * Tighter layout for a page header rather than a section of its own.
-   *
-   * Three points in the default two-column grid leave an orphan on the second
-   * row. Compact lays them out as equal columns with the glyph above the text,
-   * which reads as one row of facts instead of a broken grid.
-   */
   @Input() compact = false;
 
   @Input() points: readonly ValuePoint[] = [
     { icon: 'tag', title: 'מחיר סופי', note: 'מה שרואים לפני התשלום זה מה שמשלמים.', money: true },
     { icon: 'lock', title: 'תשלום מאובטח', note: 'פרטי האשראי עוברים לספק הסליקה.' },
-    { icon: 'truck', title: 'מעקב הזמנה', note: 'דף סטטוס לכל הזמנה, מהתשלום ועד האספקה.' },
-    { icon: 'headset', title: 'תמיכה בעברית', note: 'שאלה על הזמנה או על מוצר, אנחנו כאן.' },
+    { icon: 'delivery', title: 'מעקב הזמנה', note: 'דף סטטוס לכל הזמנה, מהתשלום ועד האספקה.' },
+    { icon: 'support', title: 'תמיכה בעברית', note: 'שאלה על הזמנה או על מוצר, אנחנו כאן.' },
   ];
 }

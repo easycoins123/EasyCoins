@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, Component, ElementRef, HostListener, ViewChild, inject, signal,
+  ChangeDetectionStrategy, Component, ElementRef, HostListener, ViewChild, effect, inject, signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
@@ -102,7 +102,7 @@ import { SearchBoxComponent } from './search-box.component';
              routerLinkActive="active"
              [attr.aria-label]="'עגלת קניות, ' + count() + ' פריטים'">
             <tt-icon name="cart"></tt-icon>
-            <span class="count" *ngIf="count() > 0" aria-hidden="true">{{ count() }}</span>
+            <span class="count" [class.tt-pop]="pop()" *ngIf="count() > 0" aria-hidden="true">{{ count() }}</span>
           </a>
 
           <!-- The one gold thing in the bar. A shop's header should say where
@@ -146,9 +146,11 @@ import { SearchBoxComponent } from './search-box.component';
                   border-color var(--tt-duration) var(--tt-ease);
     }
     .bar--scrolled {
-      background: color-mix(in srgb, var(--tt-bg) 88%, transparent);
-      backdrop-filter: blur(14px);
-      border-block-end-color: var(--tt-border);
+      background: var(--tt-glass);
+      backdrop-filter: blur(16px) saturate(1.2);
+      -webkit-backdrop-filter: blur(16px) saturate(1.2);
+      border-block-end-color: var(--tt-glass-border);
+      box-shadow: var(--tt-glass-highlight), 0 10px 30px rgba(0, 0, 0, 0.35);
     }
     .inner { display: flex; align-items: center; gap: var(--tt-space-5); min-block-size: var(--tt-header-height); }
     .brand { display: inline-flex; flex: none; }
@@ -338,6 +340,22 @@ export class AppHeaderComponent {
   readonly userMenuOpen = signal(false);
   readonly scrolled = signal(false);
   readonly count = this.cart.itemCount;
+
+  /** True for a beat whenever the cart grows, so the badge visibly receives it. */
+  readonly pop = signal(false);
+  private lastCount = this.cart.itemCount();
+
+  constructor() {
+    effect(() => {
+      const next = this.count();
+      if (next > this.lastCount) {
+        this.pop.set(false);
+        setTimeout(() => this.pop.set(true));
+        setTimeout(() => this.pop.set(false), 500);
+      }
+      this.lastCount = next;
+    }, { allowSignalWrites: true });
+  }
 
   /**
    * Whether the drawer exists at all. Above the breakpoint the bar holds the

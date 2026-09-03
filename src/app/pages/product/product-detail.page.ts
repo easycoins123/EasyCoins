@@ -18,6 +18,7 @@ import {
   ProductCardComponent, QuantitySelectorComponent, RegionBadgeComponent, ReviewCardComponent,
   StarRatingComponent, StockBadgeComponent, CompactNumberPipe, IconComponent, CoinPackComponent
 } from '../../ui';
+import { materialForStep } from '../../ui/materials';
 
 interface ProductViewModel {
   readonly detail: ProductDetail;
@@ -75,11 +76,12 @@ interface ProductViewModel {
                 <span class="tt-label">בחירת חבילה</span>
                 <div class="chips">
                   <button type="button"
-                          *ngFor="let variant of vm.detail.product.variants"
+                          *ngFor="let variant of vm.detail.product.variants; let i = index"
+                          [style.--mat]="materialColor(i)"
                           class="chip"
                           [class.on]="variant.id === variantId()"
                           (click)="selectVariant(variant)">
-                    <span>{{ variant.name | t }}</span>
+                    <span class="chip__dot" aria-hidden="true"></span><span>{{ variant.name | t }}</span>
                     <small *ngIf="showsQuantity(variant)" class="tt-faint">
                       {{ variant.quantityValue | compactNumber }} {{ variant.quantityUnit | t }}
                     </small>
@@ -171,6 +173,21 @@ interface ProductViewModel {
             </div>
           </div>
 
+          <!-- On a phone the action never scrolls away. -->
+
+          <div class="buybar tt-glass" *ngIf="offerFor(vm) as offer">
+
+            <span class="buybar__price tt-price">{{ offer.price.current | money }}</span>
+
+            <button type="button" class="tt-btn tt-btn--buy" [disabled]="!canBuy(offer) || cart.busy()" (click)="addToCart(offer)">
+
+              <tt-icon name="cart" [size]="16"></tt-icon> הוספה לעגלה
+
+            </button>
+
+          </div>
+
+
           <section class="tt-section" *ngIf="(reviews$ | async) as reviews">
             <div class="tt-section__head" *ngIf="reviews.length > 0"><h2>ביקורות</h2></div>
             <div class="tt-grid tt-grid--fit" *ngIf="reviews.length > 0">
@@ -253,6 +270,18 @@ interface ProductViewModel {
     .badges { gap: var(--tt-space-1); }
     .delivery { font-size: var(--tt-text-sm); margin: 0; }
     .price-row { display: flex; align-items: baseline; gap: var(--tt-space-2); margin-block-end: var(--tt-space-3); }
+    .media { background: radial-gradient(70% 60% at 50% 60%, var(--tt-brand-tint), transparent 72%), repeating-linear-gradient(99deg, rgba(255, 248, 235, 0.03) 0 1px, transparent 1px 22px), var(--tt-bg-elevated); }
+    .media__art { filter: drop-shadow(0 24px 30px rgba(0, 0, 0, 0.55)); }
+    .chip__dot { display: none; inline-size: 8px; block-size: 8px; border-radius: 50%; background: var(--mat); box-shadow: 0 0 8px var(--mat); }
+    .chip[style*="--mat"] .chip__dot { display: inline-block; }
+    .chip.on[style*="--mat"] { border-color: var(--mat); box-shadow: 0 0 0 1px var(--mat), 0 8px 24px rgba(0, 0, 0, 0.35); }
+    .buybar { display: none; }
+    @media (max-width: 899px) {
+      .buybar { position: fixed; inset-inline: var(--tt-space-3); inset-block-end: var(--tt-space-3); z-index: var(--tt-z-sticky); display: flex; align-items: center; justify-content: space-between; gap: var(--tt-space-3); padding: var(--tt-space-2) var(--tt-space-2) var(--tt-space-2) var(--tt-space-4); border-radius: var(--tt-radius-pill); }
+      .buybar__price { font-size: 1.6rem; }
+      .buybar .tt-btn { min-block-size: 44px; border-radius: var(--tt-radius-pill); }
+      :host { display: block; padding-block-end: 84px; }
+    }
     
     
     .grow { flex: 1; }
@@ -385,6 +414,11 @@ export class ProductDetailPage {
    * variant sits in, so the picture changes with the choice. Anything else
    * keeps its illustration. Zero means "use the picture".
    */
+  /** The tier material for a variant, by its position in the range. */
+  materialColor(index: number): string {
+    return materialForStep(index + 1).color;
+  }
+
   packSteps(vm: ProductViewModel): number {
     if (vm.detail.product.type !== ProductType.GameCurrency) {
       return 0;

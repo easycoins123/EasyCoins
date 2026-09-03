@@ -124,12 +124,44 @@
   --tt-shadow-3: 0 24px 60px rgba(0, 0, 0, 0.55);
   --tt-ring-brand: 0 0 0 1px var(--tt-border-brand), 0 8px 28px rgba(46, 95, 240, 0.26);
   --tt-ring-gold: 0 0 0 1px rgba(242, 179, 61, 0.42);
+  --tt-glow-gold: 0 0 0 1px rgba(242, 179, 61, 0.45), 0 14px 40px rgba(242, 179, 61, 0.18);
+
+  // --- Glass ---------------------------------------------------------------
+  // A translucent surface with a light top edge. Used for floating things:
+  // the scrolled header, menus, price tags, the quote. Depth without a box.
+  --tt-glass: rgba(24, 22, 19, 0.62);
+  --tt-glass-border: rgba(255, 248, 235, 0.14);
+  --tt-glass-highlight: inset 0 1px 0 rgba(255, 248, 235, 0.10);
+
+  // --- Tier materials ------------------------------------------------------
+  // Five bundles, five objects. Each tier is a material rather than a number,
+  // so the shelf reads as a progression the way a collector's audience expects:
+  // steel, bronze, silver, gold, and an obsidian-and-gold elite at the top.
+  // Original palette; the language is familiar, the artwork is ours.
+  --tt-mat-steel: #9AA7B8;
+  --tt-mat-steel-light: #E6ECF4;
+  --tt-mat-steel-glow: rgba(110, 147, 255, 0.35);
+  --tt-mat-bronze: #C98A5A;
+  --tt-mat-bronze-light: #F3D3B8;
+  --tt-mat-bronze-glow: rgba(217, 130, 74, 0.35);
+  --tt-mat-silver: #D6DEE8;
+  --tt-mat-silver-light: #FFFFFF;
+  --tt-mat-silver-glow: rgba(168, 192, 255, 0.35);
+  --tt-mat-gold: #F2B33D;
+  --tt-mat-gold-light: #FFF3D2;
+  --tt-mat-gold-glow: rgba(242, 179, 61, 0.38);
+  --tt-mat-elite: #F6C95E;
+  --tt-mat-elite-light: #FFF6DC;
+  --tt-mat-elite-glow: rgba(255, 211, 113, 0.45);
 
   // --- Typography ----------------------------------------------------------
   --tt-font: 'Heebo', 'Rubik', 'Segoe UI', system-ui, sans-serif;
-  --tt-font-display: 'Heebo', 'Rubik', system-ui, sans-serif;
+  // The display voice. Condensed and athletic, for headlines, tier quantities
+  // and prices; it is what makes "2M" read like a sports poster rather than a
+  // spreadsheet. Falls back to heavy Heebo before the face has loaded.
+  --tt-font-display: 'Karantina', 'Heebo', 'Rubik', system-ui, sans-serif;
   // Tabular figures so prices in a column line up digit for digit.
-  --tt-font-numeric: 'Heebo', 'Segoe UI', system-ui, sans-serif;
+  --tt-font-numeric: 'Karantina', 'Heebo', 'Segoe UI', system-ui, sans-serif;
 
   --tt-text-xs: 0.75rem;
   --tt-text-sm: 0.875rem;

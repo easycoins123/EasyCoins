@@ -9,9 +9,9 @@ import { BRAND } from '../../core/brand';
  * The name is read from the brand configuration rather than typed into the
  * template, so renaming the company does not mean editing the header.
  *
- * The wordmark weights its two halves differently: "EASY" carries the promise
- * and is set solid, "COINS" is the category and steps back. That is what stops
- * it reading as an evenly-weighted word, which is what generic wordmarks do.
+ * The wordmark is set in the display face, condensed and upright, the way a
+ * club crest sets its name. "EASY" carries the promise in the heavier weight;
+ * "COINS" is the category and steps back a shade. The mark keeps its lean.
  */
 @Component({
   selector: 'tt-brand-logo',
@@ -20,9 +20,6 @@ import { BRAND } from '../../core/brand';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <span class="lockup" [class.compact]="compact">
-      <!-- An E built from three bars whose ends are cut as coin edges,
-           leaning forward. Three bars plus a spine is a silhouette that holds
-           at sixteen pixels; a letter inside a circle is not. -->
       <svg class="mark" [attr.width]="markSize" [attr.height]="markSize"
            viewBox="0 0 64 64" aria-hidden="true">
         <defs>
@@ -56,15 +53,15 @@ import { BRAND } from '../../core/brand';
     .mark { flex: none; display: block; }
     .word {
       font-family: var(--tt-font-display);
-      font-size: var(--tt-text-lg);
+      font-size: 1.55rem;
       line-height: 1;
-      letter-spacing: -0.01em;
+      letter-spacing: 0.02em;
       white-space: nowrap;
+      direction: ltr;
+      unicode-bidi: isolate;
     }
-    /* The identity half is solid; the category half steps back a weight and a
-       shade so the lockup has a hierarchy rather than one flat word. */
-    .word__lead { font-weight: 800; }
-    .word__tail { font-weight: 600; color: var(--tt-text-muted); }
+    .word__lead { font-weight: 700; }
+    .word__tail { font-weight: 700; color: var(--tt-gold-400); }
   `],
 })
 export class BrandLogoComponent {

@@ -87,7 +87,7 @@ import {
             </li>
           </ul>
 
-          <aside class="summary tt-card tt-card--pad">
+          <aside class="summary tt-glass tt-card--pad">
             <h2>סיכום</h2>
 
             <div class="row"><span>סכום ביניים</span><span>{{ cart.totals().subtotal | money }}</span></div>

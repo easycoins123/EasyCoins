@@ -3,7 +3,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-import { IconComponent } from './icon.component';
+import { IconComponent, IconName } from './icon.component';
 
 export interface FilterOption {
   readonly value: string;
@@ -24,19 +24,20 @@ export interface FilterChange {
   readonly value: string;
 }
 
+/** A glyph per group, so the toolbar reads at a glance. */
+const GROUP_ICONS: Readonly<Record<string, IconName>> = {
+  platform: 'platform',
+  type: 'tag',
+  sort: 'filter',
+};
+
 /**
  * Store filters.
  *
- * These were four native selects stacked in a disclosure. A select hides its
- * options until it is opened, gives no sense of how many there are, and looks
- * the same on a shop as it does on a tax form, which is why the store kept
- * reading as an admin screen.
- *
- * Chips instead. Every option is visible, choosing one is a single tap, and the
- * current state is legible without opening anything. On a phone the groups move
- * into a sheet that slides from the bottom, with the number of active filters
- * on the button that opens it, so filtering never costs the customer their
- * place in the results.
+ * Every option is a pill, visible and one tap away, with the chosen one lit in
+ * the interactive colour. Each group carries a glyph so the toolbar can be
+ * scanned without reading. On a phone the groups move into a glass sheet from
+ * the bottom with the count of active filters on the button that opens it.
  *
  * The component holds no catalog knowledge. It renders the groups it is given
  * and emits the key and value that changed; the page owns the query.
@@ -51,10 +52,7 @@ export interface FilterChange {
       <label class="find">
         <tt-icon name="search" [size]="18" class="find__icon"></tt-icon>
         <span class="tt-visually-hidden">חיפוש בחנות</span>
-        <input type="search"
-               [value]="search"
-               (input)="searchChange.emit($any($event.target).value)"
-               placeholder="חיפוש מוצר או כמות" />
+        <input type="search" [value]="search" (input)="searchChange.emit($any($event.target).value)" placeholder="חיפוש מוצר או כמות" />
       </label>
 
       <button type="button" class="sheet-open" (click)="open.set(true)">
@@ -63,8 +61,6 @@ export interface FilterChange {
         <span class="count" *ngIf="activeCount > 0">{{ activeCount }}</span>
       </button>
 
-      <!-- Closed on a phone, the sheet is off-screen and inert, so its chips are
-           out of the focus order without being hidden from the page. -->
       <div class="groups" [class.groups--open]="open()" [attr.inert]="isSheet() && !open() ? '' : null">
         <div class="sheet" role="dialog" aria-modal="true" aria-label="סינון">
           <header class="sheet__head">
@@ -76,19 +72,13 @@ export interface FilterChange {
 
           <div class="sheet__body">
             <fieldset class="group" *ngFor="let group of groups">
-              <legend>{{ group.label }}</legend>
+              <legend><tt-icon [name]="iconFor(group.key)" [size]="14"></tt-icon>{{ group.label }}</legend>
               <div class="chips">
-                <button type="button"
-                        class="chip"
-                        [class.on]="group.selected === ''"
-                        (click)="pick(group.key, '')">
+                <button type="button" class="chip tt-pill" [class.on]="group.selected === ''" (click)="pick(group.key, '')">
                   {{ group.anyLabel }}
                 </button>
-                <button type="button"
-                        class="chip"
-                        *ngFor="let option of group.options"
-                        [class.on]="group.selected === option.value"
-                        (click)="pick(group.key, option.value)">
+                <button type="button" class="chip tt-pill" *ngFor="let option of group.options"
+                        [class.on]="group.selected === option.value" (click)="pick(group.key, option.value)">
                   {{ option.label }}
                 </button>
               </div>
@@ -96,12 +86,8 @@ export interface FilterChange {
           </div>
 
           <footer class="sheet__foot">
-            <button type="button" class="tt-btn tt-btn--quiet" *ngIf="activeCount > 0" (click)="clear.emit()">
-              איפוס
-            </button>
-            <button type="button" class="tt-btn tt-btn--primary tt-btn--block" (click)="open.set(false)">
-              הצגת התוצאות
-            </button>
+            <button type="button" class="tt-btn tt-btn--quiet" *ngIf="activeCount > 0" (click)="clear.emit()">איפוס</button>
+            <button type="button" class="tt-btn tt-btn--primary tt-btn--block" (click)="open.set(false)">הצגת התוצאות</button>
           </footer>
         </div>
       </div>
@@ -111,44 +97,30 @@ export interface FilterChange {
   `,
   styles: [`
     :host { display: block; }
+    .bar { display: flex; align-items: center; gap: var(--tt-space-2); flex-wrap: wrap; }
 
-    .bar {
-      display: flex;
-      align-items: center;
-      gap: var(--tt-space-2);
-      flex-wrap: wrap;
-    }
-
-    .find {
-      position: relative;
-      display: flex;
-      align-items: center;
-      flex: 1;
-      min-inline-size: 190px;
-    }
-    .find__icon {
-      position: absolute;
-      inset-inline-start: var(--tt-space-3);
-      color: var(--tt-text-faint);
-      pointer-events: none;
-    }
+    .find { position: relative; display: flex; align-items: center; flex: 1; min-inline-size: 190px; }
+    .find__icon { position: absolute; inset-inline-start: var(--tt-space-3); color: var(--tt-text-faint); pointer-events: none; }
     .find input {
       inline-size: 100%;
-      min-block-size: 44px;
+      min-block-size: 46px;
       padding-inline: 2.6rem var(--tt-space-3);
-      border: 1px solid var(--tt-border);
-      border-radius: var(--tt-radius-md);
-      background: var(--tt-surface);
+      border: 1px solid var(--tt-glass-border);
+      border-radius: var(--tt-radius-pill);
+      background: var(--tt-glass);
+      box-shadow: var(--tt-glass-highlight);
       color: var(--tt-text);
       font: inherit;
       font-size: var(--tt-text-sm);
     }
-    .find input:focus { outline: none; border-color: var(--tt-border-brand); background: var(--tt-surface-2); }
+    .find input:focus { outline: none; border-color: var(--tt-border-brand); box-shadow: var(--tt-glass-highlight), 0 0 0 3px rgba(46, 95, 240, 0.18); }
     .find input::-webkit-search-cancel-button { display: none; }
 
-    /* --- The chips ---------------------------------------------------------- */
     .group { border: 0; margin: 0; padding: 0; min-inline-size: 0; }
     .group legend {
+      display: flex;
+      align-items: center;
+      gap: 6px;
       padding: 0;
       margin-block-end: var(--tt-space-2);
       color: var(--tt-text-faint);
@@ -158,56 +130,26 @@ export interface FilterChange {
       text-transform: uppercase;
     }
     .chips { display: flex; flex-wrap: wrap; gap: var(--tt-space-2); }
-    .chip {
-      min-block-size: 38px;
-      padding-inline: var(--tt-space-3);
-      border: 1px solid var(--tt-border);
-      border-radius: var(--tt-radius-md);
-      background: var(--tt-surface);
-      color: var(--tt-text-muted);
-      font: inherit;
-      font-size: var(--tt-text-sm);
-      font-weight: 600;
-      cursor: pointer;
-      transition: border-color var(--tt-duration-fast) var(--tt-ease),
-                  color var(--tt-duration-fast) var(--tt-ease),
-                  background-color var(--tt-duration-fast) var(--tt-ease);
-    }
-    .chip:hover { border-color: var(--tt-border-strong); color: var(--tt-text); }
-    /* Blue, not gold: choosing a filter is an interaction, not a purchase. */
-    .chip.on {
-      border-color: var(--tt-border-brand);
-      background: var(--tt-brand-tint);
-      color: var(--tt-brand-300);
-    }
 
     .sheet-open { display: none; }
     .scrim { display: none; }
 
-    /* --- Wide: the groups sit open on the page ----------------------------- */
     @media (min-width: 860px) {
-      .groups {
-        flex-basis: 100%;
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--tt-space-5);
-        padding-block-start: var(--tt-space-4);
-      }
+      .groups { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: var(--tt-space-5); padding-block-start: var(--tt-space-4); }
       .sheet { display: contents; }
       .sheet__head, .sheet__foot { display: none; }
       .sheet__body { display: contents; }
     }
 
-    /* --- Phone: a sheet from the bottom ------------------------------------ */
     @media (max-width: 859px) {
       .sheet-open {
         display: inline-flex;
         align-items: center;
         gap: var(--tt-space-2);
-        min-block-size: 44px;
+        min-block-size: 46px;
         padding-inline: var(--tt-space-4);
         border: 1px solid var(--tt-border-strong);
-        border-radius: var(--tt-radius-md);
+        border-radius: var(--tt-radius-pill);
         background: var(--tt-surface);
         color: var(--tt-text);
         font: inherit;
@@ -215,27 +157,8 @@ export interface FilterChange {
         font-weight: 700;
         cursor: pointer;
       }
-      .count {
-        display: grid;
-        place-items: center;
-        min-inline-size: 20px;
-        block-size: 20px;
-        padding-inline: 5px;
-        border-radius: var(--tt-radius-pill);
-        background: var(--tt-brand-500);
-        color: var(--tt-text-on-brand);
-        font-size: 11px;
-        font-weight: 800;
-      }
-
-      .scrim {
-        display: block;
-        position: fixed;
-        inset: 0;
-        z-index: var(--tt-z-drawer);
-        background: var(--tt-overlay);
-      }
-
+      .count { display: grid; place-items: center; min-inline-size: 20px; block-size: 20px; padding-inline: 5px; border-radius: var(--tt-radius-pill); background: var(--tt-brand-500); color: var(--tt-text-on-brand); font-size: 11px; font-weight: 800; }
+      .scrim { display: block; position: fixed; inset: 0; z-index: var(--tt-z-drawer); background: var(--tt-overlay); backdrop-filter: blur(3px); }
       .groups {
         position: fixed;
         inset-inline: 0;
@@ -246,61 +169,28 @@ export interface FilterChange {
         pointer-events: none;
       }
       .groups--open { transform: translateY(0); pointer-events: auto; }
-      @media (prefers-reduced-motion: reduce) {
-        .groups { transition: none; }
-      }
-
+      @media (prefers-reduced-motion: reduce) { .groups { transition: none; } }
       .sheet {
         display: flex;
         flex-direction: column;
         max-block-size: 82vh;
         border-start-start-radius: var(--tt-radius-xl);
         border-start-end-radius: var(--tt-radius-xl);
-        background: var(--tt-bg-elevated);
-        border-block-start: 1px solid var(--tt-border-strong);
-        box-shadow: var(--tt-shadow-3);
+        background: rgba(18, 17, 16, 0.92);
+        backdrop-filter: blur(18px);
+        border-block-start: 1px solid var(--tt-glass-border);
+        box-shadow: var(--tt-glass-highlight), var(--tt-shadow-3);
       }
-      .sheet__head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: var(--tt-space-4);
-        border-block-end: 1px solid var(--tt-border);
-      }
-      .sheet__close {
-        display: grid;
-        place-items: center;
-        inline-size: 38px;
-        block-size: 38px;
-        border: 1px solid var(--tt-border);
-        border-radius: var(--tt-radius-md);
-        background: var(--tt-surface);
-        color: var(--tt-text-muted);
-        cursor: pointer;
-      }
-      .sheet__body {
-        display: flex;
-        flex-direction: column;
-        gap: var(--tt-space-5);
-        padding: var(--tt-space-4);
-        overflow-y: auto;
-        overscroll-behavior: contain;
-      }
-      .sheet__foot {
-        display: flex;
-        align-items: center;
-        gap: var(--tt-space-3);
-        padding: var(--tt-space-4);
-        border-block-start: 1px solid var(--tt-border);
-      }
+      .sheet__head { display: flex; align-items: center; justify-content: space-between; padding: var(--tt-space-4); border-block-end: 1px solid var(--tt-border); font-family: var(--tt-font-display); font-size: var(--tt-text-xl); }
+      .sheet__close { display: grid; place-items: center; inline-size: 38px; block-size: 38px; border: 1px solid var(--tt-border); border-radius: var(--tt-radius-md); background: var(--tt-surface); color: var(--tt-text-muted); cursor: pointer; }
+      .sheet__body { display: flex; flex-direction: column; gap: var(--tt-space-5); padding: var(--tt-space-4); overflow-y: auto; overscroll-behavior: contain; }
+      .sheet__foot { display: flex; align-items: center; gap: var(--tt-space-3); padding: var(--tt-space-4); border-block-start: 1px solid var(--tt-border); }
     }
   `],
 })
 export class FilterBarComponent {
   @Input() groups: readonly FilterGroup[] = [];
   @Input() search = '';
-
-  /** How many groups have a choice, for the badge on the sheet button. */
   @Input() activeCount = 0;
 
   @Output() readonly changed = new EventEmitter<FilterChange>();
@@ -314,13 +204,17 @@ export class FilterBarComponent {
     typeof window !== 'undefined' && window.matchMedia('(max-width: 859px)').matches,
   );
 
-  @HostListener('window:resize')
-  onResize(): void {
-    this.isSheet.set(window.matchMedia('(max-width: 859px)').matches);
+  iconFor(key: string): IconName {
+    return GROUP_ICONS[key] ?? 'filter';
   }
 
   pick(key: string, value: string): void {
     this.changed.emit({ key, value });
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    this.isSheet.set(window.matchMedia('(max-width: 859px)').matches);
   }
 
   @HostListener('document:keydown.escape')
