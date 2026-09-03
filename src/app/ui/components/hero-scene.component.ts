@@ -25,7 +25,6 @@ import { EmblemCardComponent } from './emblem-card.component';
       <tt-emblem-card class="card tt-float"></tt-emblem-card>
       <div class="stage">
         <tt-coin-art class="object" [tier]="tier" variant="hero"></tt-coin-art>
-        <tt-coin-art class="mirror" [tier]="tier" variant="hero"></tt-coin-art>
       </div>
     </div>
   `,
@@ -38,7 +37,7 @@ import { EmblemCardComponent } from './emblem-card.component';
       display: grid;
       place-items: center;
       inline-size: 100%;
-      aspect-ratio: 5 / 5.4;
+      aspect-ratio: 5 / 4.6;
       overflow: visible;
     }
 
@@ -60,40 +59,27 @@ import { EmblemCardComponent } from './emblem-card.component';
 
     .card {
       position: absolute;
-      inset-inline-end: 4%;
+      inset-inline-end: 2%;
       inset-block-start: 0;
-      inline-size: 42%;
+      inline-size: 36%;
       z-index: 0;
       filter: drop-shadow(0 26px 34px rgba(0, 0, 0, 0.6));
     }
 
-    .stage { position: relative; z-index: 1; inline-size: 100%; display: flex; flex-direction: column; align-items: center; margin-block-start: 22%; }
-    .object { inline-size: 100%; filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.6)); }
-
-    .mirror {
-      inline-size: 100%;
-      margin-block-start: -34%;
-      transform: scaleY(-1);
-      opacity: 0.14;
-      filter: blur(2.5px);
-      -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent 34%);
-      mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent 34%);
-      pointer-events: none;
-    }
+    .stage { position: relative; z-index: 1; inline-size: 100%; display: flex; flex-direction: column; align-items: center; margin-block-start: 20%; }
+    .object { inline-size: 104%; max-inline-size: none; filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.6)); }
 
     @media (max-width: 900px) {
       .scene { aspect-ratio: 16 / 12; }
-      .card { inline-size: 34%; inset-inline-end: 8%; inset-block-start: 0; }
+      .card { inline-size: 30%; inset-inline-end: 6%; inset-block-start: 0; }
       .stage { margin-block-start: 14%; }
-      .object { inline-size: 84%; }
-      .mirror { inline-size: 84%; margin-block-start: -30%; opacity: 0.12; }
+      .object { inline-size: 96%; }
     }
-    /* On a phone the scene is exactly as tall as its objects: no reflection
-       and no reserved aspect, so the headline follows the trophy directly. */
+    /* On a phone the scene is exactly as tall as its objects, so the
+       headline follows the trophy directly. */
     @media (max-width: 760px) {
       .scene { aspect-ratio: auto; }
-      .stage { margin-block-start: 16%; }
-      .mirror { display: none; }
+      .stage { margin-block-start: 14%; }
     }
   `],
 })

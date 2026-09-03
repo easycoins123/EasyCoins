@@ -52,15 +52,22 @@ Do not add it "temporarily".
 - **Cards** are code: CSS, SVG, gradients, borders, typography and original
   artwork. They are not rasterised images. See
   `src/app/ui/components/cards/`.
-- **Coin artwork** is original and drawn by `tt-coin-art`. The vector is the
-  source of truth and the final fallback. The raster versions under
-  `src/assets/products/` (`coins-<tier>.avif|webp` for the card composition,
-  `coins-legend-hero.avif|webp` for the hero) are baked from that exact
-  markup by `node qa/bake-coin-art.mjs` with a brushed-metal grain, a
-  specular highlight and a bevelled rim, and registered per composition in
-  `src/app/ui/components/cards/art-sources.ts`. Tiles stay vector. Rebake
-  after changing the drawing; the compliance test enforces a 160 KB per-file
-  and 640 KB total ceiling and that every raster ships in both formats.
+- **Coin artwork** is the approved FUT coin renders supplied by the project
+  owner (September 2026), kept as lossless masters in `docs/design/source/`
+  and baked by `node qa/bake-fut-art.mjs` into `src/assets/products/fut-*`
+  (AVIF with a WebP fallback): one composition per package size that grows
+  from a single coin to a floor of stacks, a product coin, the hero, and two
+  scene coins for the story sections. The sheet tiles are keyed to
+  transparency from their own brightness and framed on one 3:2 canvas, so
+  nothing is stretched or pasted. Every composition is registered in
+  `src/app/ui/components/cards/art-sources.ts`; `tt-coin-art` requests it
+  only when it is near the viewport (the hero at once) and falls back to its
+  own vector coin when nothing is registered. The compliance test enforces a
+  160 KB per-file and 640 KB total ceiling and that every raster ships in
+  both formats. These renders were generated for EASYCOINS and are not EA
+  assets; the "FUT" lettering is used to name the product category, and the
+  footer and the trademarks page state that EASYCOINS is not affiliated with
+  EA. Confirm that use with the owner before any wider marketing use.
 - **Tiers** are EasyCoins' own: Starter, Pro, Elite, Legend, defined once in
   `src/app/ui/components/cards/tiers.ts` and in `src/styles/_tokens.scss`.
   They are not a bronze / silver / gold imitation.

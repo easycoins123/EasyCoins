@@ -15,9 +15,8 @@ import { chromium } from '@playwright/test';
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const OUT = 'src/assets/brand/social-preview.png';
-const coins = readFileSync('src/assets/products/coins.svg', 'utf8')
-  .replace(/<\?xml[^>]*>/, '')
-  .replace(/<svg /, '<svg width="520" height="390" ');
+// The hero render, inlined so the page needs no server.
+const hero = `<img src="data:image/webp;base64,${readFileSync('src/assets/products/fut-hero.webp').toString('base64')}" width="520" alt="">`;
 
 const html = `<!doctype html>
 <html lang="he" dir="rtl">
@@ -46,7 +45,7 @@ const html = `<!doctype html>
   .line { display: flex; gap: 10px; margin-top: 8px; }
   .chip { padding: 8px 16px; border: 1px solid rgba(255, 248, 235, 0.22); border-radius: 999px; font-size: 20px; font-weight: 700; color: #ADA69A; }
   .art { position: relative; display: grid; place-items: center; }
-  .art svg { filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.6)); }
+  .art img { display: block; width: 520px; height: auto; filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.6)); }
   .rule { position: absolute; left: 72px; right: 72px; bottom: 44px; height: 1px; background: linear-gradient(90deg, transparent, rgba(230, 203, 134, 0.5), transparent); }
 </style>
 </head>
@@ -59,7 +58,7 @@ const html = `<!doctype html>
       <h1>קוינס ל־<span class="latin" dir="ltr">Ultimate Team</span><span class="muted">בלי כאב ראש.</span></h1>
       <div class="line"><span class="chip">PlayStation</span><span class="chip">Xbox</span><span class="chip">PC</span><span class="chip">100K – 2M</span></div>
     </div>
-    <div class="art">${coins}</div>
+    <div class="art">${hero}</div>
   </div>
   <div class="rule"></div>
 </body>

@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, Input, OnChanges } from '@angular/core';
+import {
+  AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, NgZone, OnChanges, OnDestroy, inject, signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { CoinTier } from '../../../domain';
@@ -117,25 +119,8 @@ const STACKS: Readonly<Record<'tile' | 'card' | 'quote', Readonly<Record<CoinTie
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div *ngIf="raster as art; else drawn" class="raster">
-      <svg class="stage" [attr.viewBox]="scene.viewBox" aria-hidden="true" focusable="false">
-        <defs>
-          <radialGradient [attr.id]="id('stage')" cx="50%" cy="50%" r="50%">
-            <stop offset="0" [attr.stop-color]="glow" [attr.stop-opacity]="variant === 'hero' ? 0.34 : 0.24"/>
-            <stop offset="0.6" [attr.stop-color]="glow" stop-opacity="0.08"/>
-            <stop offset="1" [attr.stop-color]="glow" stop-opacity="0"/>
-          </radialGradient>
-        </defs>
-        <ellipse [attr.cx]="scene.light.cx" [attr.cy]="scene.light.cy" [attr.rx]="scene.light.rx" [attr.ry]="scene.light.ry"
-                 [attr.fill]="'url(#' + id('stage') + ')'"/>
-        <g *ngIf="scene.rays.length > 0" [attr.stroke]="palette.rim" stroke-width="1" stroke-linecap="round" opacity="0.14">
-          <line *ngFor="let ray of scene.rays" [attr.x1]="ray.x1" [attr.y1]="ray.y1" [attr.x2]="ray.x2" [attr.y2]="ray.y2"/>
-        </g>
-        <g *ngIf="scene.sparks.length > 0" [attr.fill]="palette.rim">
-          <circle *ngFor="let spark of scene.sparks" [attr.cx]="spark.x" [attr.cy]="spark.y" [attr.r]="spark.r" opacity="0.7"/>
-        </g>
-      </svg>
-      <picture>
+    <div *ngIf="raster as art; else drawn" class="raster" [style.aspect-ratio]="art.width + ' / ' + art.height">
+      <picture *ngIf="near()">
         <source [srcset]="art.avif" type="image/avif" />
         <source [srcset]="art.webp" type="image/webp" />
         <img [src]="art.webp" [width]="art.width" [height]="art.height" [alt]="alt"
@@ -317,10 +302,26 @@ const STACKS: Readonly<Record<'tile' | 'card' | 'quote', Readonly<Record<CoinTie
     .art { overflow: visible; }
     .raster { position: relative; }
     .stage { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; overflow: visible; }
-    .raster picture { position: relative; }
+    .raster picture { position: relative; animation: tt-art-in 280ms var(--tt-ease-out) both; }
+    @keyframes tt-art-in { from { opacity: 0; } to { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .raster picture { animation: none; } }
   `],
 })
-export class CoinArtComponent implements OnChanges {
+export class CoinArtComponent implements OnChanges, AfterViewInit, OnDestroy {
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly zone = inject(NgZone);
+  private observer?: IntersectionObserver;
+
+  /**
+   * True once the art is close enough to the viewport to be worth a request.
+   * The hero is the largest paint on the page and is requested at once;
+   * everything below the first screen waits until it is a few hundred
+   * pixels away, so the first screen is not paying for the shelf. A phone
+   * starts a little earlier: decoding while the thumb is already scrolling
+   * is the one place the lazy art can be felt.
+   */
+  readonly near = signal(false);
+
   /** Colours the stage light and, for compositions that go by tier, the size. */
   @Input() tier: CoinTier = 'starter';
   @Input() variant: CoinArtVariant = 'card';
@@ -356,7 +357,30 @@ export class CoinArtComponent implements OnChanges {
 
   ngOnChanges(): void {
     this.scene = this.compose(this.tier, this.variant, this.amount);
-    this.raster = FORCE_VECTOR ? undefined : artSource(this.artKey ?? `coins-${this.tier}`, this.variant);
+    this.raster = FORCE_VECTOR ? undefined : artSource(this.artKey, this.variant, this.tier);
+    if (this.variant === 'hero') {
+      this.near.set(true);
+    }
+  }
+
+  ngAfterViewInit(): void {
+    if (this.near() || typeof IntersectionObserver === 'undefined') {
+      this.near.set(true);
+      return;
+    }
+    this.zone.runOutsideAngular(() => {
+      this.observer = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          this.observer?.disconnect();
+          this.zone.run(() => this.near.set(true));
+        }
+      }, { rootMargin: window.matchMedia('(pointer: coarse)').matches ? '240px 0px' : '48px 0px' });
+      this.observer.observe(this.host.nativeElement);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.observer?.disconnect();
   }
 
   private compose(tier: CoinTier, variant: CoinArtVariant, amount: number | undefined): Scene {

@@ -89,8 +89,8 @@ interface QuickTier {
         <section class="who" [ngSwitch]="auth.status()">
           <div *ngSwitchCase="'checking'" class="who__pending" aria-hidden="true"><span></span><span></span></div>
           <div *ngSwitchCase="'anonymous'" class="who__out">
-            <a class="tt-btn tt-btn--primary" routerLink="/account" (click)="close.emit()">כניסה</a>
-            <a class="tt-btn tt-btn--ghost" routerLink="/account" [queryParams]="{ mode: 'register' }" (click)="close.emit()">הרשמה</a>
+            <a class="tt-btn tt-btn--ghost" routerLink="/account" (click)="close.emit()">כניסה</a>
+            <a class="tt-btn tt-btn--quiet" routerLink="/account" [queryParams]="{ mode: 'register' }" (click)="close.emit()">הרשמה</a>
           </div>
           <a *ngSwitchCase="'authenticated'" class="who__in" routerLink="/account" (click)="close.emit()">
             <span class="avatar" aria-hidden="true">{{ auth.initials() }}</span>

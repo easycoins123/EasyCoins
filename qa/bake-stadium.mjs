@@ -72,8 +72,8 @@ await browser.close();
 
 // Blurred light survives a smaller canvas untouched; encode at 1200 wide.
 const scaled = sharp(png);
-const avif = await scaled.clone().avif({ quality: 38, effort: 8, chromaSubsampling: '4:2:0' }).toBuffer();
-const webp = await scaled.clone().webp({ quality: 70, alphaQuality: 82, effort: 6 }).toBuffer();
+const avif = await scaled.clone().avif({ quality: 30, effort: 8, chromaSubsampling: '4:2:0' }).toBuffer();
+const webp = await scaled.clone().webp({ quality: 62, alphaQuality: 80, effort: 6 }).toBuffer();
 writeFileSync(`${OUT}/stadium-bokeh.avif`, avif);
 writeFileSync(`${OUT}/stadium-bokeh.webp`, webp);
 writeFileSync('qa/screenshots/bake-stadium-bokeh.png', png);

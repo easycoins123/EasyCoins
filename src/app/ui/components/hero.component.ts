@@ -235,7 +235,7 @@ interface PriceTag {
       /* The trophy leads on a phone, small enough that the headline, the
          price and the action share the first screen with it. */
       .art { order: -1; inline-size: 100%; perspective: none; margin-block: 0 var(--tt-space-1); }
-      .art__stage { inline-size: min(64%, 280px); transform: none !important; }
+      .art__stage { inline-size: min(84%, 340px); transform: none !important; }
       .tag { display: none; }
     }
   `],

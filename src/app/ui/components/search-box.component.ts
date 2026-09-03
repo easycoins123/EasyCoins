@@ -11,6 +11,7 @@ import { formatQuantity } from '../../core/value';
 import { Product } from '../../domain';
 import { CatalogFacade } from '../../state';
 import { MoneyPipe } from '../money.pipe';
+import { CoinArtComponent } from './cards/coin-art.component';
 import { IconComponent } from './icon.component';
 
 /**
@@ -27,7 +28,7 @@ import { IconComponent } from './icon.component';
 @Component({
   selector: 'tt-search-box',
   standalone: true,
-  imports: [CommonModule, LocalizePipe, MoneyPipe, IconComponent],
+  imports: [CommonModule, LocalizePipe, MoneyPipe, IconComponent, CoinArtComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <form class="search" role="search" (submit)="submit($event)">
@@ -59,7 +60,10 @@ import { IconComponent } from './icon.component';
 
         <li *ngFor="let product of results()" role="option" [attr.aria-selected]="false">
           <button type="button" class="result" (click)="goToProduct(product)">
-            <img *ngIf="product.images[0] as image" [src]="image.url" alt="" aria-hidden="true" />
+            <tt-coin-art *ngIf="isCoins(product); else picture" class="result__coin" variant="quote" artKey="fut-thumb" tier="legend"></tt-coin-art>
+            <ng-template #picture>
+              <img *ngIf="product.images[0] as image" [src]="image.url" alt="" aria-hidden="true" />
+            </ng-template>
             <span class="result__text">
               <span class="result__name">{{ product.name | t }}</span>
               <span class="result__meta">{{ quantityOf(product) }}</span>
@@ -159,6 +163,7 @@ import { IconComponent } from './icon.component';
     }
     .result:hover, .result:focus-visible { background: var(--tt-surface-2); }
     .result img { inline-size: 34px; block-size: 34px; object-fit: contain; flex: none; }
+    .result__coin { inline-size: 56px; flex: none; }
     .result__text { display: flex; flex-direction: column; flex: 1; min-inline-size: 0; }
     .result__name {
       font-size: var(--tt-text-sm);
@@ -197,6 +202,11 @@ import { IconComponent } from './icon.component';
   `],
 })
 export class SearchBoxComponent {
+  /** The coin product carries the FUT coin; every other product its own picture. */
+  isCoins(product: Product): boolean {
+    return /\/coins\.svg$/.test(product.images[0]?.url ?? '');
+  }
+
   private readonly catalog = inject(CatalogFacade);
   private readonly router = inject(Router);
   private readonly host = inject(ElementRef<HTMLElement>);

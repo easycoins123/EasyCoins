@@ -114,7 +114,7 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
           <ol class="steps">
             <li class="step tt-plate" ttReveal="1">
               <span class="step__num">01</span>
-              <div class="step__art"><tt-process-art step="choose"></tt-process-art></div>
+              <div class="step__art step__art--coins"><tt-coin-art variant="bundle" artKey="fut-stadium" tier="elite"></tt-coin-art></div>
               <h3>בחרו חבילה</h3>
               <p>בחרו את כמות הקוינס והפלטפורמה שלכם. המחיר מוצג מראש.</p>
             </li>
@@ -190,7 +190,7 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
           </div>
           <p class="close__fine"><tt-icon name="lock" [size]="13"></tt-icon> תשלום מאובטח · מחיר סופי · דף מעקב לכל הזמנה</p>
         </div>
-        <div class="close__art" aria-hidden="true"><tt-coin-art variant="bundle" [amount]="2000000" tier="legend"></tt-coin-art></div>
+        <div class="close__art" aria-hidden="true"><tt-coin-art variant="bundle" artKey="fut-podium" tier="legend"></tt-coin-art></div>
       </div>
     </section>
   `,

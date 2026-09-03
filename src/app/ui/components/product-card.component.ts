@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
+import { STOREFRONT } from '../../core/brand';
 import { LocalizePipe } from '../../core/i18n';
 import { formatQuantity, savedAmount } from '../../core/value';
 import { CoinTier, Money, Platform, Product, ProductType, Region } from '../../domain';
@@ -32,7 +33,7 @@ import { IconComponent } from './icon.component';
   template: `
     <a class="card" [routerLink]="['/products', product.slug]" [attr.aria-label]="product.name | t">
       <div class="media">
-        <tt-coin-art *ngIf="largestQuantity as quantity; else artwork"
+        <tt-coin-art *ngIf="coinQuantity as quantity; else artwork"
                      class="media__art" [tier]="tierFor(quantity)" variant="card"></tt-coin-art>
         <ng-template #artwork>
           <img *ngIf="product.images[0] as image"
@@ -159,6 +160,11 @@ export class ProductCardComponent {
 
   tierFor(quantity: number): CoinTier {
     return tierForAmount(quantity);
+  }
+
+  /** The FUT coin art belongs to the coin product only; FC Points and the rest keep their own picture. */
+  get coinQuantity(): number | undefined {
+    return this.product.slug === STOREFRONT.focusProductSlug ? this.largestQuantity : undefined;
   }
 
   get largestQuantity(): number | undefined {

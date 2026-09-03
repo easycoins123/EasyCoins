@@ -49,7 +49,16 @@ import {
                  on a cold start. The form's shape is shown at once, and after a
                  moment the wait is explained rather than left silent. -->
             <div class="waiting" *ngIf="checkout.busy() && checkout.requirements().length === 0" role="status" aria-live="polite">
-              <p class="tt-alert">טוענים את פרטי ההזמנה…</p>
+              <div class="waiting__plate">
+                <span class="waiting__glyph" aria-hidden="true">
+                  <span class="waiting__ring"></span>
+                  <tt-icon name="shield" [size]="22"></tt-icon>
+                </span>
+                <span class="waiting__text">
+                  <strong>מכינים את התשלום המאובטח שלך…</strong>
+                  <span>הפרטים נטענים מהשרת. ההזמנה נוצרת רק אחרי אישור הפרטים, ולא בוצע חיוב.</span>
+                </span>
+              </div>
               <p class="tt-alert waiting__slow" *ngIf="slow()">
                 השרת מתעורר, זה יכול לקחת עוד כמה שניות. עדיין לא נוצרה הזמנה ולא בוצע חיוב.
               </p>
@@ -295,7 +304,7 @@ import {
     .progress li { display: inline-flex; align-items: center; gap: 6px; padding: 0.3rem 0.7rem 0.3rem 0.4rem; border: 1px solid var(--tt-border); border-radius: var(--tt-radius-pill); }
     .progress li span { display: grid; place-items: center; inline-size: 20px; block-size: 20px; border-radius: 50%; background: var(--tt-surface-3); font-family: var(--tt-font-display); font-size: var(--tt-text-sm); color: var(--tt-text); }
     .progress li.on { color: var(--tt-text); border-color: var(--tt-border-brand); background: var(--tt-brand-tint); }
-    .progress li.on span { background: var(--tt-brand-500); color: #fff; }
+    .progress li.on span { background: var(--tt-brand-500); color: var(--tt-text-on-brand); }
     .progress li.done { color: var(--tt-success); border-color: rgba(67, 209, 138, 0.4); }
     .progress li.done span { background: var(--tt-success); color: #062814; }
     .pay__sum { font-weight: 800; font-variant-numeric: tabular-nums; }
@@ -361,6 +370,14 @@ import {
     .tt-check-field { display: flex; flex-direction: column; gap: var(--tt-space-2); }
     .waiting { display: flex; flex-direction: column; gap: var(--tt-space-3); margin-block-end: var(--tt-space-4); }
     .waiting .tt-alert { margin: 0; }
+    .waiting__plate { display: flex; align-items: center; gap: var(--tt-space-3); padding: var(--tt-space-3) var(--tt-space-4); border: 1px solid var(--tt-gold-600); border-radius: var(--tt-radius-md);
+      background: linear-gradient(90deg, var(--tt-gold-tint), transparent 60%), var(--tt-surface-2); }
+    .waiting__glyph { position: relative; display: grid; place-items: center; inline-size: 48px; block-size: 48px; flex: none; border-radius: 50%; color: var(--tt-gold-400); background: var(--tt-surface-3); }
+    .waiting__ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--tt-gold-500); border-inline-start-color: transparent; animation: tt-spin 1.1s linear infinite; }
+    .waiting__text { display: flex; flex-direction: column; gap: 2px; }
+    .waiting__text strong { font-size: var(--tt-text-md); }
+    .waiting__text span { color: var(--tt-text-muted); font-size: var(--tt-text-sm); line-height: var(--tt-leading-snug); }
+    @media (prefers-reduced-motion: reduce) { .waiting__ring { animation: none; border-inline-start-color: var(--tt-gold-500); } }
     .waiting__form { display: flex; flex-direction: column; gap: var(--tt-space-2); }
     .waiting__label { inline-size: 32%; block-size: 14px; }
     .waiting__input { inline-size: 100%; block-size: 44px; margin-block-end: var(--tt-space-2); }

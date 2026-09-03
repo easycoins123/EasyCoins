@@ -32,16 +32,17 @@
 //
 :root {
   // --- Brand: interaction --------------------------------------------------
-  --tt-brand-300: #A8C0FF;
-  --tt-brand-400: #88A6FF; // body link colour; carries the AA contrast floor
-  // Deep enough that white text on it clears 4.5:1. The brighter blue above it
-  // failed AA on the skip link and on any filled button, and a primary colour
-  // that cannot carry its own label is not a primary colour.
-  --tt-brand-500: #2E5FF0; // primary action
-  --tt-brand-600: #2553E0;
-  --tt-brand-700: #1638A8;
-  --tt-brand-tint: rgba(46, 95, 240, 0.15);
-  --tt-brand-tint-strong: rgba(46, 95, 240, 0.28);
+  // The interaction colour is the gold. Selected chips, links, focus rings,
+  // the primary button and the account avatar all take it, so the one accent
+  // on the page is the one that means money. Text on a filled brand surface
+  // is the dark ink of the buy button (see --tt-text-on-brand), never white.
+  --tt-brand-300: var(--tt-gold-300);
+  --tt-brand-400: var(--tt-gold-400); // body link colour
+  --tt-brand-500: var(--tt-gold-500); // primary action
+  --tt-brand-600: var(--tt-gold-600);
+  --tt-brand-700: var(--tt-gold-700);
+  --tt-brand-tint: rgba(212, 180, 106, 0.14);
+  --tt-brand-tint-strong: rgba(212, 180, 106, 0.26);
 
   // --- Gold: money ---------------------------------------------------------
   // Champagne, not amber. The previous scale (#F2B33D) was a saturated warm
@@ -84,13 +85,13 @@
   // Lifted until it clears 4.5:1 on the lightest surface it is used on,
   // not merely on the page ground.
   --tt-text-faint: #9A9184;
-  --tt-text-on-brand: #FFFFFF;
+  --tt-text-on-brand: var(--tt-text-on-gold);
   --tt-text-on-gold: #241A05;
 
   // --- Lines ---------------------------------------------------------------
   --tt-border: rgba(255, 248, 235, 0.09);
   --tt-border-strong: rgba(255, 248, 235, 0.18);
-  --tt-border-brand: rgba(46, 95, 240, 0.50);
+  --tt-border-brand: rgba(212, 180, 106, 0.55);
 
   // --- Status --------------------------------------------------------------
   --tt-success: #43D18A;
@@ -99,11 +100,11 @@
   // stopped meaning money.
   --tt-warning: #FF9A3C;
   --tt-danger: #FF6A5C;
-  --tt-info: #6E93FF;
+  --tt-info: #A9B7C9; // a cool steel, not a blue: information sits beside gold without competing
   --tt-success-tint: rgba(67, 209, 138, 0.14);
   --tt-warning-tint: rgba(255, 154, 60, 0.14);
   --tt-danger-tint: rgba(255, 106, 92, 0.14);
-  --tt-info-tint: rgba(110, 147, 255, 0.14);
+  --tt-info-tint: rgba(169, 183, 201, 0.12);
 
   // --- Spacing (4px base) --------------------------------------------------
   --tt-space-1: 0.25rem;
@@ -131,7 +132,7 @@
   --tt-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
   --tt-shadow-2: 0 10px 30px rgba(0, 0, 0, 0.45);
   --tt-shadow-3: 0 24px 60px rgba(0, 0, 0, 0.55);
-  --tt-ring-brand: 0 0 0 1px var(--tt-border-brand), 0 8px 28px rgba(46, 95, 240, 0.22);
+  --tt-ring-brand: 0 0 0 1px var(--tt-border-brand), 0 8px 28px rgba(212, 180, 106, 0.18);
   --tt-ring-gold: 0 0 0 1px rgba(212, 180, 106, 0.40);
   // A hairline of the metal and a soft drop, never a halo. Glow was the
   // loudest tell that the interface was decorated rather than designed.
@@ -306,11 +307,11 @@
   --tt-text: #17150F;
   --tt-text-muted: #55503F;
   --tt-text-faint: #6E6857;
-  --tt-text-on-brand: #FFFFFF;
+  --tt-text-on-brand: #241A05;
 
   --tt-border: rgba(23, 21, 15, 0.11);
   --tt-border-strong: rgba(23, 21, 15, 0.22);
-  --tt-border-brand: rgba(59, 109, 255, 0.4);
+  --tt-border-brand: rgba(116, 88, 26, 0.45);
 
   // Gold and lime both vanish on white and have to darken to keep contrast.
   --tt-gold-400: #8A6A1E;

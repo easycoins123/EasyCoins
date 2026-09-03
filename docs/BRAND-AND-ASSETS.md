@@ -148,8 +148,10 @@ the interface.
 
 Since September 2026 the storefront is composed to a locked visual reference
 (`docs/design/easycoins-final-reference.png`): black and gold, a stadium after dark
-(`tt-stadium`), the EasyCoins coin as the trophy and the product, an original
-emblem card (`tt-emblem-card`) instead of any player, three object cards for the
-process, and every order presented as a ticket (`.tt-ticket`). No people appear
-anywhere. The rules and the bake commands for the raster pieces are in
-[CONTRIBUTING.md](../CONTRIBUTING.md#asset-policy).
+(`tt-stadium`), the FUT coin renders as the product (hero, package shelf, product
+page, cart, the story sections; masters in `docs/design/source/`, baked by
+`qa/bake-fut-art.mjs`), an original emblem card (`tt-emblem-card`) instead of any
+player, three object cards for the process, and every order presented as a ticket
+(`.tt-ticket`). The interaction colour is the gold; green is stadium atmosphere
+only. No people appear anywhere. The rules and the bake commands for the raster
+pieces are in [CONTRIBUTING.md](../CONTRIBUTING.md#asset-policy).

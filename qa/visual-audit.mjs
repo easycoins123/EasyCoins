@@ -81,6 +81,17 @@ for (const width of WIDTHS) {
     await page.waitForTimeout(600);
     await measure(target.name);
     await page.screenshot({ path: `${dir}/${target.name}-fold.png`, fullPage: false });
+    // Below-the-fold artwork is requested as it comes near; walk the page
+    // once so the full capture shows what a visitor who scrolled would see.
+    await page.evaluate(async () => {
+      const step = Math.max(400, window.innerHeight * 0.8);
+      for (let y = 0; y < document.documentElement.scrollHeight; y += step) {
+        window.scrollTo(0, y);
+        await new Promise((resolve) => setTimeout(resolve, 90));
+      }
+      window.scrollTo(0, 0);
+    });
+    await page.waitForTimeout(700);
     await page.screenshot({ path: `${dir}/${target.name}-full.png`, fullPage: true });
   }
 

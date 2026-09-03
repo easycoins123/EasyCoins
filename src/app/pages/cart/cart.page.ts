@@ -11,7 +11,7 @@ import { LocalizePipe } from '../../core/i18n';
 import { CartItem, ProductType } from '../../domain';
 import { CartFacade, CatalogFacade } from '../../state';
 import {
-  BundleLadderComponent,
+  BundleLadderComponent, CoinArtComponent,
   EmptyStateComponent, FulfillmentBadgeComponent, MoneyPipe, PlatformBadgeComponent,
   QuantitySelectorComponent, RegionBadgeComponent,
 } from '../../ui';
@@ -29,7 +29,7 @@ import {
   imports: [
     CommonModule, FormsModule, RouterLink, LocalizePipe, MoneyPipe,
     QuantitySelectorComponent, PlatformBadgeComponent, RegionBadgeComponent,
-    FulfillmentBadgeComponent, EmptyStateComponent, BundleLadderComponent,
+    FulfillmentBadgeComponent, EmptyStateComponent, BundleLadderComponent, CoinArtComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -62,7 +62,10 @@ import {
         <div class="layout" *ngIf="lookups$ | async as lookups">
           <ul class="lines">
             <li class="line tt-card" *ngFor="let item of cart.items(); trackBy: trackById">
-              <img *ngIf="item.imageUrl" [src]="item.imageUrl" [alt]="item.displayName | t" />
+              <tt-coin-art *ngIf="isCoins(item); else picture" class="thumb" variant="quote" artKey="fut-thumb" tier="legend"></tt-coin-art>
+              <ng-template #picture>
+                <img *ngIf="item.imageUrl" [src]="item.imageUrl" [alt]="item.displayName | t" />
+              </ng-template>
 
               <div class="details">
                 <strong>{{ item.displayName | t }}</strong>
@@ -141,6 +144,7 @@ import {
     .lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--tt-space-3); }
     .line { display: flex; gap: var(--tt-space-4); padding: var(--tt-space-4); align-items: center; flex-wrap: wrap; }
     .line img { inline-size: 64px; block-size: 64px; object-fit: contain; }
+    .line .thumb { inline-size: 84px; flex: none; }
     .details { display: flex; flex-direction: column; gap: var(--tt-space-1); flex: 1; min-inline-size: 180px; }
     .controls { display: flex; align-items: center; gap: var(--tt-space-3); }
     .line-total { font-weight: 700; min-inline-size: 84px; }
@@ -155,6 +159,12 @@ import {
 })
 export class CartPage {
   readonly cart = inject(CartFacade);
+
+  /** A coin line shows the FUT coin; the catalog's own picture is a flat icon. */
+  isCoins(item: CartItem): boolean {
+    return /\/coins\.svg$/.test(item.imageUrl ?? '');
+  }
+
   private readonly catalog = inject(CatalogFacade);
   private readonly router = inject(Router);
   private readonly analytics = inject(AnalyticsService);

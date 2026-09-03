@@ -1,17 +1,20 @@
 /**
  * Raster art registry.
  *
- * The coin artwork is drawn in SVG by `tt-coin-art`, and that vector remains
- * the source of truth and the final fallback. For the compositions that are
- * shown large, a baked raster of the same drawing with brushed-metal grain, a
- * specular highlight and a bevelled rim is registered here per art key, as an
- * AVIF with a WebP fallback (see `qa/bake-coin-art.mjs`). The component asks
- * for the composition it is about to draw and gets the best representation:
+ * The product is Ultimate Team coins, and the artwork that says so is the
+ * approved FUT coin renders baked by `qa/bake-fut-art.mjs` from the masters
+ * in `docs/design/source`: one composition per package size, growing from a
+ * single coin to a floor of stacks, a clean product coin, the hero render,
+ * and two scene coins (under the floodlights, on the plinth) for the story
+ * sections. Each ships as AVIF with a WebP fallback. The vector coin drawn by
+ * `tt-coin-art` remains the fallback when no raster is registered.
+ *
+ * Compositions a component can ask for:
  *
  *   bundle  the package shelf, one composition per bundle size
- *   card    product cards without an amount, the quote, the product page
- *   hero    the home hero (Legend only; nothing else is shown that large)
- *   tile    never raster. At 60-100 CSS px the vector is sharper and free.
+ *   card    a single product coin: cards without an amount, the quote, the
+ *           amount picker's tiles, the product page, the cart thumbnail
+ *   hero    the home hero
  *
  * Paths are relative to `src/`, the way Angular serves assets. The compliance
  * test checks that every registered file exists, that every raster ships in
@@ -31,23 +34,33 @@ export interface ArtSource {
 
 export type ArtSet = Readonly<Partial<Record<ArtComposition, ArtSource>>>;
 
-const file = (name: string, width = 720, height = 576): ArtSource => ({
+const file = (name: string, width = 448, height = 299): ArtSource => ({
   avif: `assets/products/${name}.avif`,
   webp: `assets/products/${name}.webp`,
   width,
   height,
 });
 
+/** The product coin, lying flat. One file for every tier: the tier colours the chip, not the coin. */
+const PRODUCT_COIN = file('fut-coin');
+const HERO = file('fut-hero', 960, 663);
+
 export const ART_SOURCES: Readonly<Partial<Record<string, ArtSet>>> = {
-  'coins-starter': { card: file('coins-starter') },
-  'coins-pro': { card: file('coins-pro') },
-  'coins-elite': { card: file('coins-elite') },
-  'coins-legend': { card: file('coins-legend'), hero: file('coins-legend-hero', 1200, 1015) },
-  'bundle-100k': { bundle: file('bundle-100k') },
-  'bundle-250k': { bundle: file('bundle-250k') },
-  'bundle-500k': { bundle: file('bundle-500k') },
-  'bundle-1m': { bundle: file('bundle-1m') },
-  'bundle-2m': { bundle: file('bundle-2m') },
+  'coins-starter': { card: PRODUCT_COIN },
+  'coins-pro': { card: PRODUCT_COIN },
+  'coins-elite': { card: PRODUCT_COIN },
+  'coins-legend': { card: PRODUCT_COIN, hero: HERO },
+  'bundle-100k': { bundle: file('fut-100k') },
+  'bundle-250k': { bundle: file('fut-250k') },
+  'bundle-500k': { bundle: file('fut-500k') },
+  'bundle-1m': { bundle: file('fut-1m') },
+  'bundle-2m': { bundle: file('fut-2m') },
+  /** A coin under the floodlights: the "choose" step, where the game is. */
+  'fut-stadium': { bundle: file('fut-stadium'), card: file('fut-stadium') },
+  /** A coin on the plinth: the closing invitation. */
+  'fut-podium': { bundle: file('fut-podium'), card: file('fut-podium') },
+  /** The product coin at thumbnail size, for cart lines. */
+  'fut-thumb': { card: file('fut-thumb', 240, 160) },
 };
 
 /** The art key for a bundle size, e.g. 1_000_000 -> "bundle-1m". */
@@ -59,21 +72,24 @@ export function bundleArtKey(amount: number): string {
   return `bundle-${Math.round(amount / 1_000)}k`;
 }
 
-/** The composition a variant draws, or none when the vector is the better choice. */
-export function compositionFor(variant: CoinArtVariant): ArtComposition | undefined {
+/** The composition a variant draws. */
+export function compositionFor(variant: CoinArtVariant): ArtComposition {
   switch (variant) {
     case 'hero': return 'hero';
     case 'bundle': return 'bundle';
-    case 'card':
-    case 'quote': return 'card';
-    default: return undefined;
+    default: return 'card';
   }
 }
 
-export function artSource(artKey: string | undefined, variant: CoinArtVariant): ArtSource | undefined {
+/**
+ * The raster for an art key and variant.
+ *
+ * A bundle size without a composition of its own (a custom amount) falls
+ * back to the product coin, so the shelf never mixes the FUT coin with the
+ * vector one.
+ */
+export function artSource(artKey: string | undefined, variant: CoinArtVariant, tier = 'legend'): ArtSource | undefined {
   const composition = compositionFor(variant);
-  if (!artKey || !composition) {
-    return undefined;
-  }
-  return ART_SOURCES[artKey]?.[composition];
+  const key = artKey ?? `coins-${tier}`;
+  return ART_SOURCES[key]?.[composition] ?? ART_SOURCES[`coins-${tier}`]?.card ?? PRODUCT_COIN;
 }

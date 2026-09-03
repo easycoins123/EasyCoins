@@ -57,6 +57,11 @@ for (const width of WIDTHS) {
 
     for (let index = 0; index < count; index += 1) {
       const card = cards.nth(index);
+      // The art is requested when a card comes near the viewport; bring each
+      // card into view the way a visitor would before judging it.
+      await card.scrollIntoViewIfNeeded();
+      await card.locator("tt-coin-art img, tt-coin-art svg").first().waitFor({ timeout: 5000 }).catch(() => {});
+      await page.waitForTimeout(150);
       const facts = await card.evaluate((node) => {
         const text = (selector) => node.querySelector(selector)?.textContent?.trim() ?? '';
         const svg = node.querySelector('tt-coin-art svg, tt-coin-art img');

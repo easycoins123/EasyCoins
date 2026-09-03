@@ -150,9 +150,9 @@ import { TIERS, Tier } from './tiers';
     .card--featured .chip { background: var(--tt-gold-500); border-color: transparent; color: var(--tt-text-on-gold); }
 
     /* The art fills its frame: the composition already carries its own air. */
-    .media { position: relative; display: block; inline-size: 100%; aspect-ratio: 4 / 3; margin-block: 0 var(--tt-space-1);
+    .media { position: relative; display: block; inline-size: 100%; aspect-ratio: 3 / 2; margin-block: 0 var(--tt-space-1);
       background: radial-gradient(60% 55% at 50% 66%, var(--tier-glow), transparent 72%); }
-    .media__art { position: absolute; inset: -9% -8%; inline-size: 116%; filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.55)); transition: transform var(--tt-duration-slow) var(--tt-ease-out); }
+    .media__art { position: absolute; inset: -5% -6%; inline-size: 112%; filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.55)); transition: transform var(--tt-duration-slow) var(--tt-ease-out); }
     .media__art ::ng-deep .art, .media__art ::ng-deep .raster { block-size: 100%; }
     .media__art ::ng-deep img, .media__art ::ng-deep .art { object-fit: contain; block-size: 100%; }
     .card:hover .media__art { transform: translateY(-3px) scale(1.03); }
