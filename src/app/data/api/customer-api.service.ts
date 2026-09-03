@@ -7,6 +7,11 @@ export interface AuthMethods {
   /** False until Google credentials exist on the server. */
   readonly google: boolean;
   readonly emailCode: boolean;
+  /**
+   * Whether a reset link can actually be delivered. Absent on older servers,
+   * which the client reads as "yes".
+   */
+  readonly passwordReset?: boolean;
 }
 
 /**

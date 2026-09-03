@@ -509,6 +509,42 @@ in the provider's hosted field or on the provider's own page. See
 
 ---
 
+### 7.7a Accounts and federated sign-in
+
+Added after the passwordless code above; the session model is unchanged. Every
+successful sign-in rotates the session cookie and claims the guest session's
+orders. See `docs/GOOGLE-OAUTH.md` and `docs/SECURITY-ARCHITECTURE.md`.
+
+#### `GET /api/v1/auth/methods`
+- **Auth** public · **Response 200** `{ password, google, emailCode, passwordReset }`
+- `google` is true only when the server holds Google credentials; `emailCode`
+  and `passwordReset` are true only when a mail transport exists. The
+  storefront hides what cannot work.
+
+#### `POST /api/v1/auth/register` — `{ email, password, displayName? }` → **204**
+- Always 204. A session cookie is issued **only** when an account was created;
+  an address that already has one gets the same 204 and no cookie, so the
+  endpoint cannot enumerate customers. Clients follow with `GET /me`.
+- **Errors** `422 WEAK_PASSWORD` (field error on `password`); `429`
+
+#### `POST /api/v1/auth/login` — `{ email, password }` → **200** `MeDto` + `Set-Cookie`
+- **Errors** `401 INVALID_CREDENTIALS` (one message for unknown address, no
+  password and wrong password); `401 ACCOUNT_INACTIVE`; `429`
+
+#### `POST /api/v1/auth/password/forgot` `{ email }` → 204 · `POST /api/v1/auth/password/reset` `{ token, password }` → 200 `MeDto` · `POST /api/v1/auth/password/change` `{ currentPassword, newPassword }` → 204 (auth required)
+
+#### `GET /api/v1/auth/google?returnTo=/path` → **302** to Google
+- Sets an httpOnly `tt_oauth_state` cookie holding only the hash of the state.
+  `returnTo` must be a same-site path. **503** when Google is not configured.
+
+#### `GET /api/v1/auth/google/callback` → **302** to the storefront
+- Success: `Set-Cookie: tt_session` and a redirect to `APP_BASE_URL` + `returnTo`.
+- Cancelled at Google (`error=access_denied`): `APP_BASE_URL/account?auth=cancelled`.
+- Any other failure (missing or forged state, exchange or token failure,
+  unverified email): `APP_BASE_URL/account?auth=failed`. No session either way.
+
+---
+
 ### 7.8 Webhooks (provider → backend)
 
 Not called by the browser. Documented because they are the authoritative path.

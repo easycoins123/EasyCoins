@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 
 import { brandTitle } from './core/brand';
 
+import { authRequiredGuard } from './pages/account/auth-required.guard';
 import { cartNotEmptyGuard } from './pages/checkout/cart-not-empty.guard';
 import { LEGAL_PAGES, LEGAL_PAGES_PENDING } from './pages/legal/legal.content';
 
@@ -73,9 +74,19 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import('./pages/account/account.page').then((m) => m.AccountPage),
   },
   {
+    // Reachable as a guest on purpose: an order placed without an account is
+    // owned by the anonymous session that placed it, and this is where that
+    // session reads it. The page itself invites sign-in when there is nothing.
     path: 'account/orders',
     title: brandTitle('ההזמנות שלי'),
     loadComponent: () => import('./pages/account/account-orders.page').then((m) => m.AccountOrdersPage),
+  },
+  {
+    // Account-only. Anonymous visitors are sent to sign in and brought back.
+    path: 'account/security',
+    title: brandTitle('אבטחת החשבון'),
+    canActivate: [authRequiredGuard],
+    loadComponent: () => import('./pages/account/account-security.page').then((m) => m.AccountSecurityPage),
   },
   {
     path: 'account/order/:orderId',

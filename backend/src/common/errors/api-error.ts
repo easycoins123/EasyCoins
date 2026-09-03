@@ -155,6 +155,36 @@ export const unauthorizedError = (message: string, code = 'UNAUTHENTICATED'): Ap
     ),
   });
 
+/**
+ * A sign-in that did not match. One message for an unknown address, an account
+ * with no password and a wrong password, so the response cannot be used to
+ * learn which addresses exist; and worded as what happened, not as an expired
+ * session, which is what the generic 401 text would have told the customer.
+ */
+export const invalidCredentialsError = (): ApiError =>
+  new ApiError({
+    kind: ApiErrorKind.Unauthorized,
+    status: 401,
+    code: 'INVALID_CREDENTIALS',
+    message: 'Email or password is incorrect',
+    userMessage: text(
+      'האימייל או הסיסמה שגויים.',
+      'Email or password is incorrect.',
+    ),
+  });
+
+export const accountInactiveError = (): ApiError =>
+  new ApiError({
+    kind: ApiErrorKind.Unauthorized,
+    status: 401,
+    code: 'ACCOUNT_INACTIVE',
+    message: 'This account is not active',
+    userMessage: text(
+      'החשבון הזה אינו פעיל. פנו לתמיכה.',
+      'This account is not active. Please contact support.',
+    ),
+  });
+
 export const forbiddenError = (message: string, code = 'FORBIDDEN'): ApiError =>
   new ApiError({
     kind: ApiErrorKind.Forbidden,

@@ -96,7 +96,7 @@ export class MockCustomerApiService extends CustomerApiService {
    * as it does against a freshly deployed server.
    */
   getAuthMethods(): Observable<AuthMethods> {
-    return this.backend.respond({ password: true, google: false, emailCode: true }, 80);
+    return this.backend.respond({ password: true, google: false, emailCode: true, passwordReset: true }, 80);
   }
 
   register(email: string, password: string, displayName?: string): Observable<void> {

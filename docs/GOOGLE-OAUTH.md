@@ -57,7 +57,7 @@ everything in those files ships to every visitor.
 The origin the storefront is served from. It is the site, not the API.
 
 ```
-https://top-tokenil.onrender.com
+https://www.easycoins.co.il
 ```
 
 For local work, add:
@@ -75,7 +75,7 @@ literal string and rejects anything that differs by a character.
 The route is `@Get('auth/google/callback')` under a global prefix of `api/v1`:
 
 ```
-https://top-tokenil.onrender.com/api/v1/auth/google/callback
+https://www.easycoins.co.il/api/v1/auth/google/callback
 ```
 
 For local work, add:
@@ -93,14 +93,20 @@ Press **Create**, then copy the client ID and client secret.
 
 ## 3. Set the environment variables
 
-On the backend service only. On Render: *Dashboard → the backend service →
-Environment*.
+On the API project only (Vercel project `easy-coins`): *Settings → Environment
+Variables*, then redeploy.
+
+Both URLs below go through the **storefront** domain, not the API's own
+hostname. The storefront rewrites `/api/*` to the API project, so the session
+cookie the callback sets lands on `www.easycoins.co.il`, where the storefront
+reads it. Pointing the callback at the API hostname would set the cookie on the
+wrong site and every Google sign-in would land signed out.
 
 ```
 GOOGLE_CLIENT_ID=<the client ID from Google>
 GOOGLE_CLIENT_SECRET=<the client secret from Google>
-GOOGLE_REDIRECT_URI=https://top-tokenil.onrender.com/api/v1/auth/google/callback
-APP_BASE_URL=https://top-tokenil.onrender.com
+GOOGLE_REDIRECT_URI=https://www.easycoins.co.il/api/v1/auth/google/callback
+APP_BASE_URL=https://www.easycoins.co.il
 ```
 
 Notes the config layer enforces:

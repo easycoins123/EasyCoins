@@ -20,12 +20,30 @@ export async function createApp(): Promise<NestExpressApplication> {
     // buffer so nothing is written in the framework's format.
     bufferLogs: true,
   });
+  return configureApp(app);
+}
 
+/**
+ * Everything that turns a bare Nest application into this API: logger,
+ * security headers, body limits, cookies, CORS, validation and the error
+ * envelope. Split from `createApp` so a test can build the application from a
+ * testing module with a provider overridden (a stubbed Google exchange, say)
+ * and still get exactly the production middleware stack.
+ */
+export async function configureApp(app: NestExpressApplication): Promise<NestExpressApplication> {
   const config = app.get<AppConfig>(APP_CONFIG);
   const logger = app.get(AppLogger);
   app.useLogger(logger);
 
   app.setGlobalPrefix(API_PREFIX);
+
+  // Behind a reverse proxy (Vercel, Render) the socket address is the proxy's.
+  // Trusting exactly one hop makes `request.ip` the client address the rate
+  // limits and session records are built on. Without it every customer shares
+  // the proxy's address, and the per-IP limits lock everyone out at once.
+  if (config.isDeployed) {
+    app.set('trust proxy', 1);
+  }
 
   // --- Security headers ----------------------------------------------------
   // The API serves JSON only, so the strictest CSP is appropriate: nothing here

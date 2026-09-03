@@ -69,7 +69,9 @@ const PASSWORD_ALLOWED = [
   'data/api/customer-api.service.ts',
   'data/http/http-content-api.service.ts',
   'data/mock/mock-content-api.service.ts',
+  'state/customer.facade.ts',
   'pages/account/account.page.ts',
+  'pages/account/account-security.page.ts',
 ].map((path) => path.split('/').join(sep));
 
 const stripComments = (text) => text
@@ -106,10 +108,13 @@ check('no password is written to browser storage', storedPassword.length === 0,
 
 // Password inputs in templates.
 const passwordInputs = sources.filter(({ text }) => /type=["']password["']/.test(text));
+// The sign-in screen and the account's own security screen (change password).
+const PASSWORD_INPUT_ALLOWED = ['account.page.ts', 'account-security.page.ts']
+  .map((name) => `pages${sep}account${sep}${name}`);
 const strayPasswordInputs = passwordInputs.filter(
-  ({ file }) => !file.endsWith(`pages${sep}account${sep}account.page.ts`));
+  ({ file }) => !PASSWORD_INPUT_ALLOWED.some((allowed) => file.endsWith(allowed)));
 
-check('a password input appears only on the account screen', strayPasswordInputs.length === 0,
+check('a password input appears only on the account screens', strayPasswordInputs.length === 0,
   passwordInputs.map((s) => s.file).join(', '));
 
 // Secret-looking literals.

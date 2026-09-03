@@ -158,3 +158,34 @@ describe('HTTP error mapping', () => {
     expect(isTransient(mapHttpError(response({ status: 402 })))).toBeFalse();
   });
 });
+
+/**
+ * The account screens depend on a wrong password reading as a wrong password.
+ * The server normally words it; when only the code arrives, the client does.
+ */
+describe('HTTP error mapping: account codes', () => {
+  it('words a wrong password as such when the server sends only the code', () => {
+    const error = mapHttpError(response({ status: 401, body: { code: 'INVALID_CREDENTIALS' } }));
+    expect(error.kind).toBe(AppErrorKind.Unauthorized);
+    expect(error.code).toBe('INVALID_CREDENTIALS');
+    expect(error.userMessage.he).toBe('האימייל או הסיסמה שגויים.');
+  });
+
+  it('lets the server\'s own wording win over the client fallback', () => {
+    const error = mapHttpError(response({
+      status: 401,
+      body: { code: 'INVALID_CREDENTIALS', userMessage: { he: 'ניסוח מהשרת', en: 'From the server' } },
+    }));
+    expect(error.userMessage.he).toBe('ניסוח מהשרת');
+  });
+
+  it('keeps the generic session message for an unknown 401 code', () => {
+    const error = mapHttpError(response({ status: 401, body: { code: 'SOMETHING_ELSE' } }));
+    expect(error.userMessage.he).toContain('היכנסו שוב');
+  });
+
+  it('words a weak password and an unusable reset link', () => {
+    expect(mapHttpError(response({ status: 422, body: { code: 'WEAK_PASSWORD' } })).userMessage.he).toContain('8 תווים');
+    expect(mapHttpError(response({ status: 401, body: { code: 'RESET_TOKEN_INVALID' } })).userMessage.he).toContain('קישור');
+  });
+});

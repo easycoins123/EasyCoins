@@ -44,7 +44,10 @@ export function mapHttpError(error: unknown): AppError {
   const body = extractBody(error);
   const correlationId = body?.correlationId ?? error.headers?.get('X-Request-Id') ?? undefined;
   const technical = `${error.status} ${error.statusText} ${describe(error)} ${body?.message ?? ''}`.trim();
-  const serverMessage = toLocalizedText(body?.userMessage);
+  // The server's own wording wins. When it sends only a code, a few codes the
+  // account screens depend on are worded here, so a wrong password never reads
+  // as an expired session.
+  const serverMessage = toLocalizedText(body?.userMessage) ?? messageForCode(body?.code);
   const fieldErrors = mapFieldErrors(body);
   const retryAfter = parseRetryAfter(error.headers?.get('Retry-After'));
 
@@ -140,6 +143,20 @@ function extractBody(error: HttpErrorResponse): ApiErrorDto | undefined {
 function describe(error: HttpErrorResponse): string {
   // The URL is safe to log; query strings never carry secrets by contract.
   return error.url ? `(${error.url})` : '';
+}
+
+/** Customer wording for the account codes, used only when the server sent none. */
+const CODE_MESSAGES: Readonly<Record<string, LocalizedText>> = {
+  INVALID_CREDENTIALS: localized('האימייל או הסיסמה שגויים.', 'Email or password is incorrect.'),
+  ACCOUNT_INACTIVE: localized('החשבון הזה אינו פעיל. פנו לתמיכה.', 'This account is not active. Please contact support.'),
+  INVALID_CODE: localized('הקוד שגוי או שפג תוקפו. בקשו קוד חדש.', 'The code is wrong or has expired. Request a new one.'),
+  WEAK_PASSWORD: localized('הסיסמה חלשה מדי. בחרו סיסמה באורך 8 תווים לפחות.', 'That password is too weak. Use at least 8 characters.'),
+  RESET_TOKEN_INVALID: localized('קישור האיפוס כבר לא תקף. בקשו קישור חדש.', 'That reset link is no longer valid. Request a new one.'),
+  GOOGLE_OAUTH_NOT_CONFIGURED: localized('כניסה עם Google לא זמינה כרגע. אפשר להיכנס עם אימייל וסיסמה.', 'Google sign-in is not available right now. Use email and password.'),
+};
+
+function messageForCode(code: string | undefined): LocalizedText | undefined {
+  return code ? CODE_MESSAGES[code] : undefined;
 }
 
 function toLocalizedText(value: ApiErrorDto['userMessage']): LocalizedText | undefined {

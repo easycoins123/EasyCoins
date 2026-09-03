@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import type { Customer } from '@prisma/client';
 
-import { unauthorizedError, validationError } from '../../common/errors/api-error';
+import {
+  accountInactiveError, invalidCredentialsError, unauthorizedError, validationError,
+} from '../../common/errors/api-error';
 import { generateId, generateSessionToken, hashSessionToken } from '../../common/crypto/tokens';
 import { checkPasswordStrength, hashPassword, needsRehash, verifyPassword } from '../../common/crypto/passwords';
 import { AppLogger } from '../../common/logging/app-logger.service';
@@ -118,11 +120,11 @@ export class AccountService {
     const matches = await verifyPassword(password, customer?.passwordHash ?? null);
 
     if (!customer || !matches) {
-      throw unauthorizedError('Email or password is incorrect', 'INVALID_CREDENTIALS');
+      throw invalidCredentialsError();
     }
 
     if (customer.status !== 'ACTIVE') {
-      throw unauthorizedError('This account is not active', 'ACCOUNT_INACTIVE');
+      throw accountInactiveError();
     }
 
     // Transparently upgrade a hash made with weaker parameters.

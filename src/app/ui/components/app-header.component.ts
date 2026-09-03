@@ -2,8 +2,9 @@ import {
   ChangeDetectionStrategy, Component, ElementRef, HostListener, ViewChild, inject, signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
+import { AuthFacade } from '../../state/customer.facade';
 import { CartFacade } from '../../state/cart.facade';
 import { BrandLogoComponent } from './brand-logo.component';
 import { IconComponent } from './icon.component';
@@ -19,9 +20,10 @@ import { SearchBoxComponent } from './search-box.component';
  * bar: where to buy. On mobile the bar keeps brand, cart and the buy action
  * within thumb reach and everything else moves into the drawer.
  *
- * The bar changes on scroll: transparent over the hero, then a solid ground with
- * a hairline once the page moves. One small piece of state, and it is what stops
- * the header feeling glued on top of the page.
+ * The account slot has three states and one size. Until the session check has
+ * answered it is a blank of the same width, so the bar never shows "sign in"
+ * and then swaps it for a name a moment later. Signed out it is a sign-in
+ * link; signed in it is the customer's initials and a small menu.
  */
 @Component({
   selector: 'tt-app-header',
@@ -48,9 +50,52 @@ import { SearchBoxComponent } from './search-box.component';
         <tt-search-box class="search"></tt-search-box>
 
         <div class="actions">
-          <a class="action action--account" routerLink="/account" routerLinkActive="active" aria-label="האזור האישי">
-            <tt-icon name="user"></tt-icon>
-          </a>
+          <ng-container [ngSwitch]="auth.status()">
+            <span *ngSwitchCase="'checking'" class="pending" aria-hidden="true"></span>
+
+            <a *ngSwitchCase="'anonymous'"
+               class="signin"
+               routerLink="/account"
+               routerLinkActive="active"
+               aria-label="כניסה לחשבון">
+              <tt-icon name="user" [size]="18"></tt-icon>
+              <span class="signin__label">כניסה</span>
+            </a>
+
+            <div *ngSwitchCase="'authenticated'" class="user">
+              <button #userButton
+                      type="button"
+                      class="user__button"
+                      (click)="toggleUserMenu()"
+                      [attr.aria-expanded]="userMenuOpen()"
+                      aria-haspopup="menu"
+                      aria-controls="tt-user-menu"
+                      [attr.aria-label]="'החשבון של ' + auth.displayName()">
+                <span class="avatar" aria-hidden="true">{{ auth.initials() }}</span>
+                <span class="user__name">{{ auth.firstName() }}</span>
+                <tt-icon class="user__caret" name="chevron" [size]="13"></tt-icon>
+              </button>
+
+              <div id="tt-user-menu" class="menu" role="menu" *ngIf="userMenuOpen()">
+                <p class="menu__who">
+                  <strong>{{ auth.displayName() }}</strong>
+                  <span>{{ auth.customer()?.email }}</span>
+                </p>
+                <a role="menuitem" routerLink="/account" (click)="closeUserMenu()">
+                  <tt-icon name="user" [size]="16"></tt-icon> החשבון שלי
+                </a>
+                <a role="menuitem" routerLink="/account/orders" (click)="closeUserMenu()">
+                  <tt-icon name="clock" [size]="16"></tt-icon> ההזמנות שלי
+                </a>
+                <a role="menuitem" routerLink="/account/security" (click)="closeUserMenu()">
+                  <tt-icon name="lock" [size]="16"></tt-icon> אבטחת החשבון
+                </a>
+                <button role="menuitem" type="button" class="menu__out" (click)="signOut()">
+                  <tt-icon name="logout" [size]="16"></tt-icon> התנתקות
+                </button>
+              </div>
+            </div>
+          </ng-container>
 
           <a class="action action--cart"
              routerLink="/cart"
@@ -100,20 +145,12 @@ import { SearchBoxComponent } from './search-box.component';
       transition: background-color var(--tt-duration) var(--tt-ease),
                   border-color var(--tt-duration) var(--tt-ease);
     }
-    /* Only once the page has moved. Over the hero the bar stays out of the way. */
     .bar--scrolled {
       background: color-mix(in srgb, var(--tt-bg) 88%, transparent);
       backdrop-filter: blur(14px);
       border-block-end-color: var(--tt-border);
     }
-
-    .inner {
-      display: flex;
-      align-items: center;
-      gap: var(--tt-space-5);
-      min-block-size: var(--tt-header-height);
-    }
-
+    .inner { display: flex; align-items: center; gap: var(--tt-space-5); min-block-size: var(--tt-header-height); }
     .brand { display: inline-flex; flex: none; }
     .brand:hover { text-decoration: none; }
 
@@ -132,7 +169,6 @@ import { SearchBoxComponent } from './search-box.component';
     }
     .nav a:hover { color: var(--tt-text); text-decoration: none; }
     .nav a.active { color: var(--tt-text); }
-    /* Marks the active item without shifting the row. */
     .nav a.active::after {
       content: '';
       position: absolute;
@@ -157,15 +193,9 @@ import { SearchBoxComponent } from './search-box.component';
       border: 1px solid transparent;
       color: var(--tt-text-muted);
       cursor: pointer;
-      transition: color var(--tt-duration-fast) var(--tt-ease),
-                  background-color var(--tt-duration-fast) var(--tt-ease);
+      transition: color var(--tt-duration-fast) var(--tt-ease), background-color var(--tt-duration-fast) var(--tt-ease);
     }
-    .action:hover, .action.active {
-      color: var(--tt-text);
-      background: var(--tt-surface-2);
-      text-decoration: none;
-    }
-
+    .action:hover, .action.active { color: var(--tt-text); background: var(--tt-surface-2); text-decoration: none; }
     .count {
       position: absolute;
       inset-block-start: 3px;
@@ -181,19 +211,99 @@ import { SearchBoxComponent } from './search-box.component';
       text-align: center;
     }
 
-    .buy-cta {
+    /* --- The account slot --------------------------------------------------- */
+    .pending { display: block; inline-size: 42px; block-size: 42px; }
+    .signin {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       min-block-size: 40px;
-      padding-inline: var(--tt-space-4);
-      margin-inline-start: var(--tt-space-2);
+      padding-inline: var(--tt-space-3);
+      border: 1px solid var(--tt-border-strong);
+      border-radius: var(--tt-radius-md);
+      color: var(--tt-text);
       font-size: var(--tt-text-sm);
+      font-weight: 600;
       white-space: nowrap;
+      transition: background-color var(--tt-duration-fast) var(--tt-ease);
     }
-    .buy-cta__short { display: none; }
+    .signin:hover, .signin.active { background: var(--tt-surface-2); text-decoration: none; }
 
+    .user { position: relative; }
+    .user__button {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--tt-space-2);
+      min-block-size: 40px;
+      padding: 2px var(--tt-space-2) 2px 2px;
+      padding-inline-start: 2px;
+      padding-inline-end: var(--tt-space-2);
+      border: 1px solid var(--tt-border);
+      border-radius: var(--tt-radius-pill);
+      background: var(--tt-surface);
+      color: var(--tt-text);
+      font: inherit;
+      font-size: var(--tt-text-sm);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .user__button:hover, .user__button[aria-expanded='true'] { border-color: var(--tt-border-strong); background: var(--tt-surface-2); }
+    .avatar {
+      display: grid;
+      place-items: center;
+      inline-size: 32px;
+      block-size: 32px;
+      border-radius: 50%;
+      background: linear-gradient(160deg, var(--tt-brand-400), var(--tt-brand-700));
+      color: var(--tt-text-on-brand);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+    .user__name { max-inline-size: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .user__caret { color: var(--tt-text-faint); transform: rotate(90deg); }
+
+    .menu {
+      position: absolute;
+      inset-block-start: calc(100% + 8px);
+      inset-inline-end: 0;
+      z-index: var(--tt-z-overlay);
+      min-inline-size: 240px;
+      padding: var(--tt-space-2);
+      border: 1px solid var(--tt-border-strong);
+      border-radius: var(--tt-radius-lg);
+      background: var(--tt-bg-elevated);
+      box-shadow: var(--tt-shadow-3);
+      animation: tt-rise var(--tt-duration) var(--tt-ease-out) both;
+    }
+    .menu__who { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: var(--tt-space-2) var(--tt-space-3) var(--tt-space-3); border-block-end: 1px solid var(--tt-border); }
+    .menu__who strong { font-size: var(--tt-text-sm); }
+    .menu__who span { font-size: var(--tt-text-xs); color: var(--tt-text-faint); overflow: hidden; text-overflow: ellipsis; }
+    .menu a, .menu__out {
+      display: flex;
+      align-items: center;
+      gap: var(--tt-space-2);
+      inline-size: 100%;
+      min-block-size: 40px;
+      padding-inline: var(--tt-space-3);
+      border: 0;
+      border-radius: var(--tt-radius-md);
+      background: transparent;
+      color: var(--tt-text);
+      font: inherit;
+      font-size: var(--tt-text-sm);
+      font-weight: 600;
+      text-align: start;
+      cursor: pointer;
+    }
+    .menu a:hover, .menu__out:hover { background: var(--tt-surface-2); text-decoration: none; }
+    .menu a tt-icon, .menu__out tt-icon { color: var(--tt-text-muted); }
+    .menu__out { margin-block-start: var(--tt-space-1); border-block-start: 1px solid var(--tt-border); border-radius: 0 0 var(--tt-radius-md) var(--tt-radius-md); }
+
+    .buy-cta { min-block-size: 40px; padding-inline: var(--tt-space-4); margin-inline-start: var(--tt-space-2); font-size: var(--tt-text-sm); white-space: nowrap; }
+    .buy-cta__short { display: none; }
     .toggle { display: none; }
 
-    /* Below the desktop breakpoint the navigation moves into the drawer and the
-       bar keeps brand, search, cart and a compact buy action. */
     @media (max-width: 1000px) {
       .nav { display: none; }
       .toggle { display: grid; }
@@ -202,37 +312,36 @@ import { SearchBoxComponent } from './search-box.component';
       .buy-cta { margin-inline-start: 0; padding-inline: var(--tt-space-3); }
       .buy-cta__full { display: none; }
       .buy-cta__short { display: inline; }
+      .user__name, .user__caret { display: none; }
+      .user__button { padding-inline-end: 2px; }
     }
-
-    /* On a phone the search input costs more room than it earns, so it moves
-       to the store page and the bar keeps brand and actions. The account
-       lives in the drawer at this width. */
+    /* On a phone sign-in lives in the drawer; a signed-in customer still gets
+       their avatar in the bar, which is the one thing that says "it's you". */
     @media (max-width: 560px) {
       .search { display: none; }
       .actions { margin-inline-start: auto; }
-      .action--account { display: none; }
+      .signin, .pending { display: none; }
     }
-    @media (max-width: 360px) {
-      .buy-cta { display: none; }
-    }
+    @media (max-width: 360px) { .buy-cta { display: none; } }
   `],
 })
 export class AppHeaderComponent {
   private readonly cart = inject(CartFacade);
+  private readonly router = inject(Router);
+  private readonly host = inject(ElementRef<HTMLElement>);
+  readonly auth = inject(AuthFacade);
 
   @ViewChild('toggle') private readonly toggle?: ElementRef<HTMLButtonElement>;
+  @ViewChild('userButton') private readonly userButton?: ElementRef<HTMLButtonElement>;
 
   readonly menuOpen = signal(false);
+  readonly userMenuOpen = signal(false);
   readonly scrolled = signal(false);
   readonly count = this.cart.itemCount;
 
   /**
-   * Whether the drawer exists at all.
-   *
-   * Hiding it with CSS was not enough: the panel stayed in the document, so
-   * every desktop page carried a second, invisible copy of the whole navigation.
-   * Above the breakpoint the bar holds the navigation, so the panel is simply
-   * not rendered.
+   * Whether the drawer exists at all. Above the breakpoint the bar holds the
+   * navigation, so the panel is simply not rendered.
    */
   readonly isMobile = signal(
     typeof window !== 'undefined' && window.matchMedia('(max-width: 1000px)').matches,
@@ -244,7 +353,6 @@ export class AppHeaderComponent {
     }
     this.menuOpen.set(false);
     this.lockScroll(false);
-    // Focus goes back to the control that opened the dialog, as a dialog should.
     this.toggle?.nativeElement.focus();
   }
 
@@ -254,12 +362,35 @@ export class AppHeaderComponent {
     this.lockScroll(next);
   }
 
+  toggleUserMenu(): void {
+    this.userMenuOpen.set(!this.userMenuOpen());
+  }
+
+  closeUserMenu(restoreFocus = false): void {
+    if (!this.userMenuOpen()) {
+      return;
+    }
+    this.userMenuOpen.set(false);
+    if (restoreFocus) {
+      this.userButton?.nativeElement.focus();
+    }
+  }
+
   /**
-   * Stops the page behind the drawer from scrolling.
+   * Signs out from the bar.
    *
-   * Without it a swipe over the backdrop scrolls the store underneath, so the
-   * customer closes the menu and finds themselves somewhere else on the page.
+   * The state flips at once, the server is told, and a page that only a
+   * signed-in customer may see is left for the home page.
    */
+  signOut(): void {
+    this.closeUserMenu();
+    const leaving = this.router.url.startsWith('/account/security');
+    this.auth.logout().subscribe();
+    if (leaving) {
+      void this.router.navigateByUrl('/');
+    }
+  }
+
   private lockScroll(locked: boolean): void {
     if (typeof document === 'undefined') {
       return;
@@ -270,6 +401,19 @@ export class AppHeaderComponent {
   @HostListener('document:keydown.escape')
   onEscape(): void {
     this.closeMenu();
+    this.closeUserMenu(true);
+  }
+
+  /** A click anywhere outside the account menu closes it, as a menu should. */
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.userMenuOpen()) {
+      return;
+    }
+    const user = this.host.nativeElement.querySelector('.user');
+    if (user && !user.contains(event.target as Node)) {
+      this.closeUserMenu();
+    }
   }
 
   @HostListener('window:resize')
@@ -284,8 +428,6 @@ export class AppHeaderComponent {
 
   @HostListener('window:scroll')
   onScroll(): void {
-    // A small threshold rather than zero, so a one-pixel trackpad bounce does
-    // not flicker the bar.
     this.scrolled.set(window.scrollY > 8);
   }
 }

@@ -55,7 +55,16 @@ export class CustomersController {
    */
   @Get('auth/methods')
   authMethods() {
-    return { password: true, google: this.google.isConfigured, emailCode: true };
+    // Anything that has to reach an inbox is only offered when a transport
+    // exists. Production runs without one today, and a "forgot password" that
+    // promises a link nobody sends is worse than no link.
+    const mail = this.config.notificationTransport !== 'none';
+    return {
+      password: true,
+      google: this.google.isConfigured,
+      emailCode: mail,
+      passwordReset: mail,
+    };
   }
 
   /**
@@ -198,7 +207,10 @@ export class CustomersController {
 
     if (error || !state || !code) {
       clearState();
-      response.redirect(`${this.config.appBaseUrl}/account?auth=failed`);
+      // A customer who pressed "cancel" at Google is told that, not that
+      // something failed; every other reason stays deliberately generic.
+      const outcome = error === 'access_denied' ? 'cancelled' : 'failed';
+      response.redirect(`${this.config.appBaseUrl}/account?auth=${outcome}`);
       return;
     }
 
