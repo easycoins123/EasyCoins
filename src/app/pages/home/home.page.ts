@@ -12,7 +12,7 @@ import { Platform } from '../../domain';
 import { SupportApiService } from '../../data/api';
 import { CartFacade, CatalogFacade } from '../../state';
 import {
-  AmountSelectorComponent, CoinPackComponent, FaqAccordionComponent, HeroComponent, IconComponent,
+  AmountSelectorComponent, CoinArtComponent, FaqAccordionComponent, HeroComponent, IconComponent,
   ProductCardComponent, RevealDirective, SkeletonGridComponent, ValueStripComponent,
 } from '../../ui';
 
@@ -34,7 +34,7 @@ import {
   standalone: true,
   imports: [
     CommonModule, RouterLink, LocalizePipe,
-    HeroComponent, IconComponent, AmountSelectorComponent, ValueStripComponent, CoinPackComponent,
+    HeroComponent, IconComponent, AmountSelectorComponent, ValueStripComponent, CoinArtComponent,
     ProductCardComponent, FaqAccordionComponent, SkeletonGridComponent, RevealDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -117,7 +117,7 @@ import {
     </ng-template>
 
     <section class="close">
-      <div class="close__art" aria-hidden="true"><tt-coin-pack [steps]="5"></tt-coin-pack></div>
+      <div class="close__art" aria-hidden="true"><tt-coin-art tier="legend" variant="card"></tt-coin-art></div>
       <div class="tt-container close__inner">
         <div class="close__ask" ttReveal>
           <h2>שאלות שחוזרות</h2>

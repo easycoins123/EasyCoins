@@ -27,6 +27,9 @@ export const STOREFRONT = {
    */
   focusProductSlug: 'ea-fc-ultimate-team-coins',
 
+  /** The edition currently sold. FC 27 is a data change here, not a redesign. */
+  focusGameEdition: 'fc26',
+
   /**
    * Whether to surface game browsing at all. False collapses the game routes
    * out of navigation; the routes still resolve, so an existing link keeps

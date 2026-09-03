@@ -144,28 +144,34 @@
   --tt-glass-border: rgba(255, 248, 235, 0.14);
   --tt-glass-highlight: inset 0 1px 0 rgba(255, 248, 235, 0.10);
 
-  // --- Tier materials ------------------------------------------------------
-  // Five bundles, five objects. Each tier is a material rather than a number,
-  // so the shelf reads as a progression the way a collector's audience expects:
-  // steel, bronze, silver, gold, and an obsidian-and-gold elite at the top.
-  // Original palette; the language is familiar, the artwork is ours.
-  // The "glow" of a material is the tint of its stage light, kept low: a tier
-  // should be recognisable by its metal, not by how much it shines.
-  --tt-mat-steel: #9AA7B8;
-  --tt-mat-steel-light: #E6ECF4;
-  --tt-mat-steel-glow: rgba(110, 147, 255, 0.22);
-  --tt-mat-bronze: #C4895F;
-  --tt-mat-bronze-light: #F1D4BC;
-  --tt-mat-bronze-glow: rgba(196, 137, 95, 0.22);
-  --tt-mat-silver: #D6DEE8;
-  --tt-mat-silver-light: #FFFFFF;
-  --tt-mat-silver-glow: rgba(168, 192, 255, 0.22);
-  --tt-mat-gold: #D4B46A;
-  --tt-mat-gold-light: #F7EBCB;
-  --tt-mat-gold-glow: rgba(212, 180, 106, 0.24);
-  --tt-mat-elite: #E6CB86;
-  --tt-mat-elite-light: #FBF3DC;
-  --tt-mat-elite-glow: rgba(230, 203, 134, 0.28);
+  // --- Tiers ---------------------------------------------------------------
+  // Four EasyCoins tiers, four materials of our own: graphite lit by the
+  // brand's lime, cobalt, champagne, and an obsidian with a prismatic edge.
+  // Deliberately not a bronze / silver / gold ladder: that is another
+  // product's rarity system, and the object here is a coin, not a card.
+  // `glow` is the tint of a tier's stage light, kept low: a tier is
+  // recognised by its material, not by how much it shines.
+  --tt-tier-starter: #BEF23C;
+  --tt-tier-starter-light: #E4FF9A;
+  --tt-tier-starter-deep: #23272E;
+  --tt-tier-starter-accent: #C9D1DC;
+  --tt-tier-starter-glow: rgba(190, 242, 60, 0.14);
+  --tt-tier-pro: #4C7DFF;
+  --tt-tier-pro-light: #C4D3FF;
+  --tt-tier-pro-deep: #15308F;
+  --tt-tier-pro-accent: #8FB0FF;
+  --tt-tier-pro-glow: rgba(76, 125, 255, 0.20);
+  --tt-tier-elite: #D4B46A;
+  --tt-tier-elite-light: #F7EBCB;
+  --tt-tier-elite-deep: #6B5228;
+  --tt-tier-elite-accent: #F4E6C3;
+  --tt-tier-elite-glow: rgba(212, 180, 106, 0.22);
+  --tt-tier-legend: #E6CB86;
+  --tt-tier-legend-light: #FBF3DC;
+  --tt-tier-legend-deep: #0E0C09;
+  --tt-tier-legend-accent: #CFC2FF;
+  --tt-tier-legend-glow: rgba(230, 203, 134, 0.26);
+  --tt-tier-legend-prism: linear-gradient(90deg, #E6CB86, #F4E6C3 30%, #CFC2FF 60%, #8FE3D6 85%, #E6CB86);
 
   // --- Typography ----------------------------------------------------------
   --tt-font: 'Heebo', 'Rubik', 'Segoe UI', system-ui, sans-serif;

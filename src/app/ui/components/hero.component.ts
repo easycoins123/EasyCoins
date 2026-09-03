@@ -6,7 +6,7 @@ import { STOREFRONT } from '../../core/brand';
 import { LocalizePipe } from '../../core/i18n';
 import { formatQuantity, rankByValue } from '../../core/value';
 import { Platform, ProductDetail } from '../../domain';
-import { Material, materialForStep } from '../materials';
+import { TIERS, Tier, tierForAmount } from './cards/tiers';
 import { RevealDirective } from '../reveal.directive';
 import { HeroSceneComponent } from './hero-scene.component';
 import { IconComponent } from './icon.component';
@@ -15,7 +15,7 @@ import { IconComponent } from './icon.component';
 interface PriceTag {
   readonly quantity: string;
   readonly price: string;
-  readonly material: Material;
+  readonly tier: Tier;
 }
 
 /**
@@ -99,14 +99,14 @@ interface PriceTag {
              (pointermove)="tilt($event)"
              (pointerleave)="rest()">
           <div class="art__stage" [style.transform]="transform()">
-            <tt-hero-scene tier="hero" material="elite"></tt-hero-scene>
+            <tt-hero-scene tier="legend"></tt-hero-scene>
 
-            <span class="tag tag--a tt-glass" *ngIf="tags[0] as tag" [style.--mat]="tag.material.color">
+            <span class="tag tag--a tt-glass" *ngIf="tags[0] as tag" [style.--mat]="tag.tier.color">
               <span class="tag__dot"></span>
               <span class="tag__qty tt-figure">{{ tag.quantity }}</span>
               <span class="tag__price">{{ tag.price }}</span>
             </span>
-            <span class="tag tag--b tt-glass" *ngIf="tags[1] as tag" [style.--mat]="tag.material.color">
+            <span class="tag tag--b tt-glass" *ngIf="tags[1] as tag" [style.--mat]="tag.tier.color">
               <span class="tag__dot"></span>
               <span class="tag__qty tt-figure">{{ tag.quantity }}</span>
               <span class="tag__price">{{ tag.price }}</span>
@@ -331,11 +331,11 @@ export class HeroComponent {
     if (rows.length < 2) {
       return [];
     }
-    const tag = (row: (typeof rows)[number], step: number): PriceTag => ({
+    const tag = (row: (typeof rows)[number]): PriceTag => ({
       quantity: formatQuantity(row.variant.quantityValue) || row.variant.name.he,
       price: `₪${Math.round(row.offer.price.current.amountMinor / 100).toLocaleString('he-IL')}`,
-      material: materialForStep(step),
+      tier: TIERS[tierForAmount(row.variant.quantityValue)],
     });
-    return [tag(rows[0], 1), tag(rows[rows.length - 1], rows.length)];
+    return [tag(rows[0]), tag(rows[rows.length - 1])];
   }
 }

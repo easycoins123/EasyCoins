@@ -8,8 +8,8 @@ import {
 } from '../../core/value';
 import { Money, Offer, ProductDetail, ProductVariant } from '../../domain';
 import { MoneyPipe } from '../money.pipe';
-import { Material, materialForStep } from '../materials';
-import { CoinPackComponent } from './coin-pack.component';
+import { CoinArtComponent } from './cards/coin-art.component';
+import { TIERS, Tier as TierTokens, tierForAmount } from './cards/tiers';
 import { IconComponent } from './icon.component';
 
 /** One purchasable bundle, as the picker presents it. */
@@ -19,7 +19,7 @@ interface Tier {
   readonly price: Money;
   readonly perMillion: Money;
   readonly best: boolean;
-  readonly material: Material;
+  readonly tier: TierTokens;
 }
 
 /**
@@ -38,7 +38,7 @@ interface Tier {
 @Component({
   selector: 'tt-amount-selector',
   standalone: true,
-  imports: [CommonModule, MoneyPipe, CoinPackComponent, IconComponent],
+  imports: [CommonModule, MoneyPipe, CoinArtComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="picker" *ngIf="plan() as current">
@@ -56,16 +56,16 @@ interface Tier {
                   [attr.aria-checked]="requested() === tier.quantity"
                   [class.on]="requested() === tier.quantity"
                   [class.tier--best]="tier.best"
-                  [style.--mat]="tier.material.color"
-                  [style.--mat-glow]="tier.material.glow"
+                  [style.--mat]="tier.tier.color"
+                  [style.--mat-glow]="tier.tier.glow"
                   (click)="setAmount(tier.quantity)">
             <span class="tier__flag" *ngIf="tier.best">
               <tt-icon name="lightning" [size]="11"></tt-icon> הכי משתלם
             </span>
-            <tt-coin-pack class="tier__art" [steps]="i + 1"></tt-coin-pack>
+            <tt-coin-art class="tier__art" [tier]="tier.tier.name" variant="tile"></tt-coin-art>
             <span class="tier__text">
               <span class="tier__qty tt-figure">{{ tier.label }}</span>
-              <span class="tier__mat">{{ tier.material.labelHe }}</span>
+              <span class="tier__mat">{{ tier.tier.labelHe }}</span>
               <span class="tier__rate tt-numeric">{{ tier.perMillion | money }} למיליון</span>
             </span>
             <span class="tier__price">{{ tier.price | money }}</span>
@@ -103,14 +103,14 @@ interface Tier {
 
       <!-- The quote: the one bordered surface in the module, because this is
            the part that takes money and should look like it. -->
-      <aside class="quote tt-plate" [style.--mat]="currentMaterial().color" [style.--mat-glow]="currentMaterial().glow">
+      <aside class="quote tt-plate" [style.--mat]="currentTier().color" [style.--mat-glow]="currentTier().glow">
         <div class="quote__stage">
-          <tt-coin-pack class="quote__art" [steps]="artSteps()"></tt-coin-pack>
+          <tt-coin-art class="quote__art" [tier]="currentTier().name" variant="quote"></tt-coin-art>
         </div>
 
         <div class="quote__head">
           <span class="quote__qty tt-figure">{{ label(current.provided) }}</span>
-          <span class="quote__unit">קוינס ל־<span dir="ltr">Ultimate Team</span> · {{ currentMaterial().labelHe }}</span>
+          <span class="quote__unit">קוינס ל־<span dir="ltr">Ultimate Team</span> · {{ currentTier().labelHe }}</span>
         </div>
 
         <p class="quote__rounded" *ngIf="current.provided > current.requested">
@@ -196,7 +196,7 @@ interface Tier {
       box-shadow: 0 0 0 1px var(--mat), 0 12px 32px rgba(0, 0, 0, 0.4);
       transform: translateY(-2px);
     }
-    .tier__art { inline-size: 68px; filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.45)); }
+    .tier__art { inline-size: 86px; filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.45)); }
     .tier__text { display: flex; flex-direction: column; align-items: center; gap: 2px; }
     .tier__qty { font-size: 1.9rem; }
     .tier__mat { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mat); }
@@ -238,7 +238,7 @@ interface Tier {
     @media (max-width: 640px) {
       .tiers { grid-template-columns: minmax(0, 1fr); gap: var(--tt-space-2); }
       .tier { flex-direction: row; gap: var(--tt-space-3); min-block-size: 68px; padding: var(--tt-space-2) var(--tt-space-3); padding-inline-end: 44px; text-align: start; }
-      .tier__art { inline-size: 50px; flex: none; }
+      .tier__art { inline-size: 66px; flex: none; }
       .tier__text { flex: 1; min-inline-size: 0; align-items: flex-start; }
       .tier__rate { white-space: normal; }
       .tier__price { flex: none; }
@@ -282,7 +282,7 @@ interface Tier {
       padding-block: var(--tt-space-3) 0;
       background: radial-gradient(60% 70% at 50% 60%, var(--mat-glow), transparent 70%);
     }
-    .quote__art { inline-size: 150px; filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.5)); }
+    .quote__art { inline-size: 200px; filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.5)); }
     .quote__head { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
     .quote__qty { font-size: 3rem; }
     .quote__unit { font-size: var(--tt-text-sm); color: var(--tt-text-muted); font-weight: 600; }
@@ -330,19 +330,8 @@ export class AmountSelectorComponent {
 
   readonly display = computed(() => this.requested().toLocaleString('he-IL'));
 
-  /** Drives the artwork: the tier the amount lands in, plus one for a mix. */
-  readonly artSteps = computed(() => {
-    const current = this.plan();
-    if (!current) {
-      return 1;
-    }
-    const provided = current.provided;
-    const base = provided <= 100_000 ? 1 : provided <= 250_000 ? 2 : provided <= 500_000 ? 3 : provided <= 1_000_000 ? 4 : 5;
-    const units = current.lines.reduce((count, line) => count + line.count, 0);
-    return Math.min(5, base + (units > 1 ? 1 : 0));
-  });
-
-  readonly currentMaterial = computed<Material>(() => materialForStep(this.artSteps()));
+  /** The tier the amount lands in, which drives the artwork and the quote's material. */
+  readonly currentTier = computed<TierTokens>(() => TIERS[tierForAmount(this.plan()?.provided)]);
 
   private reset(): void {
     const range = coinRange(this.offers, this.variants);
@@ -359,13 +348,13 @@ export class AmountSelectorComponent {
     return rankByValue(this.offers, this.variants)
       .filter((row) => row.perUnitMinor !== undefined && (row.variant.quantityValue ?? 0) > 0)
       .sort((a, b) => (a.variant.quantityValue ?? 0) - (b.variant.quantityValue ?? 0))
-      .map((row, index): Tier => ({
+      .map((row): Tier => ({
         quantity: row.variant.quantityValue ?? 0,
         label: formatQuantity(row.variant.quantityValue) || row.variant.name.he,
         price: row.offer.price.current,
         perMillion: { amountMinor: row.perUnitMinor ?? 0, currency: row.offer.price.current.currency },
         best: row.isBestValue,
-        material: materialForStep(index + 1),
+        tier: TIERS[tierForAmount(row.variant.quantityValue)],
       }));
   }
 

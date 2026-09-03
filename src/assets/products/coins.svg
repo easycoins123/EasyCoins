@@ -1,54 +1,79 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" role="img" aria-label="חבילת קוינס">
-  <!-- EASYCOINS product art. Machined octagonal tokens, struck with the brand Z
-       and cut on the same nine-degree shear as the mark, so every thumbnail in
-       the catalogue belongs to one family and matches the artwork the app
-       renders inline. Original geometry; no publisher property is depicted. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" role="img" aria-label="קוינס">
+  <!-- EASYCOINS product art: a stack of machined coins struck with the brand's
+       E, in the Elite champagne material of the card system. This static file
+       is the catalog's product image (cart lines, order pages, admin); the
+       storefront draws the same coins live per tier with tt-coin-art.
+       Original design; nothing here depicts another company's coin or card. -->
   <defs>
-    <linearGradient id="g" x1="0.15" y1="0" x2="0.7" y2="1">
-      <stop offset="0" stop-color="#F4E6C3"/><stop offset="0.42" stop-color="#D4B46A"/>
-      <stop offset="0.78" stop-color="#A9884A"/><stop offset="1" stop-color="#E6CB86"/>
+    <linearGradient id="face" x1="0" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#F7EBCB"/>
+      <stop offset="0.45" stop-color="#D4B46A"/>
+      <stop offset="0.82" stop-color="#A9884A"/>
+      <stop offset="1" stop-color="#6B5228"/>
     </linearGradient>
-    <linearGradient id="e" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#A9884A"/><stop offset="1" stop-color="#6B5228"/>
+    <linearGradient id="edge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A9884A"/>
+      <stop offset="1" stop-color="#6B5228"/>
     </linearGradient>
-    <linearGradient id="s" x1="0" y1="0" x2="0.55" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.5"/>
-      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.05"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    <linearGradient id="side" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6B5228"/>
+      <stop offset="0.5" stop-color="#A9884A"/>
+      <stop offset="1" stop-color="#6B5228"/>
     </linearGradient>
-    <linearGradient id="b" x1="0" y1="0" x2="0.4" y2="1">
-      <stop offset="0" stop-color="#A8C0FF"/><stop offset="1" stop-color="#2E5FF0"/>
-    </linearGradient>
-    <radialGradient id="p" cx="50%" cy="74%" r="55%">
-      <stop offset="0" stop-color="#D4B46A" stop-opacity="0.20"/>
+    <radialGradient id="light" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#D4B46A" stop-opacity="0.26"/>
+      <stop offset="0.6" stop-color="#D4B46A" stop-opacity="0.08"/>
       <stop offset="1" stop-color="#D4B46A" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <ellipse cx="100" cy="122" rx="74" ry="20" fill="url(#p)"/>
-  <g opacity="0.62">
-    <polygon points="151.6,52.2 141.3,58.2 126.7,58.2 116.4,52.2 116.4,43.8 126.7,37.8 141.3,37.8 151.6,43.8" fill="url(#e)"/>
-    <polygon points="151.6,46.2 141.3,52.2 126.7,52.2 116.4,46.2 116.4,37.8 126.7,31.8 141.3,31.8 151.6,37.8" fill="url(#g)"/>
-    <polygon points="148.4,45.5 140.0,50.3 128.0,50.3 119.6,45.5 119.6,38.5 128.0,33.7 140.0,33.7 148.4,38.5" fill="none" stroke="#6B5228" stroke-opacity="0.34" stroke-width="1"/>
-    <polygon points="150.7,46.0 140.9,51.7 127.1,51.7 117.3,46.0 117.3,38.0 127.1,32.3 140.9,32.3 150.7,38.0" fill="url(#s)"/>
+
+  <ellipse cx="100" cy="86" rx="96" ry="60" fill="url(#light)"/>
+  <ellipse cx="100" cy="122" rx="66" ry="11" fill="#000" opacity="0.42"/>
+
+  <!-- three coins, bottom first -->
+  <g>
+    <path d="M 48 104 A 42 16.8 0 0 0 132 104 L 132 112 A 42 16.8 0 0 1 48 112 Z" fill="url(#edge)"/>
+    <path d="M 48 108 A 42 16.8 0 0 0 132 108" fill="none" stroke="#F7EBCB" stroke-opacity="0.28" stroke-width="4.4" stroke-dasharray="1.6 2.4"/>
+    <ellipse cx="90" cy="104" rx="42" ry="16.8" fill="url(#face)"/>
   </g>
-  <g opacity="0.8">
-    <polygon points="180.1,110.5 166.6,118.4 147.4,118.4 133.9,110.5 133.9,99.5 147.4,91.6 166.6,91.6 180.1,99.5" fill="url(#e)"/>
-    <polygon points="180.1,102.5 166.6,110.4 147.4,110.4 133.9,102.5 133.9,91.5 147.4,83.6 166.6,83.6 180.1,91.5" fill="url(#g)"/>
-    <polygon points="175.9,101.6 164.8,108.0 149.2,108.0 138.1,101.6 138.1,92.4 149.2,86.0 164.8,86.0 175.9,92.4" fill="none" stroke="#6B5228" stroke-opacity="0.34" stroke-width="1"/>
-    <polygon points="178.9,102.3 166.1,109.7 147.9,109.7 135.1,102.3 135.1,91.7 147.9,84.3 166.1,84.3 178.9,91.7" fill="url(#s)"/>
+  <g>
+    <path d="M 49.5 96 A 42 16.8 0 0 0 133.5 96 L 133.5 104 A 42 16.8 0 0 1 49.5 104 Z" fill="url(#edge)"/>
+    <path d="M 49.5 100 A 42 16.8 0 0 0 133.5 100" fill="none" stroke="#F7EBCB" stroke-opacity="0.28" stroke-width="4.4" stroke-dasharray="1.6 2.4"/>
+    <ellipse cx="91.5" cy="96" rx="42" ry="16.8" fill="url(#face)"/>
   </g>
-  <g opacity="0.92">
-    <polygon points="71.8,118.4 56.1,127.5 33.9,127.5 18.2,118.4 18.2,105.6 33.9,96.5 56.1,96.5 71.8,105.6" fill="url(#e)"/>
-    <polygon points="71.8,109.4 56.1,118.5 33.9,118.5 18.2,109.4 18.2,96.6 33.9,87.5 56.1,87.5 71.8,96.6" fill="url(#g)"/>
-    <polygon points="67.0,108.3 54.1,115.7 35.9,115.7 23.0,108.3 23.0,97.7 35.9,90.3 54.1,90.3 67.0,97.7" fill="none" stroke="#6B5228" stroke-opacity="0.34" stroke-width="1"/>
-    <polygon points="70.5,109.1 55.5,117.8 34.5,117.8 19.5,109.1 19.5,96.9 34.5,88.2 55.5,88.2 70.5,96.9" fill="url(#s)"/>
-    <g transform="translate(30.2,89.7) scale(0.462,0.416) skewX(-9)" fill="#5A390A" fill-opacity="0.66"><path d="M14 12h10v40H14ZM14 12h34v10H14ZM14 27h26v10H14ZM14 42h34v10H14Z"/></g>
+  <g>
+    <path d="M 48 88 A 42 16.8 0 0 0 132 88 L 132 96 A 42 16.8 0 0 1 48 96 Z" fill="url(#edge)"/>
+    <path d="M 48 92 A 42 16.8 0 0 0 132 92" fill="none" stroke="#F7EBCB" stroke-opacity="0.28" stroke-width="4.4" stroke-dasharray="1.6 2.4"/>
+    <ellipse cx="90" cy="88" rx="42" ry="16.8" fill="url(#face)"/>
+    <ellipse cx="90" cy="88" rx="39.6" ry="15.7" fill="none" stroke="#FBF3DC" stroke-opacity="0.7" stroke-width="1.3"/>
+    <ellipse cx="90" cy="88" rx="32" ry="12.8" fill="none" stroke="#6B5228" stroke-opacity="0.35" stroke-width="1"/>
+    <!-- the mark, engraved -->
+    <g transform="translate(90 89.4) scale(0.79 0.316) translate(-32 -32)" fill="#FBF3DC" opacity="0.55">
+      <g transform="translate(5,0) skewX(-8)">
+        <rect x="14" y="12" width="10" height="40" rx="3"/><rect x="14" y="12" width="34" height="10" rx="5"/>
+        <rect x="14" y="27" width="26" height="10" rx="5"/><rect x="14" y="42" width="34" height="10" rx="5"/>
+        <rect x="3" y="12" width="7" height="10" rx="5" opacity="0.45"/>
+      </g>
+    </g>
+    <g transform="translate(90 88) scale(0.79 0.316) translate(-32 -32)" fill="#7B6132">
+      <g transform="translate(5,0) skewX(-8)">
+        <rect x="14" y="12" width="10" height="40" rx="3"/><rect x="14" y="12" width="34" height="10" rx="5"/>
+        <rect x="14" y="27" width="26" height="10" rx="5"/><rect x="14" y="42" width="34" height="10" rx="5"/>
+        <rect x="3" y="12" width="7" height="10" rx="5" opacity="0.45"/>
+      </g>
+    </g>
   </g>
-  <g opacity="1">
-    <polygon points="142.5,105.2 117.6,119.6 82.4,119.6 57.5,105.2 57.5,84.8 82.4,70.4 117.6,70.4 142.5,84.8" fill="url(#e)"/>
-    <polygon points="142.5,92.2 117.6,106.6 82.4,106.6 57.5,92.2 57.5,71.8 82.4,57.4 117.6,57.4 142.5,71.8" fill="url(#g)"/>
-    <polygon points="134.8,90.4 114.4,102.2 85.6,102.2 65.2,90.4 65.2,73.6 85.6,61.8 114.4,61.8 134.8,73.6" fill="none" stroke="#6B5228" stroke-opacity="0.34" stroke-width="1.6"/>
-    <polygon points="140.4,91.7 116.7,105.4 83.3,105.4 59.6,91.7 59.6,72.3 83.3,58.6 116.7,58.6 140.4,72.3" fill="url(#s)"/>
-    <g transform="translate(76.5,60.9) scale(0.733,0.659) skewX(-9)" fill="#5A390A" fill-opacity="0.66"><path d="M14 12h10v40H14ZM14 12h34v10H14ZM14 27h26v10H14ZM14 42h34v10H14Z"/></g>
+
+  <!-- a coin leaning against the stack -->
+  <g transform="rotate(-14 142 78)">
+    <ellipse cx="128" cy="78" rx="15" ry="38.6" fill="url(#side)"/>
+    <ellipse cx="142" cy="78" rx="15" ry="38.6" fill="url(#face)"/>
+    <ellipse cx="142" cy="78" rx="13.4" ry="36.2" fill="none" stroke="#FBF3DC" stroke-opacity="0.8" stroke-width="1.2"/>
+    <g transform="translate(142 78) scale(0.27 0.675) translate(-32 -32)" fill="#7B6132">
+      <g transform="translate(5,0) skewX(-8)">
+        <rect x="14" y="12" width="10" height="40" rx="3"/><rect x="14" y="12" width="34" height="10" rx="5"/>
+        <rect x="14" y="27" width="26" height="10" rx="5"/><rect x="14" y="42" width="34" height="10" rx="5"/>
+      </g>
+    </g>
   </g>
 </svg>

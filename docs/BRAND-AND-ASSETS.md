@@ -141,3 +141,5 @@ the interface.
   document, so it can be found and replaced.
 - Nothing loads from an external host at runtime. Assets are local and versioned
   with the build.
+
+> Asset policy (what may and may not be used, and how it is enforced): see [CONTRIBUTING.md](../CONTRIBUTING.md#asset-policy).

@@ -4,11 +4,12 @@ import { RouterLink } from '@angular/router';
 
 import { LocalizePipe } from '../../core/i18n';
 import { formatQuantity, savedAmount } from '../../core/value';
-import { Money, Platform, Product, ProductType, Region } from '../../domain';
+import { CoinTier, Money, Platform, Product, ProductType, Region } from '../../domain';
 import { CatalogLookups } from '../../state/catalog.facade';
 import { MoneyPipe } from '../money.pipe';
 import { PlatformBadgeComponent, RegionBadgeComponent } from './badges.component';
-import { CoinPackComponent } from './coin-pack.component';
+import { CoinArtComponent } from './cards/coin-art.component';
+import { tierForAmount } from './cards/tiers';
 import { IconComponent } from './icon.component';
 
 /**
@@ -25,14 +26,14 @@ import { IconComponent } from './icon.component';
   standalone: true,
   imports: [
     CommonModule, RouterLink, LocalizePipe, MoneyPipe,
-    PlatformBadgeComponent, RegionBadgeComponent, CoinPackComponent, IconComponent,
+    PlatformBadgeComponent, RegionBadgeComponent, CoinArtComponent, IconComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a class="card" [routerLink]="['/products', product.slug]" [attr.aria-label]="product.name | t">
       <div class="media">
-        <tt-coin-pack *ngIf="largestQuantity as quantity; else artwork"
-                      class="media__art" [steps]="packSteps(quantity)"></tt-coin-pack>
+        <tt-coin-art *ngIf="largestQuantity as quantity; else artwork"
+                     class="media__art" [tier]="tierFor(quantity)" variant="card"></tt-coin-art>
         <ng-template #artwork>
           <img *ngIf="product.images[0] as image"
                [src]="image.url" [alt]="image.alt" loading="lazy" decoding="async" />
@@ -156,17 +157,8 @@ export class ProductCardComponent {
   @Input({ required: true }) product!: Product;
   @Input() lookups?: CatalogLookups;
 
-  packSteps(quantity: number): number {
-    if (quantity <= 250_000) {
-      return 1;
-    }
-    if (quantity <= 500_000) {
-      return 2;
-    }
-    if (quantity <= 1_000_000) {
-      return 3;
-    }
-    return quantity <= 2_000_000 ? 4 : 5;
+  tierFor(quantity: number): CoinTier {
+    return tierForAmount(quantity);
   }
 
   get largestQuantity(): number | undefined {

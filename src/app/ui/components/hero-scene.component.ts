@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-import { CoinPackComponent, PackMaterial } from './coin-pack.component';
+import { CoinTier } from '../../domain';
+import { CoinArtComponent } from './cards/coin-art.component';
 
 /**
  * The hero scene.
@@ -19,7 +20,7 @@ import { CoinPackComponent, PackMaterial } from './coin-pack.component';
 @Component({
   selector: 'tt-hero-scene',
   standalone: true,
-  imports: [CommonModule, CoinPackComponent],
+  imports: [CommonModule, CoinArtComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="scene" aria-hidden="true">
@@ -28,8 +29,8 @@ import { CoinPackComponent, PackMaterial } from './coin-pack.component';
       <span class="shaft shaft--b"></span>
 
       <div class="stage">
-        <tt-coin-pack class="object" [steps]="5" [material]="material"></tt-coin-pack>
-        <tt-coin-pack class="mirror" [steps]="5" [material]="material"></tt-coin-pack>
+        <tt-coin-art class="object" [tier]="tier" variant="hero"></tt-coin-art>
+        <tt-coin-art class="mirror" [tier]="tier" variant="hero"></tt-coin-art>
       </div>
 
       <span class="horizon"></span>
@@ -83,11 +84,11 @@ import { CoinPackComponent, PackMaterial } from './coin-pack.component';
     .shaft--b { inset-inline-start: 52%; inline-size: 12%; opacity: 0.6; }
 
     .stage { position: relative; inline-size: 100%; display: flex; flex-direction: column; align-items: center; }
-    .object { inline-size: 84%; filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.55)); }
+    .object { inline-size: 92%; filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.55)); }
 
     .mirror {
-      inline-size: 84%;
-      margin-block-start: -17%;
+      inline-size: 92%;
+      margin-block-start: -30%;
       transform: scaleY(-1);
       opacity: 0.16;
       filter: blur(2.5px);
@@ -113,8 +114,8 @@ import { CoinPackComponent, PackMaterial } from './coin-pack.component';
 
     @media (max-width: 900px) {
       .scene { aspect-ratio: 16 / 11; }
-      .object { inline-size: 46%; }
-      .mirror { inline-size: 46%; margin-block-start: -14%; opacity: 0.14; }
+      .object { inline-size: 56%; }
+      .mirror { inline-size: 56%; margin-block-start: -19%; opacity: 0.14; }
       .haze { inline-size: 62%; block-size: 92%; inset-block-start: 2%; }
       .horizon { inline-size: 28%; inset-block-end: 15%; }
       .shaft, .mote { display: none; }
@@ -122,7 +123,6 @@ import { CoinPackComponent, PackMaterial } from './coin-pack.component';
   `],
 })
 export class HeroSceneComponent {
-  /** Which tier of the product family the scene is staging. */
-  @Input() tier: 'entry' | 'standard' | 'premium' | 'hero' = 'hero';
-  @Input() material: PackMaterial = 'elite';
+  /** The tier whose coins the scene stages. */
+  @Input() tier: CoinTier = 'legend';
 }

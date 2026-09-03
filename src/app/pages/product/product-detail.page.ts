@@ -16,9 +16,10 @@ import { CartFacade, CatalogFacade, CatalogLookups } from '../../state';
 import {
   ErrorStateComponent, FulfillmentBadgeComponent, MoneyPipe, PlatformBadgeComponent,
   ProductCardComponent, QuantitySelectorComponent, RegionBadgeComponent, ReviewCardComponent,
-  StarRatingComponent, StockBadgeComponent, CompactNumberPipe, IconComponent, CoinPackComponent
+  StarRatingComponent, StockBadgeComponent, CompactNumberPipe, IconComponent, CoinArtComponent
 } from '../../ui';
-import { materialForStep } from '../../ui/materials';
+import { TIERS, tierForAmount } from '../../ui/components/cards/tiers';
+import type { CoinTier } from '../../domain';
 
 interface ProductViewModel {
   readonly detail: ProductDetail;
@@ -42,7 +43,7 @@ interface ProductViewModel {
     CommonModule, RouterLink, LocalizePipe, MoneyPipe, CompactNumberPipe,
     PlatformBadgeComponent, RegionBadgeComponent, FulfillmentBadgeComponent, StockBadgeComponent,
     QuantitySelectorComponent, StarRatingComponent, ReviewCardComponent, ProductCardComponent,
-    ErrorStateComponent, IconComponent, CoinPackComponent],
+    ErrorStateComponent, IconComponent, CoinArtComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-container tt-section">
@@ -57,7 +58,7 @@ interface ProductViewModel {
 
           <div class="layout">
             <div class="media tt-card">
-              <tt-coin-pack *ngIf="packSteps(vm) as steps; else picture" class="media__art" [steps]="steps"></tt-coin-pack>
+              <tt-coin-art *ngIf="artTier(vm) as tier; else picture" class="media__art" [tier]="tier" variant="quote"></tt-coin-art>
               <ng-template #picture>
                 <img *ngIf="vm.detail.product.images[0] as image" [src]="image.url" [alt]="image.alt" />
               </ng-template>
@@ -77,7 +78,7 @@ interface ProductViewModel {
                 <div class="chips">
                   <button type="button"
                           *ngFor="let variant of vm.detail.product.variants; let i = index"
-                          [style.--mat]="materialColor(i)"
+                          [style.--mat]="tierColor(variant)"
                           class="chip"
                           [class.on]="variant.id === variantId()"
                           (click)="selectVariant(variant)">
@@ -252,7 +253,7 @@ interface ProductViewModel {
     }
     .info-skeleton { min-block-size: 520px; }
     .media img { max-block-size: 100%; object-fit: contain; }
-    .media__art { inline-size: 56%; max-inline-size: 260px; }
+    .media__art { inline-size: 70%; max-inline-size: 320px; }
     .chip__price { color: var(--tt-gold-400); font-weight: 700; }
     .info { display: flex; flex-direction: column; gap: var(--tt-space-3); }
     h1 { margin: 0; }
@@ -420,22 +421,20 @@ export class ProductDetailPage {
    * variant sits in, so the picture changes with the choice. Anything else
    * keeps its illustration. Zero means "use the picture".
    */
-  /** The tier material for a variant, by its position in the range. */
-  materialColor(index: number): string {
-    return materialForStep(index + 1).color;
+  /** The tier colour of a variant, by its size. */
+  tierColor(variant: { readonly quantityValue?: number }): string {
+    return TIERS[tierForAmount(variant.quantityValue)].color;
   }
 
-  packSteps(vm: ProductViewModel): number {
+  artTier(vm: ProductViewModel): CoinTier | null {
     if (vm.detail.product.type !== ProductType.GameCurrency) {
-      return 0;
+      return null;
     }
-    const quantities = vm.detail.product.variants
-      .map((variant) => variant.quantityValue)
-      .filter((value): value is number => typeof value === 'number' && value > 0)
-      .sort((a, b) => a - b);
     const selected = vm.detail.product.variants.find((variant) => variant.id === this.variantId());
-    const index = quantities.indexOf(selected?.quantityValue ?? -1);
-    return index < 0 ? Math.min(5, quantities.length) : Math.min(5, index + 1);
+    const largest = Math.max(0, ...vm.detail.product.variants
+      .map((variant) => variant.quantityValue)
+      .filter((value): value is number => typeof value === 'number' && value > 0));
+    return tierForAmount(selected?.quantityValue ?? largest);
   }
 
   canBuy(offer: Offer): boolean {

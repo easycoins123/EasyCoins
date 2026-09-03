@@ -71,7 +71,8 @@ file gets a row in this table with the licence and its expiry.
 
 ## Competitor research
 
-FUT.GG and FutGoat were studied for product and UX principles: bundle laddering,
+Two established competitors (an international FC price-and-asset site and an
+Israeli coin seller) were studied for product and UX principles: bundle laddering,
 per-unit price comparison, objection-first FAQ ordering, delivery-time
 communication, and discovery architecture.
 

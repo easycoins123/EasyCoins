@@ -6,7 +6,9 @@ import { formatQuantity, OfferValue, rankByValue } from '../../core/value';
 import { LocalizePipe } from '../../core/i18n';
 import { Offer, ProductDetail, ProductVariant } from '../../domain';
 import { MoneyPipe } from '../money.pipe';
-import { CoinPackComponent } from './coin-pack.component';
+import { CoinTier } from '../../domain';
+import { CoinArtComponent } from './cards/coin-art.component';
+import { tierForAmount } from './cards/tiers';
 import { IconComponent } from './icon.component';
 
 /**
@@ -32,7 +34,7 @@ import { IconComponent } from './icon.component';
 @Component({
   selector: 'tt-bundle-ladder',
   standalone: true,
-  imports: [CommonModule, RouterLink, LocalizePipe, MoneyPipe, CoinPackComponent, IconComponent],
+  imports: [CommonModule, RouterLink, LocalizePipe, MoneyPipe, CoinArtComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="rail" *ngIf="rows.length > 0">
@@ -47,7 +49,7 @@ import { IconComponent } from './icon.component';
               <tt-icon name="bolt" [size]="12"></tt-icon> הערך הגבוה ביותר
             </span>
 
-            <tt-coin-pack class="tier__art" [steps]="i + 1"></tt-coin-pack>
+            <tt-coin-art class="tier__art" [tier]="tierFor(row)" variant="tile"></tt-coin-art>
 
             <span class="qty tt-numeric">{{ label(row) }}</span>
 
@@ -215,6 +217,10 @@ import { IconComponent } from './icon.component';
 })
 export class BundleLadderComponent {
   @Input({ required: true }) productSlug = '';
+
+  tierFor(row: { readonly variant: { readonly quantityValue?: number } }): CoinTier {
+    return tierForAmount(row.variant.quantityValue);
+  }
 
   /** The product's offers and variants, already loaded by the caller. */
   @Input() set detail(detail: ProductDetail | null | undefined) {

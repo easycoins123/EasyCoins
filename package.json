@@ -13,8 +13,11 @@
     "qa:a11y": "ng build && node qa/a11y.mjs",
     "qa:perf": "ng build && node qa/perf.mjs",
     "qa:security": "ng build && node qa/security-scan.mjs",
-    "qa:all": "ng build && node qa/route-sweep.mjs && node qa/flows.mjs && node qa/a11y.mjs && node qa/security-scan.mjs && node qa/perf.mjs",
-    "serve:dist": "node qa/serve.mjs"
+    "qa:all": "npm run test:compliance && ng build --configuration development && node qa/route-sweep.mjs && node qa/flows.mjs && node qa/a11y.mjs && node qa/security-scan.mjs && node qa/perf.mjs && node qa/network-audit.mjs && node qa/card-visual.mjs",
+    "serve:dist": "node qa/serve.mjs",
+    "test:compliance": "node --experimental-strip-types --test qa/compliance/assets.compliance.test.ts",
+    "qa:cards": "ng build --configuration development && node qa/card-visual.mjs",
+    "qa:network": "ng build --configuration development && node qa/network-audit.mjs"
   },
   "private": true,
   "engines": {

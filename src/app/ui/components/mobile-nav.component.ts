@@ -12,7 +12,7 @@ import { formatQuantity, rankByValue } from '../../core/value';
 import { ProductDetail } from '../../domain';
 import { CatalogFacade } from '../../state/catalog.facade';
 import { AuthFacade } from '../../state/customer.facade';
-import { materialForStep } from '../materials';
+import { TIERS, tierForAmount } from './cards/tiers';
 import { BrandLogoComponent } from './brand-logo.component';
 import { IconComponent, IconName } from './icon.component';
 
@@ -38,6 +38,7 @@ interface QuickTier {
   readonly quantity: string;
   readonly price: string;
   readonly best: boolean;
+  readonly amount: number;
 }
 
 /**
@@ -111,7 +112,7 @@ interface QuickTier {
             <li *ngFor="let tier of tiers; let i = index">
               <a [routerLink]="['/products', tier.slug, tier.variantId]"
                  [class.best]="tier.best"
-                 [style.--mat]="materialColor(i)"
+                 [style.--mat]="tierColor(tier.amount)"
                  (click)="close.emit()">
                 <span class="quick__qty tt-numeric">{{ tier.quantity }}</span>
                 <span class="quick__price tt-numeric">{{ tier.price }}</span>
@@ -391,8 +392,8 @@ export class MobileNavComponent implements OnChanges {
     }
   }
 
-  materialColor(index: number): string {
-    return materialForStep(index + 1).color;
+  tierColor(amount: number): string {
+    return TIERS[tierForAmount(amount)].color;
   }
 
   signOut(): void {
@@ -452,6 +453,7 @@ export class MobileNavComponent implements OnChanges {
         quantity: formatQuantity(row.variant.quantityValue) || row.variant.name.he,
         price: `₪${Math.round(row.offer.price.current.amountMinor / 100).toLocaleString('he-IL')}`,
         best: row.isBestValue,
+        amount: row.variant.quantityValue ?? 0,
       }));
 
     return rows.length > 0 ? rows : null;

@@ -8,28 +8,24 @@ import {
 
 import { AnalyticsService } from '../../core/analytics';
 import { STOREFRONT } from '../../core/brand';
-import { OfferValue, rankByValue } from '../../core/value';
+import { coinProductsFrom } from '../../core/value';
 import {
-  AppError, CatalogQuery, CatalogSort, DEFAULT_PAGE_SIZE, Offer, Page, Platform, Product,
+  AppError, CatalogQuery, CatalogSort, CoinProduct, DEFAULT_PAGE_SIZE, Offer, Page, Platform, Product,
   ProductDetail, ProductType, toAppError,
 } from '../../domain';
 import { CartFacade, CatalogFacade, CatalogLookups } from '../../state';
 import {
-  CoinTierCardComponent, EmptyStateComponent, ErrorStateComponent, FilterBarComponent,
+  EasyCoinsCardComponent, EmptyStateComponent, ErrorStateComponent, FilterBarComponent,
   FilterChange, FilterGroup, IconComponent, ProductCardComponent, RevealDirective,
   SkeletonGridComponent,
 } from '../../ui';
-
-interface TierRow {
-  readonly row: OfferValue;
-  readonly rank: number;
-}
 
 interface StoreViewModel {
   readonly page: Page<Product>;
   readonly lookups: CatalogLookups;
   readonly coins: ProductDetail | null;
-  readonly tiers: readonly TierRow[];
+  /** The coin bundles, one card each, priced for the chosen platform. */
+  readonly products: readonly CoinProduct[];
   readonly others: readonly Product[];
 }
 
@@ -50,7 +46,7 @@ interface StoreViewModel {
   standalone: true,
   imports: [
     CommonModule,
-    ProductCardComponent, CoinTierCardComponent, SkeletonGridComponent, EmptyStateComponent,
+    ProductCardComponent, EasyCoinsCardComponent, SkeletonGridComponent, EmptyStateComponent,
     ErrorStateComponent, FilterBarComponent, IconComponent, RevealDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -96,19 +92,14 @@ interface StoreViewModel {
 
           <h2 class="tt-visually-hidden">תוצאות</h2>
           <div class="tt-grid shelf" *ngIf="!isEmpty(vm)">
-            <ng-container *ngIf="vm.coins as coins">
-              <tt-tier-card *ngFor="let tier of vm.tiers; let i = index; trackBy: trackByOffer"
-                            [ttReveal]="i"
-                            [row]="tier.row"
-                            [rank]="tier.rank"
-                            [productSlug]="coins.product.slug"
-                            [productName]="coins.product.name"
-                            [busy]="adding()"
-                            (buy)="buyOffer($event)">
-              </tt-tier-card>
-            </ng-container>
+            <tt-easycoins-card *ngFor="let product of vm.products; let i = index; trackBy: trackByOffer"
+                               [ttReveal]="i"
+                               [product]="product"
+                               [busy]="adding()"
+                               (buy)="buyOffer($event)">
+            </tt-easycoins-card>
             <tt-product-card *ngFor="let product of vm.others; let i = index; trackBy: trackById"
-                             [ttReveal]="vm.tiers.length + i"
+                             [ttReveal]="vm.products.length + i"
                              [product]="product"
                              [lookups]="vm.lookups">
             </tt-product-card>
@@ -222,6 +213,12 @@ export class StorePage {
     if (search) {
       this.patch({ search });
     }
+    // A platform in the URL pre-selects the filter, so a link can land a
+    // customer on the shelf already priced for their console.
+    const platform = params.get('platform');
+    if (platform) {
+      this.patch({ platformIds: [platform] });
+    }
     this.analytics.pageView('/store', 'Store');
   }
 
@@ -229,20 +226,14 @@ export class StorePage {
     const inPage = coins !== null && page.items.some((product) => product.id === coins.product.id);
     const others = page.items.filter((product) => product.id !== coins?.product.id);
     if (!coins || !inPage) {
-      return { page, lookups, coins: null, tiers: [], others };
+      return { page, lookups, coins: null, products: [], others };
     }
-    const platformId = query.platformIds?.[0];
-    const pool = coins.offers.filter((offer) => !platformId || offer.platformId === platformId);
-    const first = pool[0];
-    const comparable = first
-      ? pool.filter((offer) => offer.platformId === first.platformId && offer.regionId === first.regionId)
-      : [];
-    const ranked = rankByValue(comparable, coins.product.variants)
-      .filter((row) => row.perUnitMinor !== undefined)
-      .sort((a, b) => (a.variant.quantityValue ?? 0) - (b.variant.quantityValue ?? 0))
-      .map((row, index): TierRow => ({ row, rank: Math.min(5, index + 1) }));
-    const tiers = query.sort === 'price-desc' ? [...ranked].reverse() : ranked;
-    return { page, lookups, coins, tiers, others };
+    const ranked = coinProductsFrom(coins, lookups.platforms, {
+      game: STOREFRONT.focusGameEdition,
+      platformId: query.platformIds?.[0],
+    });
+    const products = query.sort === 'price-desc' ? [...ranked].reverse() : ranked;
+    return { page, lookups, coins, products, others };
   }
 
   buyOffer(offer: Offer): void {
@@ -257,11 +248,11 @@ export class StorePage {
   }
 
   isEmpty(vm: StoreViewModel): boolean {
-    return vm.tiers.length === 0 && vm.others.length === 0;
+    return vm.products.length === 0 && vm.others.length === 0;
   }
 
   countLabel(vm: StoreViewModel): string {
-    const total = vm.tiers.length + vm.others.length;
+    const total = vm.products.length + vm.others.length;
     return total === 1 ? 'פריט אחד' : `${total} פריטים`;
   }
 
@@ -342,8 +333,8 @@ export class StorePage {
     return product.id;
   }
 
-  trackByOffer(_index: number, tier: TierRow): string {
-    return tier.row.offer.id;
+  trackByOffer(_index: number, product: CoinProduct): string {
+    return product.id;
   }
 
   private patch(partial: Partial<CatalogQuery>): void {

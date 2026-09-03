@@ -5,3 +5,5 @@ export * from './product';
 export * from './product-type';
 export * from './query';
 export * from './region';
+export * from './coin-product';
+export * from './fc-player';
