@@ -64,6 +64,11 @@ export type IconName =
   | 'support'
   | 'lightning'
   | 'home'
+  | 'market'
+  | 'package'
+  | 'star'
+  | 'payment'
+  | 'tracking'
   | 'mark';
 
 interface IconArt {
@@ -231,6 +236,12 @@ const ART: Record<string, IconArt> = {
     stroke: 'M14.6 6.4l3.1 3.1',
   },
   refresh: { stroke: 'M20 12a8 8 0 1 1-2.4-5.7M20.4 4v4.4H16' },
+  /* The market: two transfers crossing. */
+  market: { stroke: 'M3.6 8.2h13.2M13.4 4.8l3.4 3.4-3.4 3.4M20.4 15.8H7.2M10.6 12.4l-3.4 3.4 3.4 3.4' },
+  /* A package: a box with the band the coins ship in. */
+  package: { stroke: 'M3.6 8.2 12 4l8.4 4.2v8.6L12 21l-8.4-4.2ZM3.6 8.2 12 12.4l8.4-4.2M12 12.4V21M7.8 6.1l8.4 4.2' },
+  /* A rating star. */
+  star: { fill: 'M12 2.4l2.9 6.1 6.7.8-4.9 4.6 1.3 6.6L12 17.2l-6 3.3 1.3-6.6L2.4 9.3l6.7-.8Z' },
 };
 
 /** Vocabulary names that share a drawing with an existing icon. */
@@ -239,6 +250,8 @@ const ALIASES: Readonly<Partial<Record<IconName, IconName>>> = {
   delivery: 'truck',
   support: 'headset',
   lightning: 'bolt',
+  payment: 'card',
+  tracking: 'truck',
 };
 
 @Component({

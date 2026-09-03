@@ -3,30 +3,26 @@ import { CommonModule } from '@angular/common';
 
 import { CoinTier } from '../../domain';
 import { CoinArtComponent } from './cards/coin-art.component';
-import { SquadComponent } from './world/squad.component';
+import { EmblemCardComponent } from './emblem-card.component';
 
 /**
  * The hero's object: the trophy under the lights.
  *
  * The stadium behind it is drawn by `tt-stadium`; this is what stands on the
- * centre circle. The Legend stack on a pool of light, its reflection in the
- * wet pitch, and two of the squad far behind it, backlit, small enough to be
- * atmosphere rather than subject. Nothing here is a photograph; the object
- * is the same raster the shelf uses and the figures are the same silhouettes
- * the journey uses, so the whole site keeps one cast and one trophy.
+ * centre circle. The EasyCoins card rises behind, the coin faces the visitor
+ * in front of two stacks, a pool of green energy sits under it all and the
+ * wet pitch carries a faint reflection. The same coin the shelf sells, the
+ * same card language the process uses; the hero is where they are largest.
  */
 @Component({
   selector: 'tt-hero-scene',
   standalone: true,
-  imports: [CommonModule, CoinArtComponent, SquadComponent],
+  imports: [CommonModule, CoinArtComponent, EmblemCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="scene" aria-hidden="true">
-      <span class="haze"></span>
-
-      <tt-squad class="player player--a" pose="celebrate"></tt-squad>
-      <tt-squad class="player player--b" pose="walk"></tt-squad>
-
+      <span class="energy"></span>
+      <tt-emblem-card class="card tt-float"></tt-emblem-card>
       <div class="stage">
         <tt-coin-art class="object" [tier]="tier" variant="hero"></tt-coin-art>
         <tt-coin-art class="mirror" [tier]="tier" variant="hero"></tt-coin-art>
@@ -42,35 +38,40 @@ import { SquadComponent } from './world/squad.component';
       display: grid;
       place-items: center;
       inline-size: 100%;
-      aspect-ratio: 5 / 6;
+      aspect-ratio: 5 / 5.4;
       overflow: visible;
     }
 
-    .haze {
+    /* The one green on the site: gaming energy behind the trophy. */
+    .energy {
       position: absolute;
-      inset-block-start: 8%;
-      inline-size: 96%;
-      block-size: 80%;
+      inset-inline: 4%;
+      inset-block: 8% 18%;
       border-radius: 50%;
-      background: radial-gradient(ellipse at 50% 55%, rgba(230, 203, 134, 0.18), rgba(212, 180, 106, 0.05) 45%, transparent 70%);
-      filter: blur(20px);
+      background:
+        radial-gradient(ellipse at 62% 38%, var(--tt-energy-glow), transparent 60%),
+        radial-gradient(ellipse at 42% 72%, rgba(212, 180, 106, 0.18), transparent 62%);
+      filter: blur(18px);
       z-index: -1;
     }
 
-    /* Two of the squad, far behind the trophy: backlit, small, out of the
-       spotlight. They are atmosphere here; the story gives them the stage. */
-    .player { position: absolute; inline-size: 13%; opacity: 1; --squad-body: #0B0D12; --squad-body-light: #1B2029; }
-    .player--a { inset-inline-start: 4%; inset-block-end: 33%; }
-    .player--b { inset-inline-end: 5%; inset-block-end: 35%; inline-size: 11%; opacity: 0.85; }
+    .card {
+      position: absolute;
+      inset-inline-end: 4%;
+      inset-block-start: 0;
+      inline-size: 42%;
+      z-index: 0;
+      filter: drop-shadow(0 26px 34px rgba(0, 0, 0, 0.6));
+    }
 
-    .stage { position: relative; inline-size: 100%; display: flex; flex-direction: column; align-items: center; }
-    .object { inline-size: 92%; filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.6)); }
+    .stage { position: relative; z-index: 1; inline-size: 100%; display: flex; flex-direction: column; align-items: center; margin-block-start: 22%; }
+    .object { inline-size: 100%; filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.6)); }
 
     .mirror {
-      inline-size: 92%;
-      margin-block-start: -30%;
+      inline-size: 100%;
+      margin-block-start: -34%;
       transform: scaleY(-1);
-      opacity: 0.16;
+      opacity: 0.14;
       filter: blur(2.5px);
       -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent 34%);
       mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent 34%);
@@ -78,13 +79,18 @@ import { SquadComponent } from './world/squad.component';
     }
 
     @media (max-width: 900px) {
-      .scene { aspect-ratio: 16 / 11; }
-      .object { inline-size: 66%; }
-      .mirror { inline-size: 66%; margin-block-start: -22%; opacity: 0.14; }
-      .haze { inline-size: 62%; block-size: 92%; inset-block-start: 2%; }
-      .player { inline-size: 11%; inset-block-end: 28%; }
-      .player--a { inset-inline-start: 12%; }
-      .player--b { inset-inline-end: 14%; inline-size: 8%; }
+      .scene { aspect-ratio: 16 / 12; }
+      .card { inline-size: 34%; inset-inline-end: 8%; inset-block-start: 0; }
+      .stage { margin-block-start: 14%; }
+      .object { inline-size: 84%; }
+      .mirror { inline-size: 84%; margin-block-start: -30%; opacity: 0.12; }
+    }
+    /* On a phone the scene is exactly as tall as its objects: no reflection
+       and no reserved aspect, so the headline follows the trophy directly. */
+    @media (max-width: 760px) {
+      .scene { aspect-ratio: auto; }
+      .stage { margin-block-start: 16%; }
+      .mirror { display: none; }
     }
   `],
 })

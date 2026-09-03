@@ -34,12 +34,12 @@ body {
 h1, h2 {
   margin: 0 0 var(--tt-space-3);
   font-family: var(--tt-font-display);
-  font-weight: 700;
+  font-weight: var(--tt-weight-display);
   letter-spacing: var(--tt-tracking-display);
   text-wrap: balance;
 }
-h1 { font-size: var(--tt-display-2); line-height: 0.98; }
-h2 { font-size: var(--tt-display-3); line-height: 1.02; }
+h1 { font-size: var(--tt-display-2); line-height: 1.08; }
+h2 { font-size: var(--tt-display-3); line-height: 1.12; }
 
 h3, h4 {
   margin: 0 0 var(--tt-space-2);
@@ -652,6 +652,12 @@ body::after {
   -webkit-backdrop-filter: blur(12px) saturate(1.15);
 }
 
+/* A field of faint gold hexagons: the pitch-side geometry behind a section. */
+.tt-hexfield {
+  background-color: var(--tt-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='31.2'%3E%3Cpath d='M18 0 L36 10.4 L36 20.8 L18 31.2 L0 20.8 L0 10.4 Z' fill='none' stroke='%23D4B46A' stroke-opacity='0.07' stroke-width='1'/%3E%3C/svg%3E");
+}
+
 /* The raised surface for static content: one step up from the page, a
    hairline, and a light top edge so it reads as an object without a glow. */
 .tt-plate {
@@ -697,18 +703,18 @@ body::after {
 
 .tt-price {
   font-family: var(--tt-font-display);
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-weight: var(--tt-weight-display);
+  letter-spacing: -0.02em;
 }
-.tt-price--lg { font-size: 2.1rem; }
-.tt-price--xl { font-size: 2.8rem; }
+.tt-price--lg { font-size: 1.9rem; }
+.tt-price--xl { font-size: 2.5rem; }
 
 /* Tier quantities and other big figures. */
 .tt-figure {
   font-family: var(--tt-font-display);
-  font-weight: 700;
-  line-height: 0.95;
-  letter-spacing: 0.01em;
+  font-weight: var(--tt-weight-display);
+  line-height: 1;
+  letter-spacing: -0.03em;
   direction: ltr;
   unicode-bidi: isolate;
 }

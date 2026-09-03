@@ -53,15 +53,15 @@ import { BRAND } from '../../core/brand';
     .mark { flex: none; display: block; }
     .word {
       font-family: var(--tt-font-display);
-      font-size: 1.55rem;
+      font-size: 1.3rem;
       line-height: 1;
-      letter-spacing: 0.02em;
+      letter-spacing: -0.02em;
       white-space: nowrap;
       direction: ltr;
       unicode-bidi: isolate;
     }
-    .word__lead { font-weight: 700; }
-    .word__tail { font-weight: 700; color: var(--tt-gold-400); }
+    .word__lead { font-weight: var(--tt-weight-display); }
+    .word__tail { font-weight: var(--tt-weight-display); color: var(--tt-gold-400); }
   `],
 })
 export class BrandLogoComponent {

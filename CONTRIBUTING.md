@@ -70,10 +70,13 @@ Do not add it "temporarily".
   (`src/assets/ui/stadium-bokeh.avif|webp`, from `node qa/bake-stadium.mjs`,
   registered in `world-assets.ts`). Nominative use of a game's name in text
   is fine; its logo is not.
-- **The cast** is `tt-squad`: faceless, backlit silhouettes in the EasyCoins
-  kit with the brand's E on the chest, in four poses (walk, strike, keeper,
-  celebrate). They never get a face, a number, a crest, a name or a likeness,
-  and they are always decorative (`aria-hidden`), with the meaning in text.
+- **No characters.** The storefront has no people in it, drawn or
+  photographed: no players, no mascots, no silhouettes. The idea "Ultimate
+  Team" is carried by `tt-emblem-card`, an original card with a football in
+  gold line and the brand's emblem, and by the coin itself. The visual
+  reference for the whole site is `docs/design/easycoins-final-reference.png`
+  (see `docs/design/README.md`); its player card is a placeholder for the
+  idea, never something to reproduce.
 - **The ticket** (`.tt-ticket` in `_base.scss`) is how an order is shown:
   the picker's quote, the cart and checkout summaries, the product page's
   buy card and the order page. The stub carries the real order reference

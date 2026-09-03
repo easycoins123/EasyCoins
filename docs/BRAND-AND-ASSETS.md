@@ -144,10 +144,12 @@ the interface.
 
 > Asset policy (what may and may not be used, and how it is enforced): see [CONTRIBUTING.md](../CONTRIBUTING.md#asset-policy).
 
-## The world, the cast and the ticket
+## The world, the card and the ticket
 
-Since September 2026 the storefront lives in a stadium after dark (`tt-stadium`),
-its customers' journey is acted out by a faceless squad in the EasyCoins kit
-(`tt-squad`: walk, strike, keeper, celebrate), and every order is presented as a
-ticket (`.tt-ticket`). The rules for all three, and the bake commands for the
-raster pieces, are in [CONTRIBUTING.md](../CONTRIBUTING.md#asset-policy).
+Since September 2026 the storefront is composed to a locked visual reference
+(`docs/design/easycoins-final-reference.png`): black and gold, a stadium after dark
+(`tt-stadium`), the EasyCoins coin as the trophy and the product, an original
+emblem card (`tt-emblem-card`) instead of any player, three object cards for the
+process, and every order presented as a ticket (`.tt-ticket`). No people appear
+anywhere. The rules and the bake commands for the raster pieces are in
+[CONTRIBUTING.md](../CONTRIBUTING.md#asset-policy).

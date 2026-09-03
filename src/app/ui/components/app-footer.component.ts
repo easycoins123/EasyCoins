@@ -125,6 +125,18 @@ import { IconComponent } from './icon.component';
     .bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--tt-space-2) var(--tt-space-4); margin-block-start: var(--tt-space-4); font-size: var(--tt-text-xs); color: var(--tt-text-muted); }
 
     @media (max-width: 900px) { .top { grid-template-columns: repeat(2, minmax(0, 1fr)); } .about { grid-column: 1 / -1; max-inline-size: none; } }
+    @media (max-width: 700px) {
+      .foot { margin-block-start: var(--tt-space-6); padding-block: var(--tt-space-6) var(--tt-space-4); }
+      .top { gap: var(--tt-space-4) var(--tt-space-4); }
+      .about { gap: var(--tt-space-2); }
+      .statement { font-size: var(--tt-text-xl); }
+      .col { gap: 0; }
+      .col h2 { margin-block-end: var(--tt-space-1); font-size: var(--tt-text-md); }
+      .col a { min-block-size: 30px; }
+      .assure { margin-block-start: var(--tt-space-4); padding-block: var(--tt-space-3); gap: var(--tt-space-2) var(--tt-space-4); font-size: var(--tt-caption); }
+      .notice { margin-block-start: var(--tt-space-3); }
+      .bottom { margin-block-start: var(--tt-space-3); }
+    }
   `],
 })
 export class AppFooterComponent {

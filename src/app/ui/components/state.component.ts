@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from 
 import { CommonModule } from '@angular/common';
 
 import { IconComponent, IconName } from './icon.component';
-import { SquadComponent, SquadPose } from './world/squad.component';
 
 import { AppError } from '../../domain';
 
@@ -59,23 +58,16 @@ export class SkeletonGridComponent {
 @Component({
   selector: 'tt-empty-state',
   standalone: true,
-  imports: [CommonModule, IconComponent, SquadComponent],
+  imports: [CommonModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="wrap">
-      <!-- One of the squad where the page has a story to tell; otherwise the
-           glyph plate, cut on the same nine degrees as the brand mark, so a
-           dead end still looks like it belongs to this shop. -->
-      <div class="figure" *ngIf="pose; else glyph" aria-hidden="true">
-        <span class="figure__light"></span>
-        <tt-squad [pose]="pose"></tt-squad>
+      <!-- The glyph plate, cut on the same nine degrees as the brand mark, so
+           a dead end still looks like it belongs to this shop. -->
+      <div class="glyph" aria-hidden="true">
+        <span class="glyph__plate"></span>
+        <tt-icon [name]="icon" [size]="26"></tt-icon>
       </div>
-      <ng-template #glyph>
-        <div class="glyph" aria-hidden="true">
-          <span class="glyph__plate"></span>
-          <tt-icon [name]="icon" [size]="24"></tt-icon>
-        </div>
-      </ng-template>
       <h2>{{ title }}</h2>
       <p class="tt-muted">{{ message }}</p>
       <button type="button" class="tt-btn tt-btn--primary" *ngIf="actionLabel" (click)="action.emit()">
@@ -111,11 +103,7 @@ export class SkeletonGridComponent {
       border: 1px solid var(--tt-border-strong);
       box-shadow: inset 0 1px 0 rgba(255, 248, 235, 0.06);
     }
-    .glyph tt-icon { position: relative; }
-    .figure { position: relative; inline-size: 120px; margin-block-end: var(--tt-space-2); }
-    .figure__light { position: absolute; inset-inline: 0; inset-block-end: 4px; block-size: 40%; background: radial-gradient(50% 60% at 50% 100%, var(--tt-flood-soft), transparent 70%); }
-    .figure__light::after { content: ''; position: absolute; inset-inline: 14%; inset-block-end: 0; block-size: 10px; border-radius: 50%; border: 1px solid var(--tt-pitch); }
-    .figure tt-squad { position: relative; }
+    .glyph tt-icon { position: relative; color: var(--tt-gold-400); }
     h2 { font-size: var(--tt-text-lg); margin: 0; }
     p { max-inline-size: 40ch; font-size: var(--tt-text-sm); }
     .wrap .tt-btn { margin-block-start: var(--tt-space-3); }
@@ -123,8 +111,6 @@ export class SkeletonGridComponent {
 })
 export class EmptyStateComponent {
   @Input() icon: IconName = 'search';
-  /** One of the squad instead of the glyph, when the empty state has a story. */
-  @Input() pose?: SquadPose;
   @Input() title = '';
   @Input() message = '';
   @Input() actionLabel?: string;
@@ -138,12 +124,10 @@ export class EmptyStateComponent {
 @Component({
   selector: 'tt-error-state',
   standalone: true,
-  imports: [CommonModule, IconComponent, SquadComponent],
+  imports: [CommonModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="wrap" role="alert">
-      <!-- The keeper: something got through, and the way back is the action. -->
-      <div class="figure" aria-hidden="true"><tt-squad pose="keeper"></tt-squad></div>
       <div class="glyph" aria-hidden="true"><tt-icon name="alert" [size]="24"></tt-icon></div>
       <h2>{{ title }}</h2>
       <p class="tt-muted">{{ message }}</p>
@@ -161,12 +145,11 @@ export class EmptyStateComponent {
       gap: var(--tt-space-2);
       padding: var(--tt-space-7) var(--tt-space-4);
     }
-    .figure { inline-size: 110px; margin-block-end: calc(var(--tt-space-3) * -1); }
     .glyph {
       display: grid;
       place-items: center;
-      inline-size: 44px;
-      block-size: 44px;
+      inline-size: 52px;
+      block-size: 52px;
       border-radius: var(--tt-radius-lg);
       background: var(--tt-danger-tint);
       color: var(--tt-danger);

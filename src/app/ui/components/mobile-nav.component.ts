@@ -348,7 +348,7 @@ export class MobileNavComponent implements OnChanges {
     {
       title: 'חנות',
       items: [
-        { route: '/store', icon: 'coin', label: 'חנות הקוינס' },
+        { route: '/store', icon: 'coin', label: 'חבילות' },
         { route: '/deals', icon: 'lightning', label: 'מבצעים' },
       ],
     },
@@ -364,6 +364,7 @@ export class MobileNavComponent implements OnChanges {
       title: 'עזרה',
       items: [
         { route: '/delivery', icon: 'delivery', label: 'איך זה עובד' },
+        { route: '/reviews', icon: 'star', label: 'ביקורות' },
         { route: '/faq', icon: 'info', label: 'שאלות נפוצות' },
         { route: '/support', icon: 'support', label: 'תמיכה' },
       ],

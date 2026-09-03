@@ -9,7 +9,6 @@ import { CartFacade } from '../../state/cart.facade';
 import { BrandLogoComponent } from './brand-logo.component';
 import { IconComponent } from './icon.component';
 import { MobileNavComponent } from './mobile-nav.component';
-import { SearchBoxComponent } from './search-box.component';
 
 /**
  * The site header.
@@ -30,7 +29,7 @@ import { SearchBoxComponent } from './search-box.component';
   standalone: true,
   imports: [
     CommonModule, RouterLink, RouterLinkActive,
-    BrandLogoComponent, IconComponent, SearchBoxComponent, MobileNavComponent,
+    BrandLogoComponent, IconComponent, MobileNavComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -41,13 +40,12 @@ import { SearchBoxComponent } from './search-box.component';
         </a>
 
         <nav class="nav" aria-label="ראשי">
-          <a routerLink="/store" routerLinkActive="active" ariaCurrentWhenActive="page">חנות הקוינס</a>
-          <a routerLink="/deals" routerLinkActive="active" ariaCurrentWhenActive="page">מבצעים</a>
+          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">בית</a>
+          <a routerLink="/store" routerLinkActive="active" ariaCurrentWhenActive="page">חבילות</a>
           <a routerLink="/delivery" routerLinkActive="active" ariaCurrentWhenActive="page">איך זה עובד</a>
-          <a routerLink="/support" routerLinkActive="active" ariaCurrentWhenActive="page">תמיכה</a>
+          <a routerLink="/reviews" routerLinkActive="active" ariaCurrentWhenActive="page">ביקורות</a>
+          <a routerLink="/faq" routerLinkActive="active" ariaCurrentWhenActive="page">שאלות נפוצות</a>
         </nav>
-
-        <tt-search-box class="search"></tt-search-box>
 
         <div class="actions">
           <ng-container [ngSwitch]="auth.status()">
@@ -182,7 +180,7 @@ import { SearchBoxComponent } from './search-box.component';
     }
 
     .search { flex: 1; max-inline-size: 300px; margin-inline-start: auto; }
-    .actions { display: flex; align-items: center; gap: var(--tt-space-1); }
+    .actions { display: flex; align-items: center; gap: var(--tt-space-1); margin-inline-start: auto; }
 
     .action {
       position: relative;
@@ -324,7 +322,7 @@ import { SearchBoxComponent } from './search-box.component';
       .actions { margin-inline-start: auto; }
       .signin, .pending { display: none; }
     }
-    @media (max-width: 360px) { .buy-cta { display: none; } }
+    @media (max-width: 380px) { .buy-cta { display: none; } }
   `],
 })
 export class AppHeaderComponent {

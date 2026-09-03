@@ -10,7 +10,7 @@ import {
 } from '../../domain';
 import { CartFacade, CatalogFacade, CheckoutFacade } from '../../state';
 import {
-  FulfillmentBadgeComponent, IconComponent, MoneyPipe, RegionBadgeComponent, SquadComponent,
+  FulfillmentBadgeComponent, IconComponent, MoneyPipe, RegionBadgeComponent,
 } from '../../ui';
 
 /**
@@ -28,7 +28,7 @@ import {
 @Component({
   selector: 'tt-checkout-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, LocalizePipe, MoneyPipe, RegionBadgeComponent, FulfillmentBadgeComponent, IconComponent, SquadComponent],
+  imports: [CommonModule, FormsModule, RouterLink, LocalizePipe, MoneyPipe, RegionBadgeComponent, FulfillmentBadgeComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-container tt-section">
@@ -112,9 +112,9 @@ import {
               <!-- What happens next, in the world's language: the squad walks
                    the customer from payment to delivery before they commit. -->
               <ol class="next" aria-label="מה קורה אחרי התשלום">
-                <li><span class="next__figure" aria-hidden="true"><tt-squad pose="keeper"></tt-squad></span><span><strong>תשלום מאובטח</strong><span class="tt-faint">פרטי האשראי עוברים לספק הסליקה ולא נשמרים אצלנו.</span></span></li>
-                <li><span class="next__figure" aria-hidden="true"><tt-squad pose="walk"></tt-squad></span><span><strong>דף מעקב אישי</strong><span class="tt-faint">נפתח מיד אחרי התשלום, עם מספר הזמנה.</span></span></li>
-                <li><span class="next__figure" aria-hidden="true"><tt-squad pose="celebrate"></tt-squad></span><span><strong>אספקה ועדכון</strong><span class="tt-faint">הסטטוס מתעדכן בדף ההזמנה עד שהקוינס אצלכם.</span></span></li>
+                <li><span class="next__glyph" aria-hidden="true"><tt-icon name="shield" [size]="20"></tt-icon></span><span><strong>תשלום מאובטח</strong><span class="tt-faint">פרטי האשראי עוברים לספק הסליקה ולא נשמרים אצלנו.</span></span></li>
+                <li><span class="next__glyph" aria-hidden="true"><tt-icon name="truck" [size]="20"></tt-icon></span><span><strong>דף מעקב אישי</strong><span class="tt-faint">נפתח מיד אחרי התשלום, עם מספר הזמנה.</span></span></li>
+                <li><span class="next__glyph" aria-hidden="true"><tt-icon name="coins" [size]="20"></tt-icon></span><span><strong>אספקה ועדכון</strong><span class="tt-faint">הסטטוס מתעדכן בדף ההזמנה עד שהקוינס אצלכם.</span></span></li>
               </ol>
 
               <p class="tt-hint">
@@ -277,7 +277,8 @@ import {
     .next li { display: flex; flex-direction: column; gap: var(--tt-space-2); padding: var(--tt-space-3); border: 1px solid var(--tt-border); border-radius: var(--tt-radius-md); background: var(--tt-surface-2); font-size: var(--tt-text-sm); }
     .next li strong { display: block; margin-block-end: 2px; }
     .next li .tt-faint { display: block; line-height: var(--tt-leading-snug); }
-    .next__figure { display: block; inline-size: 44px; margin-inline-start: -4px; }
+    .next__glyph { display: grid; place-items: center; inline-size: 40px; block-size: 40px; flex: none; border-radius: var(--tt-radius-md); background: var(--tt-surface-3); border: 1px solid var(--tt-gold-600); color: var(--tt-gold-400); transform: skewX(-9deg); }
+    .next__glyph tt-icon { transform: skewX(9deg); }
     @media (max-width: 640px) { .next { grid-template-columns: 1fr; } .next li { flex-direction: row; align-items: center; } }
     .progress { display: flex; gap: var(--tt-space-2); margin: calc(var(--tt-space-2) * -1) 0 var(--tt-space-5); padding: 0; list-style: none; font-size: var(--tt-text-xs); font-weight: 700; color: var(--tt-text-faint); }
     .progress li { display: inline-flex; align-items: center; gap: 6px; padding: 0.3rem 0.7rem 0.3rem 0.4rem; border: 1px solid var(--tt-border); border-radius: var(--tt-radius-pill); }

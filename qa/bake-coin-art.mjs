@@ -11,9 +11,11 @@
  * filled from measurements rather than guesses.
  *
  * What is baked and why:
- *   card  one per tier, 720 x 576. Store cards, the quote, the product page
- *         and the home close all render this composition at 150-320 CSS px.
- *   hero  Legend only, 1200 x 1015. The one large object on the site.
+ *   bundle  one per bundle size, 720 x 576, from the store shelf. The
+ *           package cards, at 150-320 CSS px.
+ *   card    one per tier, 720 x 576, from the product page with that tier's
+ *           variant selected. The quote and the product page.
+ *   hero    the trophy, 1200 x 1015, from the home page.
  * Tiles (60-100 CSS px) stay SVG: at that size the vector is sharper and
  * costs no request.
  *
@@ -30,11 +32,9 @@ const BASE = `http://localhost:${PORT}`;
 const OUT = 'src/assets/products';
 mkdirSync(OUT, { recursive: true });
 
-const TIERS = ['starter', 'pro', 'elite', 'legend'];
-const JOBS = [
-  ...TIERS.map((tier) => ({ file: `coins-${tier}`, tier, variant: 'card', width: 720, height: 576 })),
-  { file: 'coins-legend-hero', tier: 'legend', variant: 'hero', width: 1200, height: 1015 },
-];
+/** Tier -> the mock variant whose product page shows that tier's card composition. */
+const TIER_VARIANTS = { starter: 'prod-fc-coins__100k', pro: 'prod-fc-coins__250k', elite: 'prod-fc-coins__1m', legend: 'prod-fc-coins__2m' };
+const PRODUCT = '/products/ea-fc-ultimate-team-coins';
 
 /** The finishing layer, added to the extracted markup at bake time only. */
 const FINISH_DEFS = `
@@ -76,13 +76,19 @@ function finish(svg, width, height) {
   out = out
     .replace(/<ellipse\b[^>]*fill="url\(#[^)]*-light\)"[^>]*>(?:<\/ellipse>)?/, '')
     .replace(/<g\b[^>]*class="rays"[^>]*>[\s\S]*?<\/g>/, '')
-    .replace(/<g\b[^>]*>(?:\s*<circle\b[^>]*>(?:<\/circle>)?\s*)+<\/g>/, '');
+    .replace(/<g\b[^>]*>(?:\s*<circle\b[^>]*>(?:<\/circle>)?\s*)+<\/g>/g, '');
 
-  // Faces: brushed grain, specular highlight, bevelled rim.
+  // Faces (lying ellipses and the facing circle): grain, highlight, bevel.
   out = out.replace(/<ellipse\b[^>]*fill="url\(#[^)]*-face\)"[^>]*>(?:<\/ellipse>)?/g, (tag) => {
     const cx = attr(tag, 'cx'); const cy = attr(tag, 'cy'); const rx = Number(attr(tag, 'rx')); const ry = Number(attr(tag, 'ry'));
     const filtered = tag.replace(/<ellipse/, '<ellipse filter="url(#bk-metal)"');
     const bevel = `<ellipse cx="${cx}" cy="${cy}" rx="${(rx - 0.9).toFixed(2)}" ry="${(ry - 0.5).toFixed(2)}" fill="none" stroke="url(#bk-bevel)" stroke-width="1.5" opacity="0.75"></ellipse>`;
+    return filtered + bevel;
+  });
+  out = out.replace(/<circle\b[^>]*fill="url\(#[^)]*-face\)"[^>]*>(?:<\/circle>)?/g, (tag) => {
+    const cx = attr(tag, 'cx'); const cy = attr(tag, 'cy'); const r = Number(attr(tag, 'r'));
+    const filtered = tag.replace(/<circle/, '<circle filter="url(#bk-metal)"');
+    const bevel = `<circle cx="${cx}" cy="${cy}" r="${(r - 1).toFixed(2)}" fill="none" stroke="url(#bk-bevel)" stroke-width="2" opacity="0.8"></circle>`;
     return filtered + bevel;
   });
   // The contact shadow softens.
@@ -94,20 +100,34 @@ const server = await startServer(PORT);
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 
-// Card compositions from the store shelf, hero from the home page.
-await page.goto(`${BASE}/store?platform=plat-ps5`, { waitUntil: 'networkidle' });
+const jobs = [];
+
+// Bundle compositions from the store shelf, smallest first.
+await page.goto(`${BASE}/store?platform=plat-ps5&art=vector`, { waitUntil: 'networkidle' });
 await page.locator('tt-easycoins-card').first().waitFor();
-const cardSvg = {};
-for (const tier of TIERS) {
-  cardSvg[tier] = await page.locator(`tt-easycoins-card article[data-tier="${tier}"] tt-coin-art svg`).first().evaluate((node) => node.outerHTML);
+const shelf = await page.locator('tt-easycoins-card').evaluateAll((cards) => cards.map((card) => ({
+  amount: card.querySelector('.amount')?.textContent?.trim().toLowerCase() ?? '',
+  svg: card.querySelector('tt-coin-art svg')?.outerHTML ?? '',
+})));
+for (const card of shelf) {
+  if (card.svg) jobs.push({ file: `bundle-${card.amount}`, svg: card.svg, width: 720, height: 576 });
 }
-await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+
+// Card compositions per tier, from the product page.
+for (const [tier, variant] of Object.entries(TIER_VARIANTS)) {
+  await page.goto(`${BASE}${PRODUCT}/${variant}?art=vector`, { waitUntil: 'networkidle' });
+  const svg = await page.locator('.media tt-coin-art svg').first().evaluate((node) => node.outerHTML);
+  jobs.push({ file: `coins-${tier}`, svg, width: 720, height: 576 });
+}
+
+// The hero, from the home page.
+await page.goto(`${BASE}/?art=vector`, { waitUntil: 'networkidle' });
 const heroSvg = await page.locator('tt-hero-scene .object svg').first().evaluate((node) => node.outerHTML);
+jobs.push({ file: 'coins-legend-hero', svg: heroSvg, width: 1200, height: 1015, hero: true });
 
 const rows = [];
-for (const job of JOBS) {
-  const source = job.variant === 'hero' ? heroSvg : cardSvg[job.tier];
-  const svg = finish(source, job.width, job.height);
+for (const job of jobs) {
+  const svg = finish(job.svg, job.width, job.height);
   const render = await browser.newPage({ viewport: { width: job.width, height: job.height }, deviceScaleFactor: 1 });
   await render.setContent(`<!doctype html><html><head><style>html,body{margin:0;background:transparent}svg{display:block}</style></head><body>${svg}</body></html>`);
   await render.waitForTimeout(150);
@@ -115,7 +135,7 @@ for (const job of JOBS) {
   await render.close();
 
   const avif = await sharp(png).avif({ quality: 56, effort: 8, chromaSubsampling: '4:2:0' }).toBuffer();
-  const webp = await sharp(png).webp({ quality: job.variant === 'hero' ? 76 : 78, alphaQuality: 88, effort: 6 }).toBuffer();
+  const webp = await sharp(png).webp({ quality: job.hero ? 76 : 78, alphaQuality: 88, effort: 6 }).toBuffer();
   writeFileSync(`${OUT}/${job.file}.avif`, avif);
   writeFileSync(`${OUT}/${job.file}.webp`, webp);
   writeFileSync(`qa/screenshots/bake-${job.file}.png`, png);

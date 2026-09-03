@@ -72,7 +72,7 @@ describe('coin products', () => {
     expect(products.every((product) => product.game === 'fc26' && product.platform === 'playstation')).toBe(true);
     expect(products[0].priceIls).toBe(49);
     expect(products[0].perMillionIls).toBe(490);
-    expect(products[0].artKey).toBe('coins-starter');
+    expect(products.map((product) => product.artKey)).toEqual(['bundle-100k', 'bundle-250k', 'bundle-500k', 'bundle-1m', 'bundle-2m']);
     expect(products[0].productSlug).toBe('coins');
     expect(products[0].variantId).toBe('v100k');
   });

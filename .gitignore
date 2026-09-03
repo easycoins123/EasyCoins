@@ -60,3 +60,6 @@ qa/screenshots/
 # Local PostgreSQL data directory created by backend/scripts/dev-db.mjs.
 # Hundreds of megabytes of cluster files; never belongs in git.
 /backend/.pgdata/
+
+# Local design reference: third-party imagery for comparison only, never shipped
+/docs/design/*.png

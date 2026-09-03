@@ -175,12 +175,14 @@
 
   // --- Typography ----------------------------------------------------------
   --tt-font: 'Heebo', 'Rubik', 'Segoe UI', system-ui, sans-serif;
-  // The display voice. Condensed and athletic, for headlines, tier quantities
-  // and prices; it is what makes "2M" read like a sports poster rather than a
-  // spreadsheet. Falls back to heavy Heebo before the face has loaded.
-  --tt-font-display: 'Karantina', 'Heebo', 'Rubik', system-ui, sans-serif;
+  // One face, two voices. The display voice is Heebo at its heaviest weight,
+  // set tight: wide, confident, editorial, the way the reference sets its
+  // headline, its "100K COINS" and its prices. Hebrew and Latin share the
+  // face, so a mixed headline never changes texture mid-line.
+  --tt-font-display: 'Heebo', 'Rubik', 'Segoe UI', system-ui, sans-serif;
+  --tt-weight-display: 900;
   // Tabular figures so prices in a column line up digit for digit.
-  --tt-font-numeric: 'Karantina', 'Heebo', 'Segoe UI', system-ui, sans-serif;
+  --tt-font-numeric: 'Heebo', 'Segoe UI', system-ui, sans-serif;
 
   --tt-text-xs: 0.75rem;
   --tt-text-sm: 0.875rem;
@@ -205,9 +207,9 @@
   //   body       running text
   //   label      form labels, chips, table heads
   //   caption    the smallest legible size: hints, meta, legal
-  --tt-display-1: clamp(2.9rem, 5.4vw, 4.6rem);
-  --tt-display-2: clamp(2.3rem, 4.2vw, 3.4rem);
-  --tt-display-3: clamp(1.8rem, 3vw, 2.5rem);
+  --tt-display-1: clamp(2.5rem, 4.8vw, 4.25rem);
+  --tt-display-2: clamp(1.9rem, 3.2vw, 2.75rem);
+  --tt-display-3: clamp(1.5rem, 2.3vw, 2rem);
   --tt-title: clamp(1.1rem, 1.3vw, 1.25rem);
   --tt-body: 1rem;
   --tt-label: 0.8125rem;
@@ -217,8 +219,8 @@
   --tt-leading-snug: 1.35;
   --tt-leading: 1.6;
 
-  // The condensed face is set tight and upright; Heebo eyebrows are tracked.
-  --tt-tracking-display: 0.005em;
+  // Heavy Heebo wants negative tracking at display sizes; eyebrows are tracked open.
+  --tt-tracking-display: -0.02em;
   --tt-tracking-eyebrow: 0.12em;
 
   // --- Motion --------------------------------------------------------------
@@ -272,6 +274,11 @@
   --tt-flood-warm: rgba(247, 235, 203, 0.14);
   --tt-pitch: rgba(126, 196, 150, 0.12);
   --tt-pitch-glow: rgba(96, 160, 118, 0.10);
+  // The one green: FC-style gaming energy behind the artwork, never on the
+  // interface. Used at a few percent, in one or two places per page.
+  --tt-energy: #2FD36F;
+  --tt-energy-glow: rgba(47, 211, 111, 0.22);
+  --tt-energy-soft: rgba(47, 211, 111, 0.07);
   --tt-night: #07080C;
   --tt-night-2: #0B0D14;
 

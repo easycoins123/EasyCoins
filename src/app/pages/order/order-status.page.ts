@@ -12,7 +12,7 @@ import {
 import { CatalogFacade, OrderFacade } from '../../state';
 import {
   DeliveryPayloadComponent, ErrorStateComponent, FulfillmentBadgeComponent, MoneyPipe,
-  OrderStatusTimelineComponent, PlatformBadgeComponent, RegionBadgeComponent, SquadComponent,
+  OrderStatusTimelineComponent, PlatformBadgeComponent, RegionBadgeComponent, IconComponent,
 } from '../../ui';
 
 /** How often a still-moving order re-checks its status. */
@@ -29,7 +29,7 @@ const POLL_INTERVAL_MS = 2500;
   imports: [
     CommonModule, RouterLink, LocalizePipe, MoneyPipe,
     OrderStatusTimelineComponent, DeliveryPayloadComponent, FulfillmentBadgeComponent,
-    PlatformBadgeComponent, RegionBadgeComponent, ErrorStateComponent, SquadComponent],
+    PlatformBadgeComponent, RegionBadgeComponent, ErrorStateComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-container tt-section">
@@ -60,9 +60,9 @@ const POLL_INTERVAL_MS = 2500;
       <ng-template #content>
         <ng-container *ngIf="vm$ | async as vm; else loading">
           <div class="tt-alert tt-alert--success banner" *ngIf="celebrate">
-            <span class="banner__figure" aria-hidden="true"><tt-squad pose="celebrate"></tt-squad></span>
+            <span class="banner__glyph" aria-hidden="true"><tt-icon name="check" [size]="20"></tt-icon></span>
             <span>
-              <strong>שריקת סיום: ההזמנה התקבלה</strong>
+              <strong>ההזמנה התקבלה</strong>
               <span class="tt-faint">אישור נשלח לכתובת {{ vm.order.contactEmail }}. זה הכרטיס שלכם, ומספר ההזמנה מודפס עליו.</span>
             </span>
           </div>
@@ -130,8 +130,7 @@ const POLL_INTERVAL_MS = 2500;
     .missing h1 { font-size: var(--tt-text-xl); }
     .banner { margin-block-end: var(--tt-space-5); align-items: center; }
     .banner span span { display: block; }
-    .banner__figure { display: block; flex: none; inline-size: 56px; margin-block: -10px; }
-    .banner__figure span { display: block; }
+    .banner__glyph { display: grid; place-items: center; flex: none; inline-size: 40px; block-size: 40px; border-radius: 50%; background: var(--tt-success); color: #062814; }
     .summary__main { display: flex; flex-direction: column; gap: var(--tt-space-3); padding: var(--tt-space-5); }
     .summary__stub { font-size: var(--tt-caption); font-weight: 700; color: var(--tt-text-muted); }
     .layout { display: grid; gap: var(--tt-space-5); align-items: start; }

@@ -53,6 +53,7 @@ interface Tier {
                   class="tier"
                   *ngFor="let tier of tiers; let i = index"
                   role="radio"
+                  [attr.aria-label]="tier.label + ' קוינס, ' + (tier.price | money)"
                   [attr.aria-checked]="requested() === tier.quantity"
                   [class.on]="requested() === tier.quantity"
                   [class.tier--best]="tier.best"
@@ -137,6 +138,7 @@ interface Tier {
         </p>
 
         <button type="button" class="tt-btn tt-btn--buy tt-btn--lg tt-btn--block"
+                aria-label="הוספה לסל"
                 [class.tt-btn--loading]="busy"
                 [attr.aria-busy]="busy ? 'true' : null"
                 [disabled]="busy"

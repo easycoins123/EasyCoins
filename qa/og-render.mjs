@@ -25,7 +25,7 @@ const html = `<!doctype html>
 <meta charset="utf-8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700&family=Karantina:wght@700&display=block" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=block" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; }
   body { width: 1200px; height: 630px; overflow: hidden; background: #0C0B09; color: #F6F2EA; font-family: 'Heebo', sans-serif; }
@@ -37,11 +37,11 @@ const html = `<!doctype html>
       #0C0B09; }
   .wrap { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 520px; align-items: center; padding: 64px 72px; }
   .copy { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; }
-  .brand { display: inline-flex; align-items: center; gap: 10px; font-family: 'Karantina', sans-serif; font-size: 44px; direction: ltr; letter-spacing: 0.02em; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; font-family: 'Heebo', sans-serif; font-weight: 900; letter-spacing: -0.02em; font-size: 38px; direction: ltr; }
   .brand b { color: #E6CB86; }
   .kicker { font-size: 20px; font-weight: 700; letter-spacing: 0.1em; color: #ADA69A; text-transform: uppercase; }
-  h1 { font-family: 'Karantina', sans-serif; font-weight: 700; font-size: 92px; line-height: 0.94; max-width: 540px; }
-  h1 .latin { display: inline; color: #F6F2EA; font-weight: 700; white-space: nowrap; }
+  h1 { font-family: 'Heebo', sans-serif; font-weight: 900; letter-spacing: -0.02em; font-size: 78px; line-height: 1.02; max-width: 540px; }
+  h1 .latin { display: inline; color: #E6CB86; font-weight: 900; white-space: nowrap; }
   h1 .muted { display: block; color: rgba(246, 242, 234, 0.55); font-weight: 400; }
   .line { display: flex; gap: 10px; margin-top: 8px; }
   .chip { padding: 8px 16px; border: 1px solid rgba(255, 248, 235, 0.22); border-radius: 999px; font-size: 20px; font-weight: 700; color: #ADA69A; }

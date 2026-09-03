@@ -87,7 +87,7 @@ interface StoreViewModel {
         <ng-container *ngIf="vm$ | async as vm; else loading">
           <p class="count tt-faint">{{ countLabel(vm) }}</p>
 
-          <tt-empty-state *ngIf="isEmpty(vm)" pose="keeper"
+          <tt-empty-state *ngIf="isEmpty(vm)" icon="football"
                           title="לא נמצאו מוצרים"
                           message="נסו לשנות את החיפוש או לאפס את הסינון."
                           actionLabel="איפוס סינון"
@@ -99,6 +99,9 @@ interface StoreViewModel {
             <tt-easycoins-card *ngFor="let product of vm.products; let i = index; trackBy: trackByOffer"
                                [ttReveal]="i"
                                [product]="product"
+                               [featured]="product.badge === 'best-value'"
+                               [chip]="chipFor(product, vm.products)"
+                               [flagship]="i === vm.products.length - 1 && vm.products.length % 2 === 1 && vm.others.length === 0"
                                [busy]="adding()"
                                (buy)="buyOffer($event)">
             </tt-easycoins-card>
@@ -347,6 +350,21 @@ export class StorePage {
 
   trackByOffer(_index: number, product: CoinProduct): string {
     return product.id;
+  }
+
+  /** A fact the shelf can back: the smallest bundle is the cheapest, the largest the biggest. */
+  chipFor(product: CoinProduct, shelf: readonly CoinProduct[]): string | undefined {
+    if (product.badge === 'best-value') {
+      return 'הכי משתלם';
+    }
+    const amounts = shelf.map((entry) => entry.amount);
+    if (product.amount === Math.min(...amounts)) {
+      return 'הכי זול';
+    }
+    if (product.amount === Math.max(...amounts)) {
+      return 'הכי גדולה';
+    }
+    return undefined;
   }
 
   private patch(partial: Partial<CatalogQuery>): void {

@@ -28,4 +28,6 @@ export * from './components/cards/easycoins-card.component';
 export * from './parallax.directive';
 export * from './components/world/world-assets';
 export * from './components/world/stadium.component';
-export * from './components/world/squad.component';
+export * from './components/emblem-card.component';
+export * from './components/process-art.component';
+export * from './components/reviews-section.component';

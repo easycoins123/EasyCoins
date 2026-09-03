@@ -16,6 +16,15 @@ export const TIER_THRESHOLDS: readonly { readonly tier: CoinTier; readonly minAm
   { tier: 'starter', minAmount: 0 },
 ];
 
+/** The art key for a bundle size, e.g. 1_000_000 -> "bundle-1m". Mirrors the registry's naming. */
+export function bundleArtKey(amount: number): string {
+  if (amount >= 1_000_000) {
+    const millions = amount / 1_000_000;
+    return `bundle-${Number.isInteger(millions) ? millions : millions.toFixed(1)}m`;
+  }
+  return `bundle-${Math.round(amount / 1_000)}k`;
+}
+
 export function tierForAmount(amount: number | undefined): CoinTier {
   const value = amount ?? 0;
   return TIER_THRESHOLDS.find((entry) => value >= entry.minAmount)?.tier ?? 'starter';
@@ -80,7 +89,7 @@ export function coinProductsFrom(
         compareAtIls: row.offer.price.compareAt ? shekels(row.offer.price.compareAt.amountMinor) : undefined,
         perMillionIls: row.perUnitMinor === undefined ? undefined : shekels(row.perUnitMinor),
         tier,
-        artKey: `coins-${tier}`,
+        artKey: bundleArtKey(amount),
         badge: row.isBestValue ? 'best-value' : undefined,
         inStock: purchasable(row.offer),
         productSlug: detail.product.slug,
