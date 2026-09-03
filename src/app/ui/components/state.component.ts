@@ -99,8 +99,9 @@ export class SkeletonGridComponent {
       inset: 0;
       transform: skewX(-9deg);
       border-radius: var(--tt-radius-sm);
-      background: var(--tt-brand-tint);
-      border: 1px solid var(--tt-border-brand);
+      background: var(--tt-surface-2);
+      border: 1px solid var(--tt-border-strong);
+      box-shadow: inset 0 1px 0 rgba(255, 248, 235, 0.06);
     }
     .glyph tt-icon { position: relative; }
     h2 { font-size: var(--tt-text-lg); margin: 0; }

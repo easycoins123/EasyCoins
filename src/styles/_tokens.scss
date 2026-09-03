@@ -44,11 +44,20 @@
   --tt-brand-tint-strong: rgba(46, 95, 240, 0.28);
 
   // --- Gold: money ---------------------------------------------------------
-  --tt-gold-300: #FFE6AE;
-  --tt-gold-400: #FFD371;
-  --tt-gold-500: #F2B33D;
-  --tt-gold-600: #D9942A;
-  --tt-gold-tint: rgba(242, 179, 61, 0.14);
+  // Champagne, not amber. The previous scale (#F2B33D) was a saturated warm
+  // yellow that read as a sale sticker; an expensive metal is desaturated,
+  // lighter at the top edge and cooler in the shadow. These five steps are a
+  // metal ramp: 300 is the highlight, 500 the body, 700 the shadow.
+  --tt-gold-300: #F4E6C3;
+  --tt-gold-400: #E6CB86;
+  --tt-gold-500: #D4B46A;
+  --tt-gold-600: #A9884A;
+  --tt-gold-700: #7B6132;
+  --tt-gold-tint: rgba(212, 180, 106, 0.12);
+  // The metal itself, for the buy action and the coin thumb. Vertical, so the
+  // light comes from above the way it does on a real object.
+  --tt-gold-metal: linear-gradient(180deg, var(--tt-gold-300) 0%, var(--tt-gold-400) 42%, var(--tt-gold-500) 100%);
+  --tt-gold-metal-hover: linear-gradient(180deg, #F8EDD2 0%, #ECD495 42%, #DBBD75 100%);
 
   // --- Lime: speed and liveness --------------------------------------------
   // Deliberately has no "surface" variant. The moment this becomes a card
@@ -122,9 +131,11 @@
   --tt-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
   --tt-shadow-2: 0 10px 30px rgba(0, 0, 0, 0.45);
   --tt-shadow-3: 0 24px 60px rgba(0, 0, 0, 0.55);
-  --tt-ring-brand: 0 0 0 1px var(--tt-border-brand), 0 8px 28px rgba(46, 95, 240, 0.26);
-  --tt-ring-gold: 0 0 0 1px rgba(242, 179, 61, 0.42);
-  --tt-glow-gold: 0 0 0 1px rgba(242, 179, 61, 0.45), 0 14px 40px rgba(242, 179, 61, 0.18);
+  --tt-ring-brand: 0 0 0 1px var(--tt-border-brand), 0 8px 28px rgba(46, 95, 240, 0.22);
+  --tt-ring-gold: 0 0 0 1px rgba(212, 180, 106, 0.40);
+  // A hairline of the metal and a soft drop, never a halo. Glow was the
+  // loudest tell that the interface was decorated rather than designed.
+  --tt-glow-gold: 0 0 0 1px rgba(212, 180, 106, 0.35), 0 12px 32px rgba(0, 0, 0, 0.45);
 
   // --- Glass ---------------------------------------------------------------
   // A translucent surface with a light top edge. Used for floating things:
@@ -138,21 +149,23 @@
   // so the shelf reads as a progression the way a collector's audience expects:
   // steel, bronze, silver, gold, and an obsidian-and-gold elite at the top.
   // Original palette; the language is familiar, the artwork is ours.
+  // The "glow" of a material is the tint of its stage light, kept low: a tier
+  // should be recognisable by its metal, not by how much it shines.
   --tt-mat-steel: #9AA7B8;
   --tt-mat-steel-light: #E6ECF4;
-  --tt-mat-steel-glow: rgba(110, 147, 255, 0.35);
-  --tt-mat-bronze: #C98A5A;
-  --tt-mat-bronze-light: #F3D3B8;
-  --tt-mat-bronze-glow: rgba(217, 130, 74, 0.35);
+  --tt-mat-steel-glow: rgba(110, 147, 255, 0.22);
+  --tt-mat-bronze: #C4895F;
+  --tt-mat-bronze-light: #F1D4BC;
+  --tt-mat-bronze-glow: rgba(196, 137, 95, 0.22);
   --tt-mat-silver: #D6DEE8;
   --tt-mat-silver-light: #FFFFFF;
-  --tt-mat-silver-glow: rgba(168, 192, 255, 0.35);
-  --tt-mat-gold: #F2B33D;
-  --tt-mat-gold-light: #FFF3D2;
-  --tt-mat-gold-glow: rgba(242, 179, 61, 0.38);
-  --tt-mat-elite: #F6C95E;
-  --tt-mat-elite-light: #FFF6DC;
-  --tt-mat-elite-glow: rgba(255, 211, 113, 0.45);
+  --tt-mat-silver-glow: rgba(168, 192, 255, 0.22);
+  --tt-mat-gold: #D4B46A;
+  --tt-mat-gold-light: #F7EBCB;
+  --tt-mat-gold-glow: rgba(212, 180, 106, 0.24);
+  --tt-mat-elite: #E6CB86;
+  --tt-mat-elite-light: #FBF3DC;
+  --tt-mat-elite-glow: rgba(230, 203, 134, 0.28);
 
   // --- Typography ----------------------------------------------------------
   --tt-font: 'Heebo', 'Rubik', 'Segoe UI', system-ui, sans-serif;
@@ -174,21 +187,32 @@
   --tt-text-4xl: 3rem;
   --tt-text-5xl: 3.75rem;
 
-  // Fluid display sizes. Section headings were locked at 1.75rem from 360px to
-  // 1920px, so a heading that was right on a phone was undersized on a desktop
-  // and the page lost its top level of hierarchy at exactly the width where
-  // there was room for it.
-  --tt-display-1: clamp(2.1rem, 5.6vw, 3.5rem);
-  --tt-display-2: clamp(1.5rem, 3.2vw, 2.35rem);
-  --tt-display-3: clamp(1.15rem, 1.9vw, 1.5rem);
+  // The type scale, named by role so a component asks for "a section title"
+  // rather than inventing a clamp. The three display steps are set in the
+  // condensed face and are therefore larger than Heebo would be at the same
+  // width; the text steps are Heebo.
+  //
+  //   display-1  the hero headline, once per site
+  //   display-2  a page title (h1 everywhere except the hero)
+  //   display-3  a section title (h2)
+  //   title      a card or panel title (h3), Heebo
+  //   body       running text
+  //   label      form labels, chips, table heads
+  //   caption    the smallest legible size: hints, meta, legal
+  --tt-display-1: clamp(2.9rem, 5.4vw, 4.6rem);
+  --tt-display-2: clamp(2.3rem, 4.2vw, 3.4rem);
+  --tt-display-3: clamp(1.8rem, 3vw, 2.5rem);
+  --tt-title: clamp(1.1rem, 1.3vw, 1.25rem);
+  --tt-body: 1rem;
+  --tt-label: 0.8125rem;
+  --tt-caption: 0.75rem;
 
   --tt-leading-tight: 1.15;
   --tt-leading-snug: 1.35;
   --tt-leading: 1.6;
 
-  // Hebrew display type needs a little negative tracking at large sizes or it
-  // looks loose next to the Latin wordmark.
-  --tt-tracking-display: -0.02em;
+  // The condensed face is set tight and upright; Heebo eyebrows are tracked.
+  --tt-tracking-display: 0.005em;
   --tt-tracking-eyebrow: 0.12em;
 
   // --- Motion --------------------------------------------------------------
@@ -254,8 +278,8 @@
   --tt-border-brand: rgba(59, 109, 255, 0.4);
 
   // Gold and lime both vanish on white and have to darken to keep contrast.
-  --tt-gold-400: #B8830D;
-  --tt-gold-500: #8F6406;
+  --tt-gold-400: #8A6A1E;
+  --tt-gold-500: #74581A;
   --tt-accent-400: #6E8A12;
   --tt-accent-500: #59720B;
 

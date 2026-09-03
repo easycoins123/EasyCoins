@@ -14,10 +14,10 @@ export interface ValuePoint {
 /**
  * The value strip.
  *
- * Each promise gets a real object: the glyph on a glass plate cut at the
- * brand's nine degrees and lit from behind, with a title and one line under
- * it. Only claims the shop can keep; there is no order count, no rating and
- * no delivery statistic because none exists as data.
+ * Each promise gets a real object: the glyph on a plate cut at the brand's
+ * nine degrees, with a title and one line under it. Only claims the shop can
+ * keep; there is no order count, no rating and no delivery statistic because
+ * none exists as data.
  */
 @Component({
   selector: 'tt-value-strip',
@@ -43,20 +43,21 @@ export interface ValuePoint {
     .strip { display: grid; gap: var(--tt-space-4); grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin: 0; padding: 0; list-style: none; }
     .point { display: flex; align-items: flex-start; gap: var(--tt-space-3); }
 
+    /* A solid plate cut on the brand's nine degrees. The colour is in the glyph
+       and the hairline; the plate itself is the same surface as a card. */
     .plate { position: relative; display: grid; place-items: center; inline-size: 52px; block-size: 52px; flex: none; color: var(--tt-brand-300); }
     .plate__face {
       position: absolute;
       inset: 0;
       transform: skewX(-9deg);
       border-radius: var(--tt-radius-md);
-      background: linear-gradient(160deg, var(--tt-brand-tint-strong), transparent 70%), var(--tt-glass);
-      border: 1px solid var(--tt-border-brand);
-      box-shadow: var(--tt-glass-highlight), 0 10px 26px rgba(46, 95, 240, 0.16);
+      background: var(--tt-surface-2);
+      border: 1px solid var(--tt-border-strong);
+      box-shadow: inset 0 1px 0 rgba(255, 248, 235, 0.06);
     }
-    .plate tt-icon { position: relative; filter: drop-shadow(0 0 8px rgba(110, 147, 255, 0.5)); }
+    .plate tt-icon { position: relative; }
     .plate--money { color: var(--tt-gold-400); }
-    .plate--money .plate__face { background: linear-gradient(160deg, var(--tt-gold-tint), transparent 70%), var(--tt-glass); border-color: var(--tt-gold-500); box-shadow: var(--tt-glass-highlight), 0 10px 26px rgba(242, 179, 61, 0.18); }
-    .plate--money tt-icon { filter: drop-shadow(0 0 8px rgba(242, 179, 61, 0.5)); }
+    .plate--money .plate__face { border-color: var(--tt-gold-600); }
 
     .point__text { display: flex; flex-direction: column; gap: 3px; min-inline-size: 0; }
     .point__text strong { font-size: var(--tt-text-md); font-weight: 800; }

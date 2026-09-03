@@ -17,7 +17,7 @@ import { chromium } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { startServer } from './serve.mjs';
 
-const WIDTHS = (process.argv[2] ?? '360,390,430,480,768,1024,1280,1440,1920')
+const WIDTHS = (process.argv[2] ?? '320,360,375,390,414,430,768,1024,1280,1440,1600,1920')
   .split(',').map((value) => Number(value.trim())).filter(Boolean);
 const LABEL = process.argv[3] ?? 'audit';
 const PORT = 4397;

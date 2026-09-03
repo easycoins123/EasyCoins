@@ -22,7 +22,6 @@ import { IconComponent } from './icon.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <footer class="foot">
-      <div class="foot__glow" aria-hidden="true"></div>
       <div class="tt-container">
         <div class="top">
           <div class="about">
@@ -86,30 +85,15 @@ import { IconComponent } from './icon.component';
   `,
   styles: [`
     .foot {
-      position: relative;
-      isolation: isolate;
-      overflow: hidden;
       margin-block-start: var(--tt-space-8);
       padding-block: var(--tt-space-7) var(--tt-space-5);
       border-block-start: 1px solid var(--tt-border);
       background: var(--tt-bg-elevated);
     }
-    .foot__glow {
-      position: absolute;
-      inset-block-start: -40%;
-      inset-inline-end: -10%;
-      inline-size: min(60vw, 600px);
-      block-size: min(60vw, 600px);
-      border-radius: 50%;
-      background: var(--tt-gold-500);
-      opacity: 0.05;
-      filter: blur(120px);
-      z-index: -1;
-    }
 
     .top { display: grid; gap: var(--tt-space-6) var(--tt-space-5); grid-template-columns: minmax(0, 1.6fr) repeat(4, minmax(0, 1fr)); }
     .about { display: flex; flex-direction: column; gap: var(--tt-space-3); max-inline-size: 36ch; }
-    .statement { margin: 0; font-family: var(--tt-font-display); font-size: 1.9rem; line-height: 1; }
+    .statement { margin: 0; font-family: var(--tt-font-display); font-size: var(--tt-display-3); line-height: 1; }
     .statement__muted { opacity: 0.5; font-weight: 400; }
     .about .tt-faint { margin: 0; line-height: var(--tt-leading); }
     .platforms { display: flex; flex-wrap: wrap; gap: var(--tt-space-2); margin: var(--tt-space-1) 0 0; padding: 0; list-style: none; }
@@ -141,7 +125,6 @@ import { IconComponent } from './icon.component';
     .bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--tt-space-2) var(--tt-space-4); margin-block-start: var(--tt-space-4); font-size: var(--tt-text-xs); color: var(--tt-text-muted); }
 
     @media (max-width: 900px) { .top { grid-template-columns: repeat(2, minmax(0, 1fr)); } .about { grid-column: 1 / -1; max-inline-size: none; } }
-    @media (max-width: 480px) { .statement { font-size: 1.6rem; } }
   `],
 })
 export class AppFooterComponent {

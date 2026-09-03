@@ -28,9 +28,11 @@ import { GameCardComponent } from '../../ui';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-container tt-section">
-      <span class="tt-eyebrow">קטלוג</span>
-      <h1>מה אנחנו מוכרים</h1>
-      <p class="tt-muted">כרגע EASYCOINS מתמקדת ב{{ focusGameName }} בלבד.</p>
+      <header class="tt-head tt-head--tight">
+        <span class="tt-eyebrow">קטלוג</span>
+        <h1>מה אנחנו מוכרים</h1>
+        <p class="tt-head__lede">כרגע EASYCOINS מתמקדת ב{{ focusGameName }} בלבד.</p>
+      </header>
 
       <div class="tt-grid">
         <tt-game-card *ngFor="let game of games$ | async" [game]="game"></tt-game-card>

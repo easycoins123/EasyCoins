@@ -67,10 +67,10 @@ const POLL_INTERVAL_MS = 2500;
             </span>
           </div>
 
-          <header class="head">
+          <header class="tt-head tt-head--tight">
             <span class="tt-eyebrow">הזמנה {{ vm.order.reference }}</span>
             <h1>{{ heading(vm.order.status) }}</h1>
-            <p class="tt-muted" *ngIf="vm.order.statusMessage">{{ vm.order.statusMessage | t }}</p>
+            <p class="tt-head__lede" *ngIf="vm.order.statusMessage">{{ vm.order.statusMessage | t }}</p>
           </header>
 
           <div class="layout">
@@ -123,8 +123,6 @@ const POLL_INTERVAL_MS = 2500;
     .missing h1 { font-size: var(--tt-text-xl); }
     .banner { margin-block-end: var(--tt-space-5); }
     .banner span span { display: block; }
-    .head { margin-block-end: var(--tt-space-5); }
-    .head h1 { margin-block: var(--tt-space-1) var(--tt-space-2); }
     .layout { display: grid; gap: var(--tt-space-5); align-items: start; }
     @media (min-width: 900px) { .layout { grid-template-columns: 1fr 300px; } }
     h2 { font-size: var(--tt-text-lg); margin-block: var(--tt-space-5) var(--tt-space-3); }

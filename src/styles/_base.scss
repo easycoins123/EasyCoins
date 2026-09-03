@@ -28,17 +28,28 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4 {
+/* Two voices. The display face carries page and section titles; everything
+   from a card title down is Heebo. A component never sets a heading size of
+   its own: it asks the scale for a role. */
+h1, h2 {
   margin: 0 0 var(--tt-space-3);
   font-family: var(--tt-font-display);
-  line-height: var(--tt-leading-tight);
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: var(--tt-tracking-display);
+  text-wrap: balance;
 }
+h1 { font-size: var(--tt-display-2); line-height: 0.98; }
+h2 { font-size: var(--tt-display-3); line-height: 1.02; }
 
-h1 { font-size: var(--tt-display-1); }
-h2 { font-size: var(--tt-display-2); }
-h3 { font-size: var(--tt-display-3); }
+h3, h4 {
+  margin: 0 0 var(--tt-space-2);
+  font-family: var(--tt-font);
+  font-weight: 700;
+  line-height: var(--tt-leading-snug);
+  letter-spacing: -0.005em;
+}
+h3 { font-size: var(--tt-title); }
+h4 { font-size: var(--tt-text-md); }
 
 p { margin: 0 0 var(--tt-space-3); }
 
@@ -88,6 +99,32 @@ img { max-width: 100%; display: block; }
   gap: var(--tt-space-4);
   margin-block-end: var(--tt-space-5);
   flex-wrap: wrap;
+}
+
+/* The one way a section introduces itself: a quiet eyebrow, the title in the
+   display face, and at most two lines of lede. Six pages each had their own
+   copy of this with a different gap or weight; now they share one. */
+.tt-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--tt-space-2);
+  margin-block-end: var(--tt-stack);
+  max-inline-size: 62ch;
+}
+.tt-head--center { align-items: center; text-align: center; margin-inline: auto; }
+.tt-head--tight { margin-block-end: var(--tt-space-5); }
+.tt-head > h1, .tt-head > h2 { margin: 0; }
+.tt-head__lede {
+  margin: 0;
+  color: var(--tt-text-muted);
+  font-size: var(--tt-text-lg);
+  line-height: var(--tt-leading-snug);
+  max-inline-size: 52ch;
+  text-wrap: pretty;
+}
+@media (max-width: 560px) {
+  .tt-head__lede { font-size: var(--tt-text-md); }
 }
 
 .tt-grid {
@@ -158,7 +195,11 @@ img { max-width: 100%; display: block; }
 
 // --- Buttons -----------------------------------------------------------------
 
+/* Every button has the same six states: rest, hover, active, focus, disabled,
+   loading. A button that is missing one of them is where an interface starts
+   to feel unfinished, so they live here and not in components. */
 .tt-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -171,20 +212,29 @@ img { max-width: 100%; display: block; }
   border-radius: var(--tt-radius-md);
   font: inherit;
   font-weight: 600;
+  line-height: 1.2;
   cursor: pointer;
   transition: transform var(--tt-duration-fast) var(--tt-ease),
               background-color var(--tt-duration) var(--tt-ease),
-              border-color var(--tt-duration) var(--tt-ease);
+              border-color var(--tt-duration) var(--tt-ease),
+              box-shadow var(--tt-duration) var(--tt-ease),
+              color var(--tt-duration) var(--tt-ease);
   background: var(--tt-surface-3);
   color: var(--tt-text);
 }
 
-.tt-btn:hover:not(:disabled) { transform: translateY(-1px); }
-.tt-btn:active:not(:disabled) { transform: translateY(0); }
+.tt-btn:hover:not(:disabled) { transform: translateY(-1px); background: #33302B; }
+.tt-btn:active:not(:disabled) { transform: translateY(1px); transition-duration: 60ms; }
+
+.tt-btn:focus-visible {
+  outline: 2px solid var(--tt-brand-400);
+  outline-offset: 3px;
+}
 
 .tt-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .tt-btn--primary {
@@ -195,29 +245,62 @@ img { max-width: 100%; display: block; }
 .tt-btn--primary:hover:not(:disabled) { background: var(--tt-brand-400); }
 
 /* The buy action. Gold because it is the moment money is involved, and because
-   a screen with two violet buttons has no primary action at all. */
+   a screen with two blue buttons has no primary action at all. The surface is
+   the metal itself: lit from above, a hairline of the deeper shade below. */
 .tt-btn--buy {
-  background: linear-gradient(135deg, var(--tt-gold-400), var(--tt-gold-600));
+  background: var(--tt-gold-metal);
+  border-color: var(--tt-gold-600);
   color: var(--tt-text-on-gold);
   font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255, 252, 244, 0.55), 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 /* Brightening the metal, rather than switching a glow on behind it. */
 .tt-btn--buy:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--tt-gold-300), var(--tt-gold-500));
+  background: var(--tt-gold-metal-hover);
+  box-shadow: inset 0 1px 0 rgba(255, 252, 244, 0.6), 0 6px 18px rgba(0, 0, 0, 0.35);
 }
+.tt-btn--buy:focus-visible { outline-color: var(--tt-gold-400); }
 
 .tt-btn--ghost {
   background: transparent;
   border-color: var(--tt-border-strong);
   color: var(--tt-text);
 }
+.tt-btn--ghost:hover:not(:disabled) { background: rgba(255, 248, 235, 0.05); border-color: var(--tt-text-faint); }
 
 .tt-btn--quiet {
   background: transparent;
   color: var(--tt-text-muted);
   padding-inline: var(--tt-space-3);
 }
+.tt-btn--quiet:hover:not(:disabled) { background: rgba(255, 248, 235, 0.05); color: var(--tt-text); }
+
+/* Waiting on the server. The label stays in the layout (so the button keeps its
+   width) but is hidden, and a ring turns in its place. Set aria-busy as well. */
+.tt-btn--loading {
+  color: transparent !important;
+  pointer-events: none;
+}
+.tt-btn--loading::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inline-size: 18px;
+  block-size: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-color: rgba(255, 255, 255, 0.35);
+  border-block-start-color: #FFFFFF;
+  animation: tt-spin 0.75s linear infinite;
+}
+.tt-btn--buy.tt-btn--loading::after {
+  border-color: rgba(36, 26, 5, 0.25);
+  border-block-start-color: var(--tt-text-on-gold);
+}
+@keyframes tt-spin { to { transform: rotate(360deg); } }
 
 /* The primary action on a phone needs a real target, not a text-sized pill. */
 .tt-btn--lg {
@@ -314,12 +397,31 @@ img { max-width: 100%; display: block; }
   transition: border-color var(--tt-duration) var(--tt-ease);
 }
 
+.tt-input:hover,
+.tt-textarea:hover,
+.tt-select:hover { border-color: var(--tt-text-faint); }
+
 .tt-input:focus,
 .tt-textarea:focus,
 .tt-select:focus {
   border-color: var(--tt-brand-500);
   outline: none;
+  box-shadow: 0 0 0 3px var(--tt-brand-tint);
 }
+
+.tt-input::placeholder,
+.tt-textarea::placeholder { color: var(--tt-text-faint); }
+
+.tt-input[aria-invalid='true'],
+.tt-textarea[aria-invalid='true'],
+.tt-select[aria-invalid='true'] {
+  border-color: var(--tt-danger);
+  box-shadow: 0 0 0 3px var(--tt-danger-tint);
+}
+
+.tt-input:disabled,
+.tt-textarea:disabled,
+.tt-select:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .tt-textarea { min-block-size: 96px; resize: vertical; }
 
@@ -533,18 +635,29 @@ body::after {
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  opacity: 0.035;
+  opacity: 0.028;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   mix-blend-mode: screen;
 }
 
-/* A translucent surface with a light top edge. */
+/* A translucent surface with a light top edge. Reserved for things that float
+   over content: the scrolled header, menus, sheets, a toast. Static content
+   sits on a solid surface (.tt-plate); glass on a card that never moves is
+   decoration. */
 .tt-glass {
   background: var(--tt-glass);
   border: 1px solid var(--tt-glass-border);
   box-shadow: var(--tt-glass-highlight), var(--tt-shadow-2);
-  backdrop-filter: blur(16px) saturate(1.2);
-  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  backdrop-filter: blur(12px) saturate(1.15);
+  -webkit-backdrop-filter: blur(12px) saturate(1.15);
+}
+
+/* The raised surface for static content: one step up from the page, a
+   hairline, and a light top edge so it reads as an object without a glow. */
+.tt-plate {
+  background: var(--tt-surface);
+  border: 1px solid var(--tt-border);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 235, 0.05), var(--tt-shadow-1);
 }
 
 /* A pill-shaped choice, the shape every toolbar in the product uses. */
@@ -567,26 +680,20 @@ body::after {
               background-color var(--tt-duration-fast) var(--tt-ease),
               box-shadow var(--tt-duration-fast) var(--tt-ease);
 }
-.tt-pill:hover { border-color: var(--tt-border-strong); color: var(--tt-text); }
+.tt-pill:hover { border-color: var(--tt-border-strong); color: var(--tt-text); background: var(--tt-surface-2); }
+.tt-pill:active { transform: translateY(1px); }
+.tt-pill:focus-visible { outline: 2px solid var(--tt-brand-400); outline-offset: 2px; }
+.tt-pill:disabled, .tt-pill[aria-disabled='true'] { opacity: 0.5; cursor: not-allowed; }
 .tt-pill.on, .tt-pill[aria-pressed='true'] {
   border-color: var(--tt-brand-500);
   background: var(--tt-brand-tint);
   color: #DCE6FF;
-  box-shadow: 0 0 0 3px rgba(46, 95, 240, 0.18);
 }
 
 // --- Display type -------------------------------------------------------------
 //
 // The display face is condensed, so it earns larger sizes than Heebo did at
 // the same width, and it wants a touch of positive tracking on Latin figures.
-
-h1, h2 {
-  font-family: var(--tt-font-display);
-  font-weight: 700;
-  letter-spacing: 0.005em;
-}
-h1 { font-size: clamp(2.6rem, 6vw, 4.4rem); line-height: 0.98; }
-h2 { font-size: clamp(1.9rem, 3.6vw, 2.9rem); line-height: 1.02; }
 
 .tt-price {
   font-family: var(--tt-font-display);
@@ -626,33 +733,19 @@ h2 { font-size: clamp(1.9rem, 3.6vw, 2.9rem); line-height: 1.02; }
 }
 .tt-pop { animation: tt-pop 420ms var(--tt-ease-out); }
 
-/* A diagonal light crossing a surface once, on hover. */
-.tt-sweep { position: relative; overflow: hidden; }
-.tt-sweep::after {
-  content: '';
-  position: absolute;
-  inset: -40% auto -40% -60%;
-  inline-size: 40%;
-  background: linear-gradient(105deg, transparent, rgba(255, 248, 235, 0.10), transparent);
-  transform: skewX(-18deg) translateX(-120%);
-  pointer-events: none;
-  transition: transform 700ms var(--tt-ease-out);
-}
-.tt-sweep:hover::after { transform: skewX(-18deg) translateX(420%); }
-
-/* The buy button glows a little; it is the one thing that spends money. */
-.tt-btn--buy { box-shadow: 0 6px 22px rgba(242, 179, 61, 0.22); }
-.tt-btn--buy:hover:not(:disabled) { box-shadow: 0 10px 30px rgba(242, 179, 61, 0.34); }
+/* Kept as a name only. The hover light-sweep it used to draw was the kind of
+   effect that makes a shop look like a demo; hover is now a lift and a border. */
+.tt-sweep { position: relative; }
 
 /* The state a buy button takes for a moment after it worked. */
 .tt-btn--done {
   background: var(--tt-success) !important;
+  border-color: transparent !important;
   color: #062814 !important;
-  box-shadow: 0 6px 22px rgba(67, 209, 138, 0.28) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .reveal { opacity: 1; transform: none; transition: none; }
-  .tt-sweep::after { display: none; }
   body::after { display: none; }
 }

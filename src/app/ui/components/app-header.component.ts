@@ -147,8 +147,8 @@ import { SearchBoxComponent } from './search-box.component';
     }
     .bar--scrolled {
       background: var(--tt-glass);
-      backdrop-filter: blur(16px) saturate(1.2);
-      -webkit-backdrop-filter: blur(16px) saturate(1.2);
+      backdrop-filter: blur(12px) saturate(1.15);
+      -webkit-backdrop-filter: blur(12px) saturate(1.15);
       border-block-end-color: var(--tt-glass-border);
       box-shadow: var(--tt-glass-highlight), 0 10px 30px rgba(0, 0, 0, 0.35);
     }

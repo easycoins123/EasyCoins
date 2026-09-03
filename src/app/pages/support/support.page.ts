@@ -23,11 +23,11 @@ import { FaqAccordionComponent, IconComponent } from '../../ui';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-container tt-section narrow">
-      <span class="tt-eyebrow">שירות</span>
-      <h1>תמיכה</h1>
-      <p class="tt-muted">
-        נתקלתם בבעיה בהזמנה, באספקה או בתשלום? כתבו לנו ונחזור אליכם במייל.
-      </p>
+      <header class="tt-head tt-head--tight">
+        <span class="tt-eyebrow">שירות</span>
+        <h1>תמיכה</h1>
+        <p class="tt-head__lede">נתקלתם בבעיה בהזמנה, באספקה או בתשלום? כתבו לנו ונחזור אליכם במייל.</p>
+      </header>
 
       <div class="tt-alert">
         <tt-icon name="shield" [size]="18"></tt-icon>

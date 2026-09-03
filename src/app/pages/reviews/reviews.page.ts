@@ -14,8 +14,10 @@ import { ReviewCardComponent, StarRatingComponent } from '../../ui';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-container tt-section">
-      <span class="tt-eyebrow">לקוחות</span>
-      <h1>ביקורות</h1>
+      <header class="tt-head tt-head--tight">
+        <span class="tt-eyebrow">לקוחות</span>
+        <h1>ביקורות</h1>
+      </header>
 
       <div class="tt-panel head" *ngIf="summary$ | async as summary">
         <span class="score">{{ summary.average }}</span>

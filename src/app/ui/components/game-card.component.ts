@@ -50,8 +50,8 @@ import { Game } from '../../domain';
       block-size: 180px;
       border-radius: 50%;
       background: var(--accent);
-      opacity: 0.16;
-      filter: blur(12px);
+      opacity: 0.1;
+      filter: blur(14px);
     }
     .tt-eyebrow { color: var(--accent); }
     h2 { margin: 0; font-size: var(--tt-text-xl); }

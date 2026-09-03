@@ -14,9 +14,11 @@ import { FaqAccordionComponent } from '../../ui';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-container tt-section narrow">
-      <span class="tt-eyebrow">מידע</span>
-      <h1>שאלות נפוצות</h1>
-      <p class="tt-muted">לא מצאתם תשובה? <a routerLink="/support">כתבו לנו</a>.</p>
+      <header class="tt-head tt-head--tight">
+        <span class="tt-eyebrow">מידע</span>
+        <h1>שאלות נפוצות</h1>
+        <p class="tt-head__lede">לא מצאתם תשובה? <a routerLink="/support">כתבו לנו</a>.</p>
+      </header>
 
       <tt-faq-accordion [entries]="(faq$ | async) ?? []"></tt-faq-accordion>
     </div>

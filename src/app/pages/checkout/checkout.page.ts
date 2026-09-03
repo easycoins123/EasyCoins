@@ -113,7 +113,10 @@ import {
                 אנחנו לעולם לא מבקשים סיסמה, קוד אימות או קודי גיבוי, בשום שלב.
               </p>
 
-              <button type="submit" class="tt-btn tt-btn--buy tt-btn--lg tt-btn--block pay" [disabled]="checkout.busy()">
+              <button type="submit" class="tt-btn tt-btn--buy tt-btn--lg tt-btn--block pay"
+                      [class.tt-btn--loading]="checkout.busy()"
+                      [attr.aria-busy]="checkout.busy() ? 'true' : null"
+                      [disabled]="checkout.busy()">
                 <span>המשך לתשלום</span>
                 <span class="pay__sum tt-numeric">{{ cart.totals().total | money }}</span>
               </button>
@@ -170,6 +173,8 @@ import {
             </p>
 
             <button type="button" class="tt-btn tt-btn--primary tt-btn--block"
+                    [class.tt-btn--loading]="checkout.busy()"
+                    [attr.aria-busy]="checkout.busy() ? 'true' : null"
                     [disabled]="checkout.busy() || checkout.paymentPending()"
                     (click)="pay()">
               <ng-container *ngIf="checkout.busy()">מעבד…</ng-container>
@@ -206,7 +211,7 @@ import {
           </section>
         </div>
 
-        <aside class="summary tt-glass tt-card--pad" *ngIf="lookups$ | async as lookups">
+        <aside class="summary tt-plate tt-card--pad" *ngIf="lookups$ | async as lookups">
           <h2>מה קונים</h2>
           <ul>
             <li *ngFor="let item of cart.items()">

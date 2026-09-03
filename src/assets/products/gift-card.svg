@@ -5,11 +5,11 @@
        renders inline. Original geometry; no publisher property is depicted. -->
   <defs>
     <linearGradient id="g" x1="0.15" y1="0" x2="0.7" y2="1">
-      <stop offset="0" stop-color="#FFE6AE"/><stop offset="0.42" stop-color="#F2B33D"/>
-      <stop offset="0.78" stop-color="#D9942A"/><stop offset="1" stop-color="#FFD371"/>
+      <stop offset="0" stop-color="#F4E6C3"/><stop offset="0.42" stop-color="#D4B46A"/>
+      <stop offset="0.78" stop-color="#A9884A"/><stop offset="1" stop-color="#E6CB86"/>
     </linearGradient>
     <linearGradient id="e" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#D9942A"/><stop offset="1" stop-color="#7A4E10"/>
+      <stop offset="0" stop-color="#A9884A"/><stop offset="1" stop-color="#6B5228"/>
     </linearGradient>
     <linearGradient id="s" x1="0" y1="0" x2="0.55" y2="1">
       <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.5"/>
@@ -20,8 +20,8 @@
       <stop offset="0" stop-color="#A8C0FF"/><stop offset="1" stop-color="#2E5FF0"/>
     </linearGradient>
     <radialGradient id="p" cx="50%" cy="74%" r="55%">
-      <stop offset="0" stop-color="#F2B33D" stop-opacity="0.20"/>
-      <stop offset="1" stop-color="#F2B33D" stop-opacity="0"/>
+      <stop offset="0" stop-color="#D4B46A" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#D4B46A" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <ellipse cx="100" cy="122" rx="56" ry="20" fill="url(#p)"/>

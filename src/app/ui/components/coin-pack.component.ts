@@ -23,10 +23,12 @@ interface Palette {
 
 const PALETTES: Record<PackMaterial, Palette> = {
   steel: { light: '#E6ECF4', mid: '#9AA7B8', dark: '#5C6879', deep: '#2B333F', glow: '#6E93FF', body: '#171A1F' },
-  bronze: { light: '#F3D3B8', mid: '#C98A5A', dark: '#8C5A34', deep: '#4A2C16', glow: '#D9824A', body: '#1D1512' },
+  bronze: { light: '#F1D4BC', mid: '#C4895F', dark: '#8A5A36', deep: '#4A2C16', glow: '#C4895F', body: '#1D1512' },
   silver: { light: '#FFFFFF', mid: '#D6DEE8', dark: '#8E9AA8', deep: '#4B5563', glow: '#A8C0FF', body: '#15181D' },
-  gold: { light: '#FFF3D2', mid: '#F2B33D', dark: '#B8790F', deep: '#7A4E10', glow: '#F2B33D', body: '#14110D' },
-  elite: { light: '#FFF6DC', mid: '#F6C95E', dark: '#6B4A12', deep: '#1A1206', glow: '#FFD371', body: '#0A0908' },
+  // Champagne. The metal is lighter and less saturated than the old amber, so
+  // the gold tier reads as jewellery rather than as a warning colour.
+  gold: { light: '#F7EBCB', mid: '#D4B46A', dark: '#A9884A', deep: '#6B5228', glow: '#D4B46A', body: '#14110D' },
+  elite: { light: '#FBF3DC', mid: '#E6CB86', dark: '#7B6132', deep: '#1A1409', glow: '#E6CB86', body: '#0A0908' },
 };
 
 interface FannedCard {

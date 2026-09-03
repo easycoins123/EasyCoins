@@ -1,31 +1,61 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" role="img" aria-label="שירות לחשבון">
-  <!-- EASYCOINS product art. Machined octagonal tokens, struck with the brand Z
-       and cut on the same nine-degree shear as the mark, so every thumbnail in
-       the catalogue belongs to one family and matches the artwork the app
-       renders inline. Original geometry; no publisher property is depicted. -->
+  <!-- EASYCOINS product art: an account service. A card-shaped plate in the
+       steel material of the coin packs, with three etched rows (a squad,
+       abstracted) and a champagne-gold octagon medallion carrying a check:
+       the job is done. Same geometry and materials as the pack artwork the
+       app renders inline. Original design; no publisher property is depicted
+       and nothing resembles a player item. -->
   <defs>
-    <linearGradient id="g" x1="0.15" y1="0" x2="0.7" y2="1">
-      <stop offset="0" stop-color="#FFE6AE"/><stop offset="0.42" stop-color="#F2B33D"/>
-      <stop offset="0.78" stop-color="#D9942A"/><stop offset="1" stop-color="#FFD371"/>
+    <linearGradient id="frame" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#E6ECF4"/>
+      <stop offset="0.5" stop-color="#9AA7B8"/>
+      <stop offset="1" stop-color="#5C6879"/>
     </linearGradient>
-    <linearGradient id="e" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#D9942A"/><stop offset="1" stop-color="#7A4E10"/>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#20242B"/>
+      <stop offset="1" stop-color="#121519"/>
     </linearGradient>
-    <linearGradient id="s" x1="0" y1="0" x2="0.55" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.5"/>
-      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.05"/>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F7EBCB"/>
+      <stop offset="0.45" stop-color="#D4B46A"/>
+      <stop offset="1" stop-color="#A9884A"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.22"/>
+      <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0.03"/>
       <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
     </linearGradient>
-    <linearGradient id="b" x1="0" y1="0" x2="0.4" y2="1">
-      <stop offset="0" stop-color="#A8C0FF"/><stop offset="1" stop-color="#2E5FF0"/>
-    </linearGradient>
-    <radialGradient id="p" cx="50%" cy="74%" r="55%">
-      <stop offset="0" stop-color="#F2B33D" stop-opacity="0.20"/>
-      <stop offset="1" stop-color="#F2B33D" stop-opacity="0"/>
+    <radialGradient id="light" cx="50%" cy="55%" r="55%">
+      <stop offset="0" stop-color="#6E93FF" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#6E93FF" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <ellipse cx="100" cy="122" rx="56" ry="20" fill="url(#p)"/>
-  <polygon points="153.6,102.9 122.2,121.1 77.8,121.1 46.4,102.9 46.4,77.1 77.8,58.9 122.2,58.9 153.6,77.1" fill="#1F1D1A"/>
-  <polygon points="153.6,102.9 122.2,121.1 77.8,121.1 46.4,102.9 46.4,77.1 77.8,58.9 122.2,58.9 153.6,77.1" fill="none" stroke="url(#b)" stroke-width="2"/>
-  <path d="M78 94 L94 108 L124 78" fill="none" stroke="url(#b)" stroke-width="9" stroke-linecap="square"/>
+
+  <ellipse cx="100" cy="86" rx="82" ry="46" fill="url(#light)"/>
+  <ellipse cx="100" cy="132" rx="40" ry="6" fill="#000" opacity="0.45"/>
+
+  <g transform="translate(100 78) rotate(-6)">
+    <!-- frame and body -->
+    <rect x="-38" y="-52" width="76" height="104" rx="9" fill="url(#frame)"/>
+    <rect x="-34" y="-48" width="68" height="96" rx="7" fill="url(#body)"/>
+    <rect x="-34" y="-48" width="68" height="96" rx="7" fill="url(#gloss)"/>
+
+    <!-- medallion -->
+    <path fill="#000" opacity="0.4" transform="translate(0 -12)" d="M18.5,7.7 L7.7,18.5 L-7.7,18.5 L-18.5,7.7 L-18.5,-7.7 L-7.7,-18.5 L7.7,-18.5 L18.5,-7.7 Z"/>
+    <path fill="url(#gold)" transform="translate(0 -14)" d="M18.5,7.7 L7.7,18.5 L-7.7,18.5 L-18.5,7.7 L-18.5,-7.7 L-7.7,-18.5 L7.7,-18.5 L18.5,-7.7 Z"/>
+    <path fill="none" stroke="#7B6132" stroke-opacity="0.6" stroke-width="1.5" transform="translate(0 -14)" d="M13.9,5.8 L5.8,13.9 L-5.8,13.9 L-13.9,5.8 L-13.9,-5.8 L-5.8,-13.9 L5.8,-13.9 L13.9,-5.8 Z"/>
+    <path fill="none" stroke="#241A05" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 -14)" d="M-7,0.5 L-2.2,5.3 L7.5,-5"/>
+
+    <!-- three etched rows -->
+    <g fill="#9AA7B8" opacity="0.55">
+      <rect x="-24" y="14" width="48" height="4" rx="2"/>
+      <rect x="-24" y="24" width="38" height="4" rx="2"/>
+      <rect x="-24" y="34" width="44" height="4" rx="2"/>
+    </g>
+    <g fill="#D4B46A" opacity="0.9">
+      <rect x="-24" y="14" width="10" height="4" rx="2"/>
+      <rect x="-24" y="24" width="14" height="4" rx="2"/>
+      <rect x="-24" y="34" width="8" height="4" rx="2"/>
+    </g>
+  </g>
 </svg>

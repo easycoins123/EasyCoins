@@ -50,7 +50,7 @@ interface Tier {
       <div class="picker__body">
         <div class="tiers" role="radiogroup" aria-label="בחירת חבילה">
           <button type="button"
-                  class="tier tt-sweep"
+                  class="tier"
                   *ngFor="let tier of tiers; let i = index"
                   role="radio"
                   [attr.aria-checked]="requested() === tier.quantity"
@@ -103,7 +103,7 @@ interface Tier {
 
       <!-- The quote: the one bordered surface in the module, because this is
            the part that takes money and should look like it. -->
-      <aside class="quote tt-glass" [style.--mat]="currentMaterial().color" [style.--mat-glow]="currentMaterial().glow">
+      <aside class="quote tt-plate" [style.--mat]="currentMaterial().color" [style.--mat-glow]="currentMaterial().glow">
         <div class="quote__stage">
           <tt-coin-pack class="quote__art" [steps]="artSteps()"></tt-coin-pack>
         </div>
@@ -134,9 +134,13 @@ interface Tier {
           <span>למיליון קוינס</span>
         </p>
 
-        <button type="button" class="tt-btn tt-btn--buy tt-btn--lg tt-btn--block" [disabled]="busy" (click)="confirm.emit(current)">
+        <button type="button" class="tt-btn tt-btn--buy tt-btn--lg tt-btn--block"
+                [class.tt-btn--loading]="busy"
+                [attr.aria-busy]="busy ? 'true' : null"
+                [disabled]="busy"
+                (click)="confirm.emit(current)">
           <tt-icon name="cart" [size]="18"></tt-icon>
-          <span>{{ busy ? 'מוסיפים…' : 'הוספה לסל' }}</span>
+          <span>הוספה לסל</span>
         </button>
 
         <p class="quote__assure">
@@ -149,7 +153,7 @@ interface Tier {
   styles: [`
     :host { display: block; }
 
-    .picker { display: grid; gap: var(--tt-stack); align-items: start; }
+    .picker { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--tt-stack); align-items: start; }
     @media (min-width: 900px) {
       .picker {
         grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.85fr);
@@ -185,11 +189,12 @@ interface Tier {
                   transform var(--tt-duration-fast) var(--tt-ease),
                   box-shadow var(--tt-duration) var(--tt-ease);
     }
-    .tier:hover { border-color: var(--tt-border-strong); transform: translateY(-3px); }
+    .tier:hover { border-color: var(--tt-border-strong); transform: translateY(-2px); }
+    .tier:focus-visible { outline: 2px solid var(--tt-brand-400); outline-offset: 3px; }
     .tier.on {
       border-color: var(--mat);
-      box-shadow: 0 0 0 1px var(--mat), 0 16px 44px var(--mat-glow);
-      transform: translateY(-4px);
+      box-shadow: 0 0 0 1px var(--mat), 0 12px 32px rgba(0, 0, 0, 0.4);
+      transform: translateY(-2px);
     }
     .tier__art { inline-size: 68px; filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.45)); }
     .tier__text { display: flex; flex-direction: column; align-items: center; gap: 2px; }
@@ -231,10 +236,12 @@ interface Tier {
     .tier.on .tier__check { opacity: 1; transform: scale(1); }
 
     @media (max-width: 640px) {
-      .tiers { grid-template-columns: 1fr; gap: var(--tt-space-2); }
+      .tiers { grid-template-columns: minmax(0, 1fr); gap: var(--tt-space-2); }
       .tier { flex-direction: row; gap: var(--tt-space-3); min-block-size: 68px; padding: var(--tt-space-2) var(--tt-space-3); padding-inline-end: 44px; text-align: start; }
       .tier__art { inline-size: 50px; flex: none; }
-      .tier__text { flex: 1; align-items: flex-start; }
+      .tier__text { flex: 1; min-inline-size: 0; align-items: flex-start; }
+      .tier__rate { white-space: normal; }
+      .tier__price { flex: none; }
       .tier__qty { font-size: 1.6rem; }
       .tier__price { font-size: 1.35rem; }
       .tier__flag { inset-block-start: 6px; inset-inline-start: auto; inset-inline-end: 40px; }
@@ -266,7 +273,7 @@ interface Tier {
       padding: var(--tt-space-4);
       border-radius: var(--tt-radius-xl);
       border-color: var(--mat);
-      box-shadow: var(--tt-glass-highlight), 0 0 0 1px var(--mat-glow), 0 24px 60px rgba(0, 0, 0, 0.5);
+      box-shadow: inset 0 1px 0 rgba(255, 248, 235, 0.06), var(--tt-shadow-2);
     }
     .quote__stage {
       display: grid;
@@ -283,7 +290,7 @@ interface Tier {
     .quote__rounded tt-icon { flex: none; margin-block-start: 1px; }
     .quote__lines { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--tt-space-1); }
     .quote__lines li { display: flex; justify-content: space-between; gap: var(--tt-space-3); font-size: var(--tt-text-sm); color: var(--tt-text-muted); }
-    .quote__total { display: flex; justify-content: space-between; align-items: baseline; gap: var(--tt-space-3); padding-block-start: var(--tt-space-3); border-block-start: 1px solid var(--tt-glass-border); }
+    .quote__total { display: flex; justify-content: space-between; align-items: baseline; gap: var(--tt-space-3); padding-block-start: var(--tt-space-3); border-block-start: 1px solid var(--tt-border); }
     .quote__label { font-weight: 700; }
     .quote__rate { margin: calc(var(--tt-space-2) * -1) 0 0; color: var(--tt-text-faint); font-size: var(--tt-text-xs); text-align: end; }
     .quote__assure { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--tt-text-faint); font-size: 11px; }

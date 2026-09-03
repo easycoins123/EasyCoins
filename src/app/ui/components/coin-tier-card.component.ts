@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
@@ -29,7 +29,7 @@ import { IconComponent } from './icon.component';
   imports: [CommonModule, RouterLink, LocalizePipe, MoneyPipe, CoinPackComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <article class="card tt-sweep"
+    <article class="card"
              [class.card--best]="row.isBestValue"
              [class.card--elite]="material.name === 'elite'"
              [style.--mat]="material.color"
@@ -58,8 +58,10 @@ import { IconComponent } from './icon.component';
         </span>
         <button type="button"
                 class="tt-btn tt-btn--buy tt-btn--sm buy"
+                [class.tt-btn--loading]="loading()"
                 [class.tt-btn--done]="done()"
-                [disabled]="busy && !done()"
+                [attr.aria-busy]="loading() ? 'true' : null"
+                [disabled]="busyState() && !done()"
                 (click)="add()">
           <ng-container *ngIf="!done()"><tt-icon name="cart" [size]="15"></tt-icon> הוספה לסל</ng-container>
           <ng-container *ngIf="done()"><tt-icon name="check" [size]="15"></tt-icon> נוסף לסל</ng-container>
@@ -82,7 +84,9 @@ import { IconComponent } from './icon.component';
                   border-color var(--tt-duration-fast) var(--tt-ease),
                   box-shadow var(--tt-duration) var(--tt-ease);
     }
-    .card:hover { transform: translateY(-4px); border-color: var(--mat); box-shadow: 0 0 0 1px var(--mat-glow), 0 22px 50px rgba(0, 0, 0, 0.5), 0 0 40px var(--mat-glow); }
+    /* Hover is a lift and the material on the edge. No halo: five glowing
+       cards in a row is a slot machine, not a shelf. */
+    .card:hover { transform: translateY(-3px); border-color: var(--mat); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45); }
     .card--best { border-color: var(--tt-gold-500); }
     .card--elite { background: linear-gradient(180deg, #0F0D0A, var(--tt-surface) 40%); }
 
@@ -142,7 +146,7 @@ import { IconComponent } from './icon.component';
     .price { display: flex; flex-direction: column; gap: 1px; min-inline-size: 0; }
     .price .tt-price { font-size: 1.7rem; }
     .was { font-size: var(--tt-text-xs); color: var(--tt-text-faint); text-decoration: line-through; }
-    .buy { min-block-size: 38px; white-space: nowrap; flex: none; transition: background-color var(--tt-duration) var(--tt-ease), color var(--tt-duration) var(--tt-ease); }
+    .buy { min-block-size: 38px; white-space: nowrap; flex: none; }
 
     @media (max-width: 480px) {
       .foot { flex-direction: column; align-items: stretch; gap: var(--tt-space-2); }
@@ -158,12 +162,29 @@ export class CoinTierCardComponent {
   @Input() rank = 1;
   @Input({ required: true }) productSlug = '';
   @Input({ required: true }) productName!: LocalizedText;
-  @Input() busy = false;
+
+  /**
+   * Whether the parent has a cart request in flight. The card watches the
+   * transition back to idle: if it was this card that asked, the button
+   * confirms. A confirmation that appears before the server answered would be
+   * a lie the toast has to correct a second later.
+   */
+  @Input() set busy(value: boolean) {
+    const wasBusy = this.busyState();
+    this.busyState.set(value);
+    if (this.pending() && wasBusy && !value) {
+      this.finish();
+    }
+  }
 
   @Output() readonly buy = new EventEmitter<Offer>();
 
+  readonly busyState = signal(false);
+  /** True from this card's click until the parent reports the request done. */
+  readonly pending = signal(false);
   /** True for a moment after the bundle went into the cart. */
   readonly done = signal(false);
+  readonly loading = computed(() => this.pending() && this.busyState());
 
   get material(): Material {
     return materialForStep(this.rank);
@@ -184,10 +205,23 @@ export class CoinTierCardComponent {
   }
 
   add(): void {
-    if (this.done()) {
+    if (this.done() || this.pending()) {
       return;
     }
+    this.pending.set(true);
     this.buy.emit(this.row.offer);
+    // The parent's busy flag reaches this input on the next change detection.
+    // If it never turns on (a synchronous add), confirm right away rather than
+    // leaving the button waiting for a transition that will not come.
+    setTimeout(() => {
+      if (this.pending() && !this.busyState()) {
+        this.finish();
+      }
+    }, 0);
+  }
+
+  private finish(): void {
+    this.pending.set(false);
     this.done.set(true);
     setTimeout(() => this.done.set(false), 1400);
   }

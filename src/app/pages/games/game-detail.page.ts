@@ -31,10 +31,10 @@ import { signal } from '@angular/core';
             <a routerLink="/games">משחקים</a> / <span>{{ vm.game.name | t }}</span>
           </nav>
 
-          <header class="head" [style.--accent]="vm.game.accentColor || 'var(--tt-brand-500)'">
+          <header class="tt-head tt-head--tight" [style.--accent]="vm.game.accentColor || 'var(--tt-brand-500)'">
             <span class="tt-eyebrow">{{ vm.game.publisher }}</span>
             <h1>{{ vm.game.name | t }}</h1>
-            <p class="tt-muted">{{ vm.game.shortDescription | t }}</p>
+            <p class="tt-head__lede">{{ vm.game.shortDescription | t }}</p>
           </header>
 
           <tt-empty-state *ngIf="vm.products.length === 0"
@@ -57,8 +57,6 @@ import { signal } from '@angular/core';
   `,
   styles: [`
     .crumbs { margin-block-end: var(--tt-space-3); }
-    .head { margin-block-end: var(--tt-space-5); }
-    .head h1 { margin-block: var(--tt-space-1) var(--tt-space-2); }
     .tt-eyebrow { color: var(--accent); }
   `],
 })

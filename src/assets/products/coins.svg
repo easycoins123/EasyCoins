@@ -5,11 +5,11 @@
        renders inline. Original geometry; no publisher property is depicted. -->
   <defs>
     <linearGradient id="g" x1="0.15" y1="0" x2="0.7" y2="1">
-      <stop offset="0" stop-color="#FFE6AE"/><stop offset="0.42" stop-color="#F2B33D"/>
-      <stop offset="0.78" stop-color="#D9942A"/><stop offset="1" stop-color="#FFD371"/>
+      <stop offset="0" stop-color="#F4E6C3"/><stop offset="0.42" stop-color="#D4B46A"/>
+      <stop offset="0.78" stop-color="#A9884A"/><stop offset="1" stop-color="#E6CB86"/>
     </linearGradient>
     <linearGradient id="e" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#D9942A"/><stop offset="1" stop-color="#7A4E10"/>
+      <stop offset="0" stop-color="#A9884A"/><stop offset="1" stop-color="#6B5228"/>
     </linearGradient>
     <linearGradient id="s" x1="0" y1="0" x2="0.55" y2="1">
       <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.5"/>
@@ -20,34 +20,34 @@
       <stop offset="0" stop-color="#A8C0FF"/><stop offset="1" stop-color="#2E5FF0"/>
     </linearGradient>
     <radialGradient id="p" cx="50%" cy="74%" r="55%">
-      <stop offset="0" stop-color="#F2B33D" stop-opacity="0.20"/>
-      <stop offset="1" stop-color="#F2B33D" stop-opacity="0"/>
+      <stop offset="0" stop-color="#D4B46A" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#D4B46A" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <ellipse cx="100" cy="122" rx="74" ry="20" fill="url(#p)"/>
   <g opacity="0.62">
     <polygon points="151.6,52.2 141.3,58.2 126.7,58.2 116.4,52.2 116.4,43.8 126.7,37.8 141.3,37.8 151.6,43.8" fill="url(#e)"/>
     <polygon points="151.6,46.2 141.3,52.2 126.7,52.2 116.4,46.2 116.4,37.8 126.7,31.8 141.3,31.8 151.6,37.8" fill="url(#g)"/>
-    <polygon points="148.4,45.5 140.0,50.3 128.0,50.3 119.6,45.5 119.6,38.5 128.0,33.7 140.0,33.7 148.4,38.5" fill="none" stroke="#7A4E10" stroke-opacity="0.34" stroke-width="1"/>
+    <polygon points="148.4,45.5 140.0,50.3 128.0,50.3 119.6,45.5 119.6,38.5 128.0,33.7 140.0,33.7 148.4,38.5" fill="none" stroke="#6B5228" stroke-opacity="0.34" stroke-width="1"/>
     <polygon points="150.7,46.0 140.9,51.7 127.1,51.7 117.3,46.0 117.3,38.0 127.1,32.3 140.9,32.3 150.7,38.0" fill="url(#s)"/>
   </g>
   <g opacity="0.8">
     <polygon points="180.1,110.5 166.6,118.4 147.4,118.4 133.9,110.5 133.9,99.5 147.4,91.6 166.6,91.6 180.1,99.5" fill="url(#e)"/>
     <polygon points="180.1,102.5 166.6,110.4 147.4,110.4 133.9,102.5 133.9,91.5 147.4,83.6 166.6,83.6 180.1,91.5" fill="url(#g)"/>
-    <polygon points="175.9,101.6 164.8,108.0 149.2,108.0 138.1,101.6 138.1,92.4 149.2,86.0 164.8,86.0 175.9,92.4" fill="none" stroke="#7A4E10" stroke-opacity="0.34" stroke-width="1"/>
+    <polygon points="175.9,101.6 164.8,108.0 149.2,108.0 138.1,101.6 138.1,92.4 149.2,86.0 164.8,86.0 175.9,92.4" fill="none" stroke="#6B5228" stroke-opacity="0.34" stroke-width="1"/>
     <polygon points="178.9,102.3 166.1,109.7 147.9,109.7 135.1,102.3 135.1,91.7 147.9,84.3 166.1,84.3 178.9,91.7" fill="url(#s)"/>
   </g>
   <g opacity="0.92">
     <polygon points="71.8,118.4 56.1,127.5 33.9,127.5 18.2,118.4 18.2,105.6 33.9,96.5 56.1,96.5 71.8,105.6" fill="url(#e)"/>
     <polygon points="71.8,109.4 56.1,118.5 33.9,118.5 18.2,109.4 18.2,96.6 33.9,87.5 56.1,87.5 71.8,96.6" fill="url(#g)"/>
-    <polygon points="67.0,108.3 54.1,115.7 35.9,115.7 23.0,108.3 23.0,97.7 35.9,90.3 54.1,90.3 67.0,97.7" fill="none" stroke="#7A4E10" stroke-opacity="0.34" stroke-width="1"/>
+    <polygon points="67.0,108.3 54.1,115.7 35.9,115.7 23.0,108.3 23.0,97.7 35.9,90.3 54.1,90.3 67.0,97.7" fill="none" stroke="#6B5228" stroke-opacity="0.34" stroke-width="1"/>
     <polygon points="70.5,109.1 55.5,117.8 34.5,117.8 19.5,109.1 19.5,96.9 34.5,88.2 55.5,88.2 70.5,96.9" fill="url(#s)"/>
     <g transform="translate(30.2,89.7) scale(0.462,0.416) skewX(-9)" fill="#5A390A" fill-opacity="0.66"><path d="M14 12h10v40H14ZM14 12h34v10H14ZM14 27h26v10H14ZM14 42h34v10H14Z"/></g>
   </g>
   <g opacity="1">
     <polygon points="142.5,105.2 117.6,119.6 82.4,119.6 57.5,105.2 57.5,84.8 82.4,70.4 117.6,70.4 142.5,84.8" fill="url(#e)"/>
     <polygon points="142.5,92.2 117.6,106.6 82.4,106.6 57.5,92.2 57.5,71.8 82.4,57.4 117.6,57.4 142.5,71.8" fill="url(#g)"/>
-    <polygon points="134.8,90.4 114.4,102.2 85.6,102.2 65.2,90.4 65.2,73.6 85.6,61.8 114.4,61.8 134.8,73.6" fill="none" stroke="#7A4E10" stroke-opacity="0.34" stroke-width="1.6"/>
+    <polygon points="134.8,90.4 114.4,102.2 85.6,102.2 65.2,90.4 65.2,73.6 85.6,61.8 114.4,61.8 134.8,73.6" fill="none" stroke="#6B5228" stroke-opacity="0.34" stroke-width="1.6"/>
     <polygon points="140.4,91.7 116.7,105.4 83.3,105.4 59.6,91.7 59.6,72.3 83.3,58.6 116.7,58.6 140.4,72.3" fill="url(#s)"/>
     <g transform="translate(76.5,60.9) scale(0.733,0.659) skewX(-9)" fill="#5A390A" fill-opacity="0.66"><path d="M14 12h10v40H14ZM14 12h34v10H14ZM14 27h26v10H14ZM14 42h34v10H14Z"/></g>
   </g>

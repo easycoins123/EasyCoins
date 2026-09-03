@@ -51,7 +51,7 @@ interface PriceTag {
 
       <div class="tt-container hero__inner">
         <div class="copy">
-          <p class="kicker tt-glass" ttReveal="0">
+          <p class="kicker tt-eyebrow" ttReveal="0">
             <tt-icon name="football" [size]="15"></tt-icon>
             <span>{{ gameName }} · Ultimate Team</span>
           </p>
@@ -126,6 +126,8 @@ interface PriceTag {
       border-block-end: 1px solid var(--tt-border);
     }
     .hero__ground { position: absolute; inset: 0; z-index: -1; }
+    /* Two low washes: a cool one behind the object, a warm one behind the
+       copy. Low enough that the ground still reads as one material. */
     .wash {
       position: absolute;
       inset-block-start: -40%;
@@ -134,7 +136,7 @@ interface PriceTag {
       block-size: min(70vw, 760px);
       border-radius: 50%;
       background: var(--tt-brand-500);
-      opacity: 0.14;
+      opacity: 0.09;
       filter: blur(130px);
     }
     .wash--warm {
@@ -144,7 +146,7 @@ interface PriceTag {
       inline-size: min(48vw, 520px);
       block-size: min(48vw, 520px);
       background: var(--tt-gold-500);
-      opacity: 0.09;
+      opacity: 0.05;
     }
     .bands {
       position: absolute;
@@ -162,25 +164,21 @@ interface PriceTag {
     }
     .copy { display: flex; flex-direction: column; align-items: flex-start; }
 
+    /* A label, not a badge: the game name in small caps with the football
+       glyph in gold, sitting directly above the headline. */
     .kicker {
       display: inline-flex;
       align-items: center;
       gap: var(--tt-space-2);
       margin: 0 0 var(--tt-space-4);
-      padding: 0.35rem 0.8rem;
-      border-radius: var(--tt-radius-pill);
-      font-size: var(--tt-text-xs);
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      color: var(--tt-text-muted);
     }
     .kicker tt-icon { color: var(--tt-gold-400); }
 
     h1 {
       margin: 0;
-      font-size: clamp(3rem, 5.2vw, 4.7rem);
+      font-size: var(--tt-display-1);
       line-height: 0.94;
-      letter-spacing: 0.005em;
+      letter-spacing: var(--tt-tracking-display);
       font-weight: 700;
     }
     .h1__what { display: block; }
@@ -205,7 +203,7 @@ interface PriceTag {
     }
     .deal__figure { display: flex; align-items: baseline; gap: 3px; }
     .deal__from { color: var(--tt-text-faint); font-size: var(--tt-text-sm); }
-    .deal__value { font-size: clamp(3rem, 5.6vw, 4.6rem); color: var(--tt-gold-400); }
+    .deal__value { font-size: var(--tt-display-1); color: var(--tt-gold-400); }
     .deal__currency { font-family: var(--tt-font-display); font-size: var(--tt-text-2xl); color: var(--tt-gold-400); }
     .deal__note { display: flex; flex-direction: column; gap: 2px; }
     .deal__unit { font-size: var(--tt-text-sm); font-weight: 700; }
@@ -239,7 +237,7 @@ interface PriceTag {
       direction: ltr;
       transform: translateZ(40px);
     }
-    .tag__dot { inline-size: 10px; block-size: 10px; border-radius: 50%; background: var(--mat); box-shadow: 0 0 12px var(--mat); }
+    .tag__dot { inline-size: 10px; block-size: 10px; border-radius: 50%; background: var(--mat); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45); }
     .tag__qty { font-size: var(--tt-text-xl); }
     .tag__price { font-size: var(--tt-text-xs); font-weight: 700; color: var(--tt-gold-400); }
     .tag--a { inset-block-start: 20%; inset-inline-start: 2%; }
@@ -295,7 +293,7 @@ export class HeroComponent {
     const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
     const x = (event.clientX - box.left) / box.width - 0.5;
     const y = (event.clientY - box.top) / box.height - 0.5;
-    this.transform.set(`rotateY(${(x * 10).toFixed(2)}deg) rotateX(${(-y * 8).toFixed(2)}deg)`);
+    this.transform.set(`rotateY(${(x * 8).toFixed(2)}deg) rotateX(${(-y * 6).toFixed(2)}deg)`);
   }
 
   rest(): void {

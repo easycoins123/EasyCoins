@@ -105,15 +105,17 @@ const GROUP_ICONS: Readonly<Record<string, IconName>> = {
       inline-size: 100%;
       min-block-size: 46px;
       padding-inline: 2.6rem var(--tt-space-3);
-      border: 1px solid var(--tt-glass-border);
+      border: 1px solid var(--tt-border-strong);
       border-radius: var(--tt-radius-pill);
-      background: var(--tt-glass);
-      box-shadow: var(--tt-glass-highlight);
+      background: var(--tt-surface);
       color: var(--tt-text);
       font: inherit;
       font-size: var(--tt-text-sm);
+      transition: border-color var(--tt-duration-fast) var(--tt-ease), box-shadow var(--tt-duration-fast) var(--tt-ease);
     }
-    .find input:focus { outline: none; border-color: var(--tt-border-brand); box-shadow: var(--tt-glass-highlight), 0 0 0 3px rgba(46, 95, 240, 0.18); }
+    .find input:hover { border-color: var(--tt-text-faint); }
+    .find input:focus { outline: none; border-color: var(--tt-brand-500); box-shadow: 0 0 0 3px var(--tt-brand-tint); }
+    .find input::placeholder { color: var(--tt-text-faint); }
     .find input::-webkit-search-cancel-button { display: none; }
 
     .group { border: 0; margin: 0; padding: 0; min-inline-size: 0; }

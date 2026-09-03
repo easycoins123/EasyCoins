@@ -207,8 +207,8 @@ function safeReturnPath(value: string | null): string | null {
   styles: [`
     .narrow { max-inline-size: 520px; }
     .head { margin-block-end: var(--tt-space-5); }
-    .head h1 { margin: 0 0 var(--tt-space-1); font-size: var(--tt-text-2xl); }
-    .head p { margin: 0; }
+    .head h1 { margin: 0 0 var(--tt-space-1); font-size: var(--tt-display-3); }
+    .head p { margin: 0; font-size: var(--tt-text-md); line-height: var(--tt-leading-snug); }
     .head--in { display: flex; align-items: center; gap: var(--tt-space-3); }
     .avatar {
       display: grid;

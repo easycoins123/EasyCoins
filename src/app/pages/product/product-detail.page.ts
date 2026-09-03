@@ -155,6 +155,8 @@ interface ProductViewModel {
                     </tt-quantity-selector>
 
                     <button type="button" class="tt-btn tt-btn--buy grow"
+                            [class.tt-btn--loading]="cart.busy()"
+                            [attr.aria-busy]="cart.busy() ? 'true' : null"
                             [disabled]="!canBuy(offer) || cart.busy()"
                             (click)="addToCart(offer)">
                       הוספה לעגלה
@@ -179,7 +181,11 @@ interface ProductViewModel {
 
             <span class="buybar__price tt-price">{{ offer.price.current | money }}</span>
 
-            <button type="button" class="tt-btn tt-btn--buy" [disabled]="!canBuy(offer) || cart.busy()" (click)="addToCart(offer)">
+            <button type="button" class="tt-btn tt-btn--buy"
+                    [class.tt-btn--loading]="cart.busy()"
+                    [attr.aria-busy]="cart.busy() ? 'true' : null"
+                    [disabled]="!canBuy(offer) || cart.busy()"
+                    (click)="addToCart(offer)">
 
               <tt-icon name="cart" [size]="16"></tt-icon> הוספה לעגלה
 

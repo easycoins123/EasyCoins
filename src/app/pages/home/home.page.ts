@@ -76,24 +76,24 @@ import {
 
       <section class="tt-section steps-band">
         <div class="tt-container">
-          <div class="steps-head" ttReveal>
+          <div class="tt-head" ttReveal>
             <h2>שלושה צעדים, בלי הפתעות</h2>
-            <p class="tt-muted">מה שרואים לפני התשלום זה מה שמשלמים. אין שלב נסתר.</p>
+            <p class="tt-head__lede">מה שרואים לפני התשלום זה מה שמשלמים. אין שלב נסתר.</p>
           </div>
 
           <ol class="steps">
             <li ttReveal="1">
-              <span class="steps__badge tt-glass"><tt-icon name="coin" [size]="22"></tt-icon><b>1</b></span>
+              <span class="steps__badge tt-plate"><tt-icon name="coin" [size]="22"></tt-icon><b>1</b></span>
               <h3>בוחרים חבילה</h3>
               <p>המחיר, הפלטפורמה ואזור החנות מופיעים לפני התשלום.</p>
             </li>
             <li ttReveal="2">
-              <span class="steps__badge tt-glass"><tt-icon name="lock" [size]="22"></tt-icon><b>2</b></span>
+              <span class="steps__badge tt-plate"><tt-icon name="lock" [size]="22"></tt-icon><b>2</b></span>
               <h3>משלמים</h3>
               <p>פרטי האשראי עוברים לספק הסליקה. אצלנו הם לא נשמרים.</p>
             </li>
             <li ttReveal="3">
-              <span class="steps__badge tt-glass"><tt-icon name="delivery" [size]="22"></tt-icon><b>3</b></span>
+              <span class="steps__badge tt-plate"><tt-icon name="delivery" [size]="22"></tt-icon><b>3</b></span>
               <h3>מקבלים</h3>
               <p>לכל הזמנה יש דף מעקב עם הסטטוס, מהתשלום ועד האספקה.</p>
             </li>
@@ -124,7 +124,7 @@ import {
           <tt-faq-accordion [entries]="(faq$ | async) ?? []"></tt-faq-accordion>
           <a class="ghost-link" routerLink="/faq">עוד שאלות <tt-icon name="chevron" [size]="15" dir="auto"></tt-icon></a>
         </div>
-        <aside class="close__act tt-glass" ttReveal="2">
+        <aside class="close__act tt-plate" ttReveal="2">
           <p class="close__kicker">מוכנים?</p>
           <p class="close__line">בוחרים כמות, רואים מחיר, מסיימים.</p>
           <a class="tt-btn tt-btn--buy tt-btn--lg" routerLink="/store">לקניית קוינס <tt-icon name="arrow" [size]="18" dir="auto"></tt-icon></a>
@@ -138,11 +138,11 @@ import {
 
     .promises { padding-block: var(--tt-space-6); border-block-end: 1px solid var(--tt-border); }
 
+    /* One quiet light per section, never two colours fighting on one ground. */
     .buy {
       position: relative;
       background:
-        radial-gradient(70% 80% at 85% 0%, var(--tt-brand-tint), transparent 60%),
-        radial-gradient(40% 60% at 10% 100%, var(--tt-gold-tint), transparent 60%),
+        radial-gradient(70% 80% at 85% 0%, rgba(46, 95, 240, 0.07), transparent 60%),
         var(--tt-bg-elevated);
       border-block-end: 1px solid var(--tt-border);
       padding-block: var(--tt-section-y);
@@ -155,7 +155,7 @@ import {
     @media (min-width: 1000px) {
       .shelf-row { grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr); }
       .shelf__aside { display: flex; flex-direction: column; align-items: flex-start; gap: var(--tt-space-2); padding-inline-start: var(--tt-space-6); border-inline-start: 1px solid var(--tt-border); }
-      .shelf__kicker { margin: 0; font-family: var(--tt-font-display); font-size: 2.2rem; line-height: 1; }
+      .shelf__kicker { margin: 0; font-family: var(--tt-font-display); font-size: var(--tt-display-3); line-height: 1; }
       .shelf__line { margin: 0; max-inline-size: 34ch; color: var(--tt-text-muted); font-size: var(--tt-text-sm); line-height: var(--tt-leading); }
     }
 
@@ -163,9 +163,7 @@ import {
     .ghost-link { display: inline-flex; align-items: center; gap: 4px; color: var(--tt-text-muted); font-size: var(--tt-text-sm); font-weight: 600; white-space: nowrap; }
     .ghost-link:hover { color: var(--tt-brand-300); text-decoration: none; }
 
-    .steps-band { border-block-end: 1px solid var(--tt-border); background: radial-gradient(60% 70% at 50% 100%, var(--tt-brand-tint), transparent 70%); }
-    .steps-head { margin-block-end: var(--tt-space-6); max-inline-size: 60ch; }
-    .steps-head p { margin: var(--tt-space-2) 0 0; font-size: var(--tt-text-sm); }
+    .steps-band { border-block-end: 1px solid var(--tt-border); }
 
     /* A timeline: three stops on one rule. */
     .steps { position: relative; display: grid; gap: var(--tt-space-5); grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; }
@@ -183,7 +181,7 @@ import {
       color: var(--tt-gold-400);
     }
     .steps__badge b { font-family: var(--tt-font-display); font-size: 2.2rem; line-height: 1; color: var(--tt-text); }
-    .steps h3 { margin: 0 0 var(--tt-space-1); font-family: var(--tt-font-display); font-size: 1.6rem; }
+    .steps h3 { margin: 0 0 var(--tt-space-1); font-family: var(--tt-font-display); font-size: 1.6rem; line-height: 1; letter-spacing: var(--tt-tracking-display); }
     .steps p { margin: 0; color: var(--tt-text-muted); font-size: var(--tt-text-sm); line-height: var(--tt-leading-snug); }
 
     .compat { display: flex; align-items: center; flex-wrap: wrap; gap: var(--tt-space-2); margin-block-start: var(--tt-space-6); padding-block-start: var(--tt-space-4); border-block-start: 1px solid var(--tt-border); font-size: var(--tt-text-sm); }
@@ -193,12 +191,12 @@ import {
     .compat__note tt-icon { color: var(--tt-brand-400); flex: none; }
 
     .close { position: relative; isolation: isolate; overflow: hidden; padding-block: var(--tt-section-y); }
-    .close__art { position: absolute; inset-block-start: 50%; inset-inline-start: -4%; inline-size: min(40vw, 420px); transform: translateY(-50%) rotate(-10deg); opacity: 0.14; filter: blur(1px); z-index: -1; pointer-events: none; }
+    .close__art { position: absolute; inset-block-start: 50%; inset-inline-start: -4%; inline-size: min(40vw, 420px); transform: translateY(-50%) rotate(-10deg); opacity: 0.12; filter: blur(1px); z-index: -1; pointer-events: none; }
     .close__inner { display: grid; gap: var(--tt-space-7); grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr); align-items: start; }
     .close__ask h2 { margin-block-end: var(--tt-space-4); }
     .close__ask .ghost-link { margin-block-start: var(--tt-space-4); }
     .close__act { display: flex; flex-direction: column; align-items: flex-start; gap: var(--tt-space-3); padding: var(--tt-space-5); border-radius: var(--tt-radius-xl); }
-    .close__kicker { margin: 0; font-family: var(--tt-font-display); font-size: 3rem; line-height: 1; }
+    .close__kicker { margin: 0; font-family: var(--tt-font-display); font-size: var(--tt-display-2); line-height: 1; }
     .close__line { margin: 0; color: var(--tt-text-muted); font-size: var(--tt-text-sm); }
     .close__fine { display: inline-flex; align-items: center; gap: 6px; color: var(--tt-text-faint); font-size: var(--tt-text-xs); }
 

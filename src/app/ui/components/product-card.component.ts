@@ -29,7 +29,7 @@ import { IconComponent } from './icon.component';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <a class="card tt-sweep" [routerLink]="['/products', product.slug]" [attr.aria-label]="product.name | t">
+    <a class="card" [routerLink]="['/products', product.slug]" [attr.aria-label]="product.name | t">
       <div class="media">
         <tt-coin-pack *ngIf="largestQuantity as quantity; else artwork"
                       class="media__art" [steps]="packSteps(quantity)"></tt-coin-pack>
@@ -84,7 +84,8 @@ import { IconComponent } from './icon.component';
                   border-color var(--tt-duration-fast) var(--tt-ease),
                   box-shadow var(--tt-duration) var(--tt-ease);
     }
-    .card:hover { transform: translateY(-4px); border-color: var(--tt-border-brand); box-shadow: var(--tt-ring-brand), 0 22px 50px rgba(0, 0, 0, 0.5); text-decoration: none; }
+    .card:hover { transform: translateY(-3px); border-color: var(--tt-border-strong); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45); text-decoration: none; }
+    .card:focus-visible { outline: 2px solid var(--tt-brand-400); outline-offset: 3px; }
 
     .media {
       position: relative;

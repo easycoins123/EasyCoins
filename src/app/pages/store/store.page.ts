@@ -56,12 +56,10 @@ interface StoreViewModel {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-container tt-section store">
-      <div class="store__glow" aria-hidden="true"></div>
-
-      <header class="head">
+      <header class="tt-head tt-head--tight">
         <span class="tt-eyebrow">{{ gameName }} · Ultimate Team</span>
         <h1>חנות הקוינס</h1>
-        <p class="tt-muted">חמש חבילות במחיר סופי. הפלטפורמה ואזור החנות מוצגים לפני התשלום, ולכל הזמנה יש דף מעקב.</p>
+        <p class="tt-head__lede">חמש חבילות במחיר סופי. הפלטפורמה ואזור החנות מוצגים לפני התשלום, ולכל הזמנה יש דף מעקב.</p>
       </header>
 
       <tt-filter-bar class="filters"
@@ -74,7 +72,7 @@ interface StoreViewModel {
       </tt-filter-bar>
 
       <!-- Trust in the first screen, as a strip on the toolbar's rule. -->
-      <ul class="assure tt-glass">
+      <ul class="assure tt-plate">
         <li><tt-icon name="lock" [size]="15"></tt-icon> תשלום מאובטח</li>
         <li><tt-icon name="delivery" [size]="15"></tt-icon> מעקב הזמנה</li>
         <li><tt-icon name="support" [size]="15"></tt-icon> תמיכה בעברית</li>
@@ -126,25 +124,7 @@ interface StoreViewModel {
     </div>
   `,
   styles: [`
-    /* The glow is blurred paint, not layout: it must never reach past the
-       inline edge, or an RTL page grows a horizontal scrollbar. */
     .store { position: relative; }
-    .store__glow {
-      position: absolute;
-      inset-block-start: -10%;
-      inset-inline-end: 0;
-      inline-size: min(50vw, 560px);
-      block-size: min(50vw, 560px);
-      border-radius: 50%;
-      background: var(--tt-brand-500);
-      opacity: 0.1;
-      filter: blur(120px);
-      pointer-events: none;
-      z-index: -1;
-    }
-    .head { max-inline-size: 60ch; margin-block-end: var(--tt-space-5); }
-    .head h1 { margin-block: var(--tt-space-1) var(--tt-space-2); }
-    .head p { margin: 0; font-size: var(--tt-text-sm); }
 
     .filters { display: block; margin-block-end: var(--tt-space-3); }
     .assure {
@@ -170,7 +150,6 @@ interface StoreViewModel {
     .more { display: flex; justify-content: center; margin-block-start: var(--tt-space-5); }
 
     @media (max-width: 719px) {
-      .head { margin-block-end: var(--tt-space-4); }
       .assure { gap: var(--tt-space-1) var(--tt-space-3); padding-inline: var(--tt-space-3); }
     }
   `],

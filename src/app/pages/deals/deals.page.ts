@@ -22,8 +22,10 @@ import { EmptyStateComponent, ProductCardComponent } from '../../ui';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-container tt-section">
-      <span class="tt-eyebrow">מבצעים</span>
-      <h1>דילים פעילים</h1>
+      <header class="tt-head tt-head--tight">
+        <span class="tt-eyebrow">מבצעים</span>
+        <h1>דילים פעילים</h1>
+      </header>
 
       <ng-container *ngIf="vm$ | async as vm">
         <tt-empty-state *ngIf="vm.promotions.length === 0"

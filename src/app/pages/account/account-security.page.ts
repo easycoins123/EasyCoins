@@ -69,7 +69,7 @@ import { IconComponent } from '../../ui';
     .back { display: inline-flex; align-items: center; gap: 4px; margin-block-end: var(--tt-space-4); color: var(--tt-text-muted); font-size: var(--tt-text-sm); font-weight: 600; }
     .back tt-icon { transform: rotate(180deg); }
     .head { margin-block-end: var(--tt-space-5); }
-    .head h1 { margin: 0 0 var(--tt-space-1); font-size: var(--tt-text-2xl); }
+    .head h1 { margin: 0 0 var(--tt-space-1); font-size: var(--tt-display-3); }
     .head p { margin: 0; }
     .form { display: flex; flex-direction: column; gap: var(--tt-space-3); }
     .form h2 { margin: 0 0 var(--tt-space-1); font-size: var(--tt-text-lg); }
