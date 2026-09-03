@@ -180,6 +180,26 @@ test('every product raster asset ships as both AVIF and WebP', () => {
   assert.deepEqual(missing, [], `Raster pairs incomplete:\n  ${missing.join('\n  ')}`);
 });
 
+test('raster art stays within its weight ceiling', () => {
+  // A coin composition is decorative; it must never cost more than the page
+  // it decorates. Per file and in total, measured on disk.
+  const dir = join(ROOT, 'src', 'assets', 'products');
+  const PER_FILE = 160 * 1024;
+  const TOTAL = 640 * 1024;
+  const files = existsSync(dir) ? readdirSync(dir).filter((file) => /\.(?:avif|webp)$/i.test(file)) : [];
+  const heavy: string[] = [];
+  let total = 0;
+  for (const file of files) {
+    const size = statSync(join(dir, file)).size;
+    total += size;
+    if (size > PER_FILE) {
+      heavy.push(`${file}: ${(size / 1024).toFixed(1)} KB`);
+    }
+  }
+  assert.deepEqual(heavy, [], `Raster files over ${PER_FILE / 1024} KB:\n  ${heavy.join('\n  ')}`);
+  assert.ok(total <= TOTAL, `Raster art totals ${(total / 1024).toFixed(1)} KB, ceiling is ${TOTAL / 1024} KB`);
+});
+
 test('every registered art source points at files that exist', () => {
   const registry = join(ROOT, 'src', 'app', 'ui', 'components', 'cards', 'art-sources.ts');
   assert.ok(existsSync(registry), 'art-sources.ts is missing');

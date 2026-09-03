@@ -52,10 +52,15 @@ Do not add it "temporarily".
 - **Cards** are code: CSS, SVG, gradients, borders, typography and original
   artwork. They are not rasterised images. See
   `src/app/ui/components/cards/`.
-- **Coin artwork** is original and drawn by `tt-coin-art`. When an
-  illustrator supplies raster art, register it in
-  `src/app/ui/components/cards/art-sources.ts` as an AVIF and WebP pair under
-  `src/assets/products/`; the card system switches to it without changes.
+- **Coin artwork** is original and drawn by `tt-coin-art`. The vector is the
+  source of truth and the final fallback. The raster versions under
+  `src/assets/products/` (`coins-<tier>.avif|webp` for the card composition,
+  `coins-legend-hero.avif|webp` for the hero) are baked from that exact
+  markup by `node qa/bake-coin-art.mjs` with a brushed-metal grain, a
+  specular highlight and a bevelled rim, and registered per composition in
+  `src/app/ui/components/cards/art-sources.ts`. Tiles stay vector. Rebake
+  after changing the drawing; the compliance test enforces a 160 KB per-file
+  and 640 KB total ceiling and that every raster ships in both formats.
 - **Tiers** are EasyCoins' own: Starter, Pro, Elite, Legend, defined once in
   `src/app/ui/components/cards/tiers.ts` and in `src/styles/_tokens.scss`.
   They are not a bronze / silver / gold imitation.

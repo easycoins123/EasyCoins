@@ -1,28 +1,71 @@
 /**
  * Raster art registry.
  *
- * The coin artwork is drawn in SVG by `tt-coin-art`, which is the production
- * art today. When an illustrator delivers rendered coins, they go into
- * `src/assets/products/` as an AVIF and WebP pair per tier and are registered
- * here by art key; the card system then renders a `<picture>` instead of the
- * SVG without any change to the cards. The compliance test checks that every
- * registered path exists and that every raster asset has both formats.
+ * The coin artwork is drawn in SVG by `tt-coin-art`, and that vector remains
+ * the source of truth and the final fallback. For the compositions that are
+ * shown large, a baked raster of the same drawing with brushed-metal grain, a
+ * specular highlight and a bevelled rim is registered here per art key, as an
+ * AVIF with a WebP fallback (see `qa/bake-coin-art.mjs`). The component asks
+ * for the composition it is about to draw and gets the best representation:
  *
- * Paths are relative to `src/`, the way Angular serves assets.
+ *   card   store cards, the quote, the product page, the home close
+ *   hero   the home hero (Legend only; nothing else is shown that large)
+ *   tile   never raster. At 60-100 CSS px the vector is sharper and free.
+ *
+ * Paths are relative to `src/`, the way Angular serves assets. The compliance
+ * test checks that every registered file exists, that every raster ships in
+ * both formats, and that no file exceeds the size ceiling.
  */
+export type CoinArtVariant = 'tile' | 'card' | 'quote' | 'hero';
+
+export type ArtComposition = 'card' | 'hero';
+
 export interface ArtSource {
   readonly avif: string;
   readonly webp: string;
+  /** Intrinsic pixel size, so the image reserves its box before it loads. */
   readonly width: number;
   readonly height: number;
 }
 
-export const ART_SOURCES: Readonly<Partial<Record<string, ArtSource>>> = {
-  // Once the files exist, an entry per art key names the AVIF and WebP files
-  // under assets/products/ and their intrinsic width and height. Nothing is
-  // registered today: the SVG artwork is the production art.
+export type ArtSet = Readonly<Partial<Record<ArtComposition, ArtSource>>>;
+
+const card = (tier: string): ArtSource => ({
+  avif: `assets/products/coins-${tier}.avif`,
+  webp: `assets/products/coins-${tier}.webp`,
+  width: 720,
+  height: 576,
+});
+
+export const ART_SOURCES: Readonly<Partial<Record<string, ArtSet>>> = {
+  'coins-starter': { card: card('starter') },
+  'coins-pro': { card: card('pro') },
+  'coins-elite': { card: card('elite') },
+  'coins-legend': {
+    card: card('legend'),
+    hero: {
+      avif: 'assets/products/coins-legend-hero.avif',
+      webp: 'assets/products/coins-legend-hero.webp',
+      width: 1200,
+      height: 1015,
+    },
+  },
 };
 
-export function artSource(artKey: string | undefined): ArtSource | undefined {
-  return artKey ? ART_SOURCES[artKey] : undefined;
+/** The composition a variant draws, or none when the vector is the better choice. */
+export function compositionFor(variant: CoinArtVariant): ArtComposition | undefined {
+  switch (variant) {
+    case 'hero': return 'hero';
+    case 'card':
+    case 'quote': return 'card';
+    default: return undefined;
+  }
+}
+
+export function artSource(artKey: string | undefined, variant: CoinArtVariant): ArtSource | undefined {
+  const composition = compositionFor(variant);
+  if (!artKey || !composition) {
+    return undefined;
+  }
+  return ART_SOURCES[artKey]?.[composition];
 }

@@ -2,10 +2,10 @@ import { ChangeDetectionStrategy, Component, Input, OnChanges } from '@angular/c
 import { CommonModule } from '@angular/common';
 
 import { CoinTier } from '../../../domain';
-import { ArtSource, artSource } from './art-sources';
+import { ArtSource, CoinArtVariant, artSource } from './art-sources';
 import { TIERS, Tier } from './tiers';
 
-export type CoinArtVariant = 'tile' | 'card' | 'quote' | 'hero';
+export type { CoinArtVariant } from './art-sources';
 
 /** A coin lying on the stage, drawn as a top ellipse over a short edge. */
 interface LyingCoin {
@@ -86,9 +86,10 @@ const MARK_BOX = 64;
  * coins, and the hero composition a burst of light behind it all.
  *
  * Everything is inline SVG with the tier's material as gradient stops, so it
- * recolours with the theme and costs no request. When raster art is
- * registered for the art key (see `art-sources.ts`) it is used instead, in
- * AVIF with a WebP fallback, and nothing else in the card system changes.
+ * recolours with the theme and costs no request. For the compositions shown
+ * large (card, quote, hero) a baked raster of the same drawing is registered
+ * in `art-sources.ts` and used instead, AVIF first, WebP as fallback, the
+ * vector when neither is registered; the tile composition is always vector.
  *
  * Decorative by default: the amount, tier and platform are text on the card.
  * Pass `alt` only where the art is the content.
@@ -99,11 +100,38 @@ const MARK_BOX = 64;
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <picture *ngIf="raster as art; else drawn" class="raster">
-      <source [srcset]="art.avif" type="image/avif" />
-      <source [srcset]="art.webp" type="image/webp" />
-      <img [src]="art.webp" [width]="art.width" [height]="art.height" [alt]="alt" loading="lazy" decoding="async" />
-    </picture>
+    <!-- AVIF, then WebP, then (with no raster registered) the vector below.
+         The hero is the largest paint on the site, so it loads eagerly with
+         priority; every other composition waits for its turn. -->
+    <div *ngIf="raster as art; else drawn" class="raster">
+      <!-- The stage light stays vector behind the raster: a gradient that
+           recolours with the theme and never bands. -->
+      <svg class="stage" [attr.viewBox]="scene.viewBox" aria-hidden="true" focusable="false">
+        <defs>
+          <radialGradient [attr.id]="id('stage')" cx="50%" cy="50%" r="50%">
+            <stop offset="0" [attr.stop-color]="palette.glow" [attr.stop-opacity]="variant === 'hero' ? 0.34 : 0.26"/>
+            <stop offset="0.6" [attr.stop-color]="palette.glow" stop-opacity="0.08"/>
+            <stop offset="1" [attr.stop-color]="palette.glow" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <ellipse [attr.cx]="scene.light.cx" [attr.cy]="scene.light.cy" [attr.rx]="scene.light.rx" [attr.ry]="scene.light.ry"
+                 [attr.fill]="'url(#' + id('stage') + ')'"/>
+        <g *ngIf="scene.rays.length > 0" [attr.stroke]="palette.rim" stroke-width="1" stroke-linecap="round" opacity="0.14">
+          <line *ngFor="let ray of scene.rays" [attr.x1]="ray.x1" [attr.y1]="ray.y1" [attr.x2]="ray.x2" [attr.y2]="ray.y2"/>
+        </g>
+        <g *ngIf="scene.sparks.length > 0" [attr.fill]="palette.rim">
+          <circle *ngFor="let spark of scene.sparks" [attr.cx]="spark.x" [attr.cy]="spark.y" [attr.r]="spark.r" opacity="0.7"/>
+        </g>
+      </svg>
+      <picture>
+        <source [srcset]="art.avif" type="image/avif" />
+        <source [srcset]="art.webp" type="image/webp" />
+        <img [src]="art.webp" [width]="art.width" [height]="art.height" [alt]="alt"
+             [attr.loading]="variant === 'hero' ? 'eager' : 'lazy'"
+             [attr.fetchpriority]="variant === 'hero' ? 'high' : null"
+             decoding="async" />
+      </picture>
+    </div>
 
     <ng-template #drawn>
       <svg class="art" [class.art--hero]="variant === 'hero'"
@@ -205,8 +233,11 @@ const MARK_BOX = 64;
   `,
   styles: [`
     :host { display: block; line-height: 0; }
-    .art, .raster, .raster img { display: block; inline-size: 100%; block-size: auto; }
+    .art, .raster, .raster picture, .raster img { display: block; inline-size: 100%; block-size: auto; }
     .art { overflow: visible; }
+    .raster { position: relative; }
+    .stage { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; overflow: visible; }
+    .raster picture { position: relative; }
     /* The hero's leaning coin breathes, very slowly. Nothing else moves. */
     .art--hero .standing { animation: tt-coin-lean 7s var(--tt-ease) infinite alternate; transform-box: fill-box; transform-origin: center; }
     @keyframes tt-coin-lean { from { translate: 0 0; } to { translate: 0 -4px; } }
@@ -240,7 +271,7 @@ export class CoinArtComponent implements OnChanges {
 
   ngOnChanges(): void {
     this.scene = this.compose(this.tier, this.variant);
-    this.raster = artSource(this.artKey ?? `coins-${this.tier}`);
+    this.raster = artSource(this.artKey ?? `coins-${this.tier}`, this.variant);
   }
 
   private geometry(tier: CoinTier, variant: CoinArtVariant): Geometry {
