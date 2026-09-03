@@ -4,7 +4,7 @@ import {
   Cart, CartItem, CartValidationResult, FulfillmentMethod, computeTotals, fromMajor,
 } from '../../domain';
 import { CartApiService } from '../api';
-import { provideDataLayer } from '../providers';
+import { provideMockDataLayer } from './providers';
 import { OFFERS } from './catalog.seed';
 
 const GIFT_50 = 'offer__prod-ps-gift-card__50__plat-ps5__reg-il';
@@ -43,7 +43,7 @@ describe('cart validation (server re-pricing)', () => {
   let api: CartApiService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideDataLayer()] });
+    TestBed.configureTestingModule({ providers: [provideMockDataLayer()] });
     api = TestBed.inject(CartApiService);
   });
 

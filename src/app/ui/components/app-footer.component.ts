@@ -132,7 +132,7 @@ import { IconComponent } from './icon.component';
       .statement { font-size: var(--tt-text-xl); }
       .col { gap: 0; }
       .col h2 { margin-block-end: var(--tt-space-1); font-size: var(--tt-text-md); }
-      .col a { min-block-size: 30px; }
+      .col a { min-block-size: 32px; }
       .assure { margin-block-start: var(--tt-space-4); padding-block: var(--tt-space-3); gap: var(--tt-space-2) var(--tt-space-4); font-size: var(--tt-caption); }
       .notice { margin-block-start: var(--tt-space-3); }
       .bottom { margin-block-start: var(--tt-space-3); }

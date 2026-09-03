@@ -5,6 +5,8 @@
  * written by engineers — they must be reviewed by a lawyer before the store takes
  * real money. Every page says so at the top rather than pretending otherwise.
  */
+import { LEGAL_MANIFEST } from './legal.manifest';
+
 export interface LegalSection {
   readonly heading: string;
   readonly paragraphs: readonly string[];
@@ -28,8 +30,7 @@ export interface LegalPageContent {
 
 export const LEGAL_PAGES: readonly LegalPageContent[] = [
   {
-    slug: 'about',
-    title: 'אודות',
+    ...LEGAL_MANIFEST.about,
     intro: 'EASYCOINS היא חנות דיגיטלית ישראלית למוצרי גיימינג: קודים דיגיטליים, כרטיסי מתנה, מנויים, מטבעות משחק ושירותים נלווים.',
     sections: [
       {
@@ -55,8 +56,7 @@ export const LEGAL_PAGES: readonly LegalPageContent[] = [
     ],
   },
   {
-    slug: 'terms',
-    title: 'תנאי שימוש',
+    ...LEGAL_MANIFEST.terms,
     intro: 'התנאים שלהלן חלים על השימוש באתר ועל רכישת מוצרים דרכו. זוהי טיוטה ראשונית שנכתבה על ידי צוות הפיתוח וטרם עברה בדיקה משפטית.',
     sections: [
       {
@@ -88,8 +88,7 @@ export const LEGAL_PAGES: readonly LegalPageContent[] = [
     ],
   },
   {
-    slug: 'privacy',
-    title: 'מדיניות פרטיות',
+    ...LEGAL_MANIFEST.privacy,
     intro: 'מדיניות זו מסבירה איזה מידע נאסף באתר ולמה. זוהי טיוטה ראשונית שטרם עברה בדיקה משפטית.',
     sections: [
       {
@@ -114,8 +113,7 @@ export const LEGAL_PAGES: readonly LegalPageContent[] = [
     ],
   },
   {
-    slug: 'refund-policy',
-    title: 'מדיניות החזרים',
+    ...LEGAL_MANIFEST.refund,
     intro: 'מדיניות ההחזרים למוצרים דיגיטליים. זוהי טיוטה ראשונית שטרם עברה בדיקה משפטית ואינה גוברת על זכויותיכם לפי חוק הגנת הצרכן.',
     sections: [
       {
@@ -140,8 +138,7 @@ export const LEGAL_PAGES: readonly LegalPageContent[] = [
     ],
   },
   {
-    slug: 'accessibility',
-    title: 'הצהרת נגישות',
+    ...LEGAL_MANIFEST.accessibility,
     intro: 'אנחנו רואים בנגישות חלק מהמוצר ולא תוספת. העמוד הזה מתאר את מה שכבר נעשה ואת מה שעוד פתוח.',
     sections: [
       {
@@ -176,8 +173,7 @@ export const LEGAL_PAGES: readonly LegalPageContent[] = [
  */
 export const LEGAL_PAGES_PENDING: readonly LegalPageContent[] = [
   {
-    slug: 'business-details',
-    title: 'פרטי העסק',
+    ...LEGAL_MANIFEST.business,
     intro: 'לפי חוק הגנת הצרכן, עוסק שמוכר מרחוק חייב להציג את פרטי הזיהוי שלו. הפרטים כאן יושלמו לפני שהחנות מתחילה למכור.',
     sections: [
       {
@@ -197,8 +193,7 @@ export const LEGAL_PAGES_PENDING: readonly LegalPageContent[] = [
     ],
   },
   {
-    slug: 'delivery',
-    title: 'אספקה דיגיטלית',
+    ...LEGAL_MANIFEST.delivery,
     intro: 'איך המוצר מגיע אליכם, וכמה זמן זה לוקח. זמני האספקה המוצגים בכל מוצר הם הערכה ולא התחייבות.',
     sections: [
       {
@@ -222,8 +217,7 @@ export const LEGAL_PAGES_PENDING: readonly LegalPageContent[] = [
     ],
   },
   {
-    slug: 'ip',
-    title: 'סימני מסחר וזכויות',
+    ...LEGAL_MANIFEST.ip,
     intro: 'שמות המשחקים והפלטפורמות באתר שייכים לבעליהם. EASYCOINS אינה מסונפת אליהם.',
     sections: [
       {

@@ -10,11 +10,20 @@ import { CoinPlan, coinProductsFrom } from '../../core/value';
 import { LocalizePipe } from '../../core/i18n';
 import { CoinProduct, LocalizedText, Offer, Platform } from '../../domain';
 import { CartFacade, CatalogFacade } from '../../state';
-import {
-  AmountSelectorComponent, CoinArtComponent, EasyCoinsCardComponent, HeroComponent, IconComponent,
-  IconName, ProcessArtComponent, RevealDirective, ReviewsSectionComponent, SkeletonGridComponent,
-  StadiumComponent,
-} from '../../ui';
+// Imported by file rather than through the barrel: the barrel re-exports every
+// component in the library, and a chunk that imports it carries the store's
+// filters, search box and product cards to the first screen of the home page.
+import { AmountSelectorComponent } from '../../ui/components/amount-selector.component';
+import { CoinArtComponent } from '../../ui/components/cards/coin-art.component';
+import { EasyCoinsCardComponent } from '../../ui/components/cards/easycoins-card.component';
+import { HeroComponent } from '../../ui/components/hero.component';
+import { IconComponent, IconName } from '../../ui/components/icon.component';
+import { ProcessArtComponent } from '../../ui/components/process-art.component';
+import { ReviewsSectionComponent } from '../../ui/components/reviews-section.component';
+import { SkeletonGridComponent } from '../../ui/components/state.component';
+import { StadiumComponent } from '../../ui/components/world/stadium.component';
+import { LiveDirective } from '../../ui/live.directive';
+import { RevealDirective } from '../../ui/reveal.directive';
 
 interface TrustItem { readonly icon: IconName; readonly title: string; readonly note: string; readonly gold?: boolean; }
 interface Reason { readonly icon: IconName; readonly title: string; readonly note: string; }
@@ -33,12 +42,16 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
   imports: [
     CommonModule, RouterLink, LocalizePipe,
     HeroComponent, IconComponent, AmountSelectorComponent, EasyCoinsCardComponent, CoinArtComponent,
-    ProcessArtComponent, ReviewsSectionComponent, SkeletonGridComponent, RevealDirective, StadiumComponent,
+    ProcessArtComponent, ReviewsSectionComponent, SkeletonGridComponent, LiveDirective, RevealDirective, StadiumComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <ng-container *ngIf="vm$ | async as vm; else loading">
-      <tt-hero [ladder]="vm.ladder" [platforms]="vm.platforms"></tt-hero>
+    <!-- The hero is not gated on the data: the first screen and its largest
+         image paint as soon as the chunk runs, and the numbers fill in. -->
+    <ng-container *ngIf="{ vm: vm$ | async } as state">
+    <tt-hero [ladder]="state.vm?.ladder ?? null" [platforms]="state.vm?.platforms ?? []" [pending]="!state.vm"></tt-hero>
+
+    <ng-container *ngIf="state.vm as vm; else loading">
 
       <!-- The trust rail: five things the shop keeps, in a strip under the hero. -->
       <div class="rail-band">
@@ -92,7 +105,7 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
       </section>
 
       <!-- How it works: three objects, one line. -->
-      <section class="process">
+      <section class="process" ttLive>
         <tt-stadium scene="band"></tt-stadium>
         <div class="tt-container">
           <div class="chapter" ttReveal>
@@ -105,14 +118,14 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
               <h3>בחרו חבילה</h3>
               <p>בחרו את כמות הקוינס והפלטפורמה שלכם. המחיר מוצג מראש.</p>
             </li>
-            <li class="step__link" aria-hidden="true"><span></span></li>
+            <li class="step__link" aria-hidden="true"><span class="tt-travel"></span></li>
             <li class="step tt-plate" ttReveal="2">
               <span class="step__num">02</span>
               <div class="step__art"><tt-process-art step="secure"></tt-process-art></div>
               <h3>בצעו תשלום מאובטח</h3>
               <p>התשלום עובר לספק הסליקה. פרטי האשראי לא נשמרים אצלנו.</p>
             </li>
-            <li class="step__link" aria-hidden="true"><span></span></li>
+            <li class="step__link" aria-hidden="true"><span class="tt-travel"></span></li>
             <li class="step tt-plate" ttReveal="3">
               <span class="step__num">03</span>
               <div class="step__art step__art--coins"><tt-coin-art variant="bundle" [amount]="1000000" tier="elite"></tt-coin-art></div>
@@ -161,9 +174,9 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
     </ng-container>
 
     <ng-template #loading>
-      <tt-hero></tt-hero>
       <section class="tt-container tt-section"><tt-skeleton-grid [count]="5"></tt-skeleton-grid></section>
     </ng-template>
+    </ng-container>
 
     <section class="close">
       <tt-stadium scene="close"></tt-stadium>
@@ -228,12 +241,8 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
     .step p { margin: 0; max-inline-size: 30ch; color: var(--tt-text-muted); font-size: var(--tt-text-sm); line-height: var(--tt-leading-snug); }
     .step__data { display: inline-flex !important; align-items: center; gap: 6px; padding: 0.3rem 0.7rem; border: 1px solid var(--tt-border-strong); border-radius: var(--tt-radius-pill); color: var(--tt-text) !important; font-weight: 700; }
     .step__data tt-icon { color: var(--tt-energy); }
-    /* the connector: a gold dashed line that travels */
+    /* the connector: the shared travelling line (.tt-travel), live while the section is on screen */
     .step__link { display: flex; align-items: center; justify-content: center; }
-    .step__link span { display: block; inline-size: 100%; block-size: 2px; background: repeating-linear-gradient(90deg, var(--tt-gold-500) 0 6px, transparent 6px 12px); background-size: 12px 2px; animation: tt-travel 1.2s linear infinite; opacity: 0.8; }
-    @keyframes tt-travel { to { background-position: 12px 0; } }
-    [dir='rtl'] .step__link span { animation-direction: reverse; }
-    @media (prefers-reduced-motion: reduce) { .step__link span { animation: none; } }
 
     /* --- Reviews ------------------------------------------------------------- */
     .voices { background: var(--tt-bg-elevated); border-block-end: 1px solid var(--tt-border); }
@@ -270,8 +279,9 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
     @media (max-width: 860px) {
       .steps { grid-template-columns: 1fr; gap: 0; }
       .step__link { block-size: 40px; }
-      .step__link span { inline-size: 2px; block-size: 100%; background: repeating-linear-gradient(180deg, var(--tt-gold-500) 0 6px, transparent 6px 12px); background-size: 2px 12px; animation-name: tt-travel-y; }
-      @keyframes tt-travel-y { to { background-position: 0 12px; } }
+      .step__link .tt-travel { inline-size: 2px; block-size: 100%; }
+      .step__link .tt-travel::before { inset-inline: 0; inset-block-start: 0; inline-size: auto; block-size: calc(100% + 24px); background: repeating-linear-gradient(180deg, var(--tt-gold-500) 0 6px, transparent 6px 12px); animation-name: tt-travel-y; }
+      @keyframes tt-travel-y { to { transform: translateY(-12px); } }
       .close__inner { grid-template-columns: 1fr; }
       .close__art { inline-size: min(100%, 320px); }
     }

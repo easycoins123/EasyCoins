@@ -21,6 +21,7 @@ export * from './components/search-box.component';
 export * from './components/state.component';
 export * from './money.pipe';
 export * from './reveal.directive';
+export * from './live.directive';
 export * from './components/cards/tiers';
 export * from './components/cards/art-sources';
 export * from './components/cards/coin-art.component';

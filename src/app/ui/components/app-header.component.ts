@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, Component, ElementRef, HostListener, ViewChild, effect, inject, signal,
+  ChangeDetectionStrategy, Component, ElementRef, HostListener, NgZone, ViewChild, effect, inject, signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
@@ -329,6 +329,7 @@ export class AppHeaderComponent {
   private readonly cart = inject(CartFacade);
   private readonly router = inject(Router);
   private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly zone = inject(NgZone);
   readonly auth = inject(AuthFacade);
 
   @ViewChild('toggle') private readonly toggle?: ElementRef<HTMLButtonElement>;
@@ -353,6 +354,7 @@ export class AppHeaderComponent {
       }
       this.lastCount = next;
     }, { allowSignalWrites: true });
+    this.watchViewport();
   }
 
   /**
@@ -432,18 +434,37 @@ export class AppHeaderComponent {
     }
   }
 
-  @HostListener('window:resize')
-  onResize(): void {
-    const mobile = window.matchMedia('(max-width: 1000px)').matches;
-    this.isMobile.set(mobile);
-    if (!mobile && this.menuOpen()) {
-      this.menuOpen.set(false);
-      this.lockScroll(false);
+  /**
+   * Scroll and breakpoint, watched outside Angular.
+   *
+   * A scroll listener bound in the template ran change detection for the whole
+   * application on every scroll event, sixty times a second, to decide one
+   * boolean. Now the listener stays outside the zone and only re-enters it at
+   * the moment the bar actually needs to change. The breakpoint is a media
+   * query event rather than a resize handler, for the same reason.
+   */
+  private watchViewport(): void {
+    if (typeof window === 'undefined') {
+      return;
     }
-  }
-
-  @HostListener('window:scroll')
-  onScroll(): void {
-    this.scrolled.set(window.scrollY > 8);
+    const scrolled = () => {
+      const next = window.scrollY > 8;
+      if (next !== this.scrolled()) {
+        this.zone.run(() => this.scrolled.set(next));
+      }
+    };
+    const breakpoint = window.matchMedia('(max-width: 1000px)');
+    const crossed = () => this.zone.run(() => {
+      this.isMobile.set(breakpoint.matches);
+      if (!breakpoint.matches && this.menuOpen()) {
+        this.menuOpen.set(false);
+        this.lockScroll(false);
+      }
+    });
+    this.zone.runOutsideAngular(() => {
+      window.addEventListener('scroll', scrolled, { passive: true });
+      breakpoint.addEventListener('change', crossed);
+      scrolled();
+    });
   }
 }

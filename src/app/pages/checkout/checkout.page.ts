@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -45,9 +45,20 @@ import {
           <section class="tt-card tt-card--pad" *ngIf="!checkout.orderId()">
             <h2>פרטים לאספקה</h2>
 
-            <p class="tt-alert" *ngIf="checkout.busy() && checkout.requirements().length === 0">
-              טוענים את פרטי ההזמנה…
-            </p>
+            <!-- The session is opened by the server, which can take a few seconds
+                 on a cold start. The form's shape is shown at once, and after a
+                 moment the wait is explained rather than left silent. -->
+            <div class="waiting" *ngIf="checkout.busy() && checkout.requirements().length === 0" role="status" aria-live="polite">
+              <p class="tt-alert">טוענים את פרטי ההזמנה…</p>
+              <p class="tt-alert waiting__slow" *ngIf="slow()">
+                השרת מתעורר, זה יכול לקחת עוד כמה שניות. עדיין לא נוצרה הזמנה ולא בוצע חיוב.
+              </p>
+              <div class="waiting__form" aria-hidden="true">
+                <span class="tt-skeleton waiting__label"></span><span class="tt-skeleton waiting__input"></span>
+                <span class="tt-skeleton waiting__label"></span><span class="tt-skeleton waiting__input"></span>
+                <span class="tt-skeleton waiting__label"></span><span class="tt-skeleton waiting__input"></span>
+              </div>
+            </div>
 
             <form class="fields" (submit)="submit($event)">
               <ng-container *ngFor="let requirement of checkout.requirements()">
@@ -348,9 +359,14 @@ import {
     .row.total { display: flex; justify-content: space-between; font-weight: 700; padding-block-start: var(--tt-space-2); border-block-start: 1px solid var(--tt-border); margin-block-end: var(--tt-space-3); }
     .tt-check .tt-hint { display: block; }
     .tt-check-field { display: flex; flex-direction: column; gap: var(--tt-space-2); }
+    .waiting { display: flex; flex-direction: column; gap: var(--tt-space-3); margin-block-end: var(--tt-space-4); }
+    .waiting .tt-alert { margin: 0; }
+    .waiting__form { display: flex; flex-direction: column; gap: var(--tt-space-2); }
+    .waiting__label { inline-size: 32%; block-size: 14px; }
+    .waiting__input { inline-size: 100%; block-size: 44px; margin-block-end: var(--tt-space-2); }
   `],
 })
-export class CheckoutPage {
+export class CheckoutPage implements OnDestroy {
   readonly checkout = inject(CheckoutFacade);
   readonly cart = inject(CartFacade);
   private readonly catalog = inject(CatalogFacade);
@@ -364,13 +380,33 @@ export class CheckoutPage {
   /** Answers live in component memory for the length of the flow and nowhere else. */
   private readonly values = signal<CheckoutFieldValues>({});
 
+  /** True once opening the session has taken longer than a customer expects. */
+  readonly slow = signal(false);
+  private slowTimer?: ReturnType<typeof setTimeout>;
+
   constructor() {
     this.analytics.pageView('/checkout', 'Checkout');
     // No reset here. start() resumes an unfinished session for this tab and
     // opens a new one otherwise; resetting first threw the session away, so a
     // refresh after submitting details created a second one, and against a real
     // backend that means a second order.
-    this.checkout.start().subscribe();
+    this.slowTimer = setTimeout(() => this.slow.set(true), 4000);
+    this.checkout.start().subscribe({
+      complete: () => this.settle(),
+      error: () => this.settle(),
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.settle();
+  }
+
+  private settle(): void {
+    if (this.slowTimer) {
+      clearTimeout(this.slowTimer);
+      this.slowTimer = undefined;
+    }
+    this.slow.set(false);
   }
 
   text(key: CheckoutFieldKey): string {

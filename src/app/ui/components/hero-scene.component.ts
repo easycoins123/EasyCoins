@@ -55,6 +55,9 @@ import { EmblemCardComponent } from './emblem-card.component';
       z-index: -1;
     }
 
+    /* The float runs only while the hero is on screen (the parent sets is-live). */
+    :host(:not(.is-live)) .card { animation-play-state: paused; }
+
     .card {
       position: absolute;
       inset-inline-end: 4%;

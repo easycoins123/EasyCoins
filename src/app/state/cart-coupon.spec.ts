@@ -1,6 +1,6 @@
 import { TestBed, fakeAsync, flush, tick } from '@angular/core/testing';
 
-import { provideDataLayer } from '../data/providers';
+import { provideMockDataLayer } from '../data/mock/providers';
 import { OFFERS } from '../data/mock/catalog.seed';
 import { CartFacade } from './cart.facade';
 
@@ -27,7 +27,7 @@ describe('CartFacade coupons', () => {
   let cart: CartFacade;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideDataLayer()] });
+    TestBed.configureTestingModule({ providers: [provideMockDataLayer()] });
     cart = TestBed.inject(CartFacade);
     cart.clear();
   });

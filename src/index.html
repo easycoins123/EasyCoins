@@ -31,11 +31,14 @@
   <link rel="icon" type="image/svg+xml" href="assets/brand/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/brand/icon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/brand/apple-touch-icon.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- Heebo carries the body. Karantina is the display voice: a condensed,
-       athletic face for headlines, tier quantities and prices. -->
-  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Heebo is self-hosted (see styles/_base.scss): the two scripts the first
+       screen needs start downloading with the HTML instead of after a
+       third-party stylesheet. The hero's largest images start now as well,
+       rather than after the home chunk has been fetched and rendered. -->
+  <link rel="preload" href="assets/fonts/heebo-hebrew.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/heebo-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/products/coins-legend-hero.avif" as="image" type="image/avif">
+  <link rel="preload" href="assets/ui/stadium-bokeh.avif" as="image" type="image/avif" fetchpriority="low">
 </head>
 <body>
   <app-root></app-root>
