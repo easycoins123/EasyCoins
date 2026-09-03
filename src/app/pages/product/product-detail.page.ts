@@ -16,7 +16,7 @@ import { CartFacade, CatalogFacade, CatalogLookups } from '../../state';
 import {
   ErrorStateComponent, FulfillmentBadgeComponent, MoneyPipe, PlatformBadgeComponent,
   ProductCardComponent, QuantitySelectorComponent, RegionBadgeComponent, ReviewCardComponent,
-  StarRatingComponent, StockBadgeComponent, CompactNumberPipe, IconComponent, CoinArtComponent
+  StarRatingComponent, StockBadgeComponent, CompactNumberPipe, IconComponent, CoinArtComponent, StadiumComponent
 } from '../../ui';
 import { TIERS, tierForAmount } from '../../ui/components/cards/tiers';
 import type { CoinTier } from '../../domain';
@@ -43,7 +43,7 @@ interface ProductViewModel {
     CommonModule, RouterLink, LocalizePipe, MoneyPipe, CompactNumberPipe,
     PlatformBadgeComponent, RegionBadgeComponent, FulfillmentBadgeComponent, StockBadgeComponent,
     QuantitySelectorComponent, StarRatingComponent, ReviewCardComponent, ProductCardComponent,
-    ErrorStateComponent, IconComponent, CoinArtComponent],
+    ErrorStateComponent, IconComponent, CoinArtComponent, StadiumComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-container tt-section">
@@ -58,6 +58,7 @@ interface ProductViewModel {
 
           <div class="layout">
             <div class="media tt-card">
+              <tt-stadium scene="stage"></tt-stadium>
               <tt-coin-art *ngIf="artTier(vm) as tier; else picture" class="media__art" [tier]="tier" variant="quote"></tt-coin-art>
               <ng-template #picture>
                 <img *ngIf="vm.detail.product.images[0] as image" [src]="image.url" [alt]="image.alt" />
@@ -140,7 +141,9 @@ interface ProductViewModel {
                   {{ vm.lookups.fulfillment.get(offer.fulfillmentMethod)?.description | t }}
                 </p>
 
-                <div class="buy tt-card tt-card--pad">
+                <div class="buy tt-ticket tt-ticket--gold">
+                  <div class="tt-ticket__main">
+                  <p class="tt-ticket__eyebrow"><span>כרטיס · ההזמנה שלך</span><span>{{ platformOf(vm, offer)?.shortName | t }}</span></p>
                   <div class="price-row">
                     <span class="tt-price tt-price--xl">{{ offer.price.current | money }}</span>
                     <span class="tt-price-was" *ngIf="offer.price.compareAt">{{ offer.price.compareAt | money }}</span>
@@ -171,6 +174,11 @@ interface ProductViewModel {
 
                   <p class="tt-hint" *ngIf="!canBuy(offer)">המוצר אינו זמין לרכישה כרגע.</p>
                   <p class="tt-hint" *ngIf="offer.terms">{{ offer.terms | t }}</p>
+                  </div>
+                  <div class="tt-ticket__stub">
+                    <span class="tt-ticket__tally"></span>
+                    <span class="buy__stub">מחיר סופי · הפלטפורמה ואזור החנות מודפסים על הכרטיס</span>
+                  </div>
                 </div>
               </ng-container>
             </div>
@@ -237,7 +245,12 @@ interface ProductViewModel {
          product in view while the options are read. */
       .media { position: sticky; inset-block-start: calc(var(--tt-header-height) + var(--tt-space-4)); }
     }
+    /* The product stands on the pitch under the lights: the stadium draws the
+       ground, the art stands in front of it. */
     .media {
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
       display: grid;
       place-items: center;
       padding: var(--tt-space-5);
@@ -246,9 +259,6 @@ interface ProductViewModel {
       aspect-ratio: 4 / 3;
       min-block-size: 0;
       border-radius: var(--tt-radius-lg);
-      background:
-        radial-gradient(circle at 50% 115%, var(--tt-brand-tint), transparent 62%),
-        var(--tt-surface);
       border: 1px solid var(--tt-border);
     }
     .info-skeleton { min-block-size: 520px; }
@@ -277,8 +287,9 @@ interface ProductViewModel {
     .badges { gap: var(--tt-space-1); }
     .delivery { font-size: var(--tt-text-sm); margin: 0; }
     .price-row { display: flex; align-items: baseline; gap: var(--tt-space-2); margin-block-end: var(--tt-space-3); }
-    .media { background: radial-gradient(70% 60% at 50% 60%, var(--tt-brand-tint), transparent 72%), repeating-linear-gradient(99deg, rgba(255, 248, 235, 0.03) 0 1px, transparent 1px 22px), var(--tt-bg-elevated); }
-    .media__art { filter: drop-shadow(0 24px 30px rgba(0, 0, 0, 0.55)); }
+    .buy .tt-ticket__main { padding: var(--tt-space-5); }
+    .buy__stub { font-size: var(--tt-caption); font-weight: 700; color: var(--tt-text-muted); }
+    .media__art { position: relative; filter: drop-shadow(0 24px 30px rgba(0, 0, 0, 0.55)); }
     .chip__dot { display: none; inline-size: 8px; block-size: 8px; border-radius: 50%; background: var(--mat); box-shadow: 0 0 8px var(--mat); }
     .chip[style*="--mat"] .chip__dot { display: inline-block; }
     .chip.on[style*="--mat"] { border-color: var(--mat); box-shadow: 0 0 0 1px var(--mat), 0 8px 24px rgba(0, 0, 0, 0.35); }

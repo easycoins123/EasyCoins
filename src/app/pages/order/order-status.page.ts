@@ -12,7 +12,7 @@ import {
 import { CatalogFacade, OrderFacade } from '../../state';
 import {
   DeliveryPayloadComponent, ErrorStateComponent, FulfillmentBadgeComponent, MoneyPipe,
-  OrderStatusTimelineComponent, PlatformBadgeComponent, RegionBadgeComponent, IconComponent
+  OrderStatusTimelineComponent, PlatformBadgeComponent, RegionBadgeComponent, SquadComponent,
 } from '../../ui';
 
 /** How often a still-moving order re-checks its status. */
@@ -29,7 +29,7 @@ const POLL_INTERVAL_MS = 2500;
   imports: [
     CommonModule, RouterLink, LocalizePipe, MoneyPipe,
     OrderStatusTimelineComponent, DeliveryPayloadComponent, FulfillmentBadgeComponent,
-    PlatformBadgeComponent, RegionBadgeComponent, ErrorStateComponent, IconComponent],
+    PlatformBadgeComponent, RegionBadgeComponent, ErrorStateComponent, SquadComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-container tt-section">
@@ -60,10 +60,10 @@ const POLL_INTERVAL_MS = 2500;
       <ng-template #content>
         <ng-container *ngIf="vm$ | async as vm; else loading">
           <div class="tt-alert tt-alert--success banner" *ngIf="celebrate">
-            <tt-icon name="check" [size]="18"></tt-icon>
+            <span class="banner__figure" aria-hidden="true"><tt-squad pose="celebrate"></tt-squad></span>
             <span>
-              <strong>ההזמנה התקבלה</strong>
-              <span class="tt-faint">אישור נשלח לכתובת {{ vm.order.contactEmail }}.</span>
+              <strong>שריקת סיום: ההזמנה התקבלה</strong>
+              <span class="tt-faint">אישור נשלח לכתובת {{ vm.order.contactEmail }}. זה הכרטיס שלכם, ומספר ההזמנה מודפס עליו.</span>
             </span>
           </div>
 
@@ -96,7 +96,9 @@ const POLL_INTERVAL_MS = 2500;
               </ul>
             </section>
 
-            <aside class="tt-card tt-card--pad summary">
+            <aside class="tt-ticket tt-ticket--gold summary">
+              <div class="tt-ticket__main summary__main">
+              <p class="tt-ticket__eyebrow"><span>כרטיס · ההזמנה שלך</span><span class="tt-numeric">{{ vm.order.reference }}</span></p>
               <h2>סיכום</h2>
               <div class="row"><span>סכום ביניים</span><span>{{ vm.order.totals.subtotal | money }}</span></div>
               <div class="row" *ngIf="vm.order.totals.discount.amountMinor > 0">
@@ -105,6 +107,11 @@ const POLL_INTERVAL_MS = 2500;
               <div class="row total"><span>שולם</span><span>{{ vm.order.totals.total | money }}</span></div>
               <a class="tt-btn tt-btn--ghost tt-btn--block" routerLink="/support">צריך עזרה?</a>
               <a class="tt-btn tt-btn--quiet tt-btn--block" routerLink="/store">המשך קנייה</a>
+              </div>
+              <div class="tt-ticket__stub">
+                <span class="tt-ticket__tally"></span>
+                <span class="summary__stub tt-numeric">הזמנה {{ vm.order.reference }}</span>
+              </div>
             </aside>
           </div>
         </ng-container>
@@ -121,8 +128,12 @@ const POLL_INTERVAL_MS = 2500;
   styles: [`
     .missing { max-inline-size: 620px; }
     .missing h1 { font-size: var(--tt-text-xl); }
-    .banner { margin-block-end: var(--tt-space-5); }
+    .banner { margin-block-end: var(--tt-space-5); align-items: center; }
     .banner span span { display: block; }
+    .banner__figure { display: block; flex: none; inline-size: 56px; margin-block: -10px; }
+    .banner__figure span { display: block; }
+    .summary__main { display: flex; flex-direction: column; gap: var(--tt-space-3); padding: var(--tt-space-5); }
+    .summary__stub { font-size: var(--tt-caption); font-weight: 700; color: var(--tt-text-muted); }
     .layout { display: grid; gap: var(--tt-space-5); align-items: start; }
     @media (min-width: 900px) { .layout { grid-template-columns: 1fr 300px; } }
     h2 { font-size: var(--tt-text-lg); margin-block: var(--tt-space-5) var(--tt-space-3); }

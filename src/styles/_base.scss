@@ -737,6 +737,115 @@ body::after {
    effect that makes a shop look like a demo; hover is now a lift and a border. */
 .tt-sweep { position: relative; }
 
+// --- The ticket ---------------------------------------------------------------
+//
+// Every order is a match ticket: a card cut with two notches at the tear line,
+// a perforation, and a stub that carries the total or the reference. The stub
+// height is fixed so the notches can be placed with a mask; the tally pattern
+// on the stub is the brand's E repeated, not a barcode of anything real.
+
+.tt-ticket {
+  --tt-ticket-stub: 64px;
+  --tt-ticket-notch: 12px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--tt-surface);
+  border: 1px solid var(--tt-border-strong);
+  border-radius: var(--tt-radius-lg);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 235, 0.06), var(--tt-shadow-2);
+  -webkit-mask-image:
+    radial-gradient(circle at 0 calc(100% - var(--tt-ticket-stub)), transparent var(--tt-ticket-notch), #000 calc(var(--tt-ticket-notch) + 0.5px)),
+    radial-gradient(circle at 100% calc(100% - var(--tt-ticket-stub)), transparent var(--tt-ticket-notch), #000 calc(var(--tt-ticket-notch) + 0.5px));
+  mask-image:
+    radial-gradient(circle at 0 calc(100% - var(--tt-ticket-stub)), transparent var(--tt-ticket-notch), #000 calc(var(--tt-ticket-notch) + 0.5px)),
+    radial-gradient(circle at 100% calc(100% - var(--tt-ticket-stub)), transparent var(--tt-ticket-notch), #000 calc(var(--tt-ticket-notch) + 0.5px));
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+.tt-ticket__main { flex: 1; padding: var(--tt-space-4); }
+.tt-ticket__eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tt-space-3);
+  margin: 0 0 var(--tt-space-3);
+  font-size: var(--tt-caption);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tt-text-faint);
+}
+.tt-ticket__stub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tt-space-3);
+  block-size: var(--tt-ticket-stub);
+  padding-inline: var(--tt-space-4);
+  border-block-start: 2px dashed var(--tt-border-strong);
+  background: var(--tt-surface-2);
+}
+.tt-ticket__tally {
+  flex: none;
+  inline-size: 84px;
+  block-size: 26px;
+  opacity: 0.55;
+  color: var(--tt-gold-400);
+  background: repeating-linear-gradient(90deg, currentColor 0 2px, transparent 2px 5px, currentColor 5px 6px, transparent 6px 9px, currentColor 9px 12px, transparent 12px 16px);
+}
+.tt-ticket--gold { border-color: var(--tt-gold-600); }
+
+// --- Cinematic sequences ------------------------------------------------------
+//
+// One entrance timeline for the hero: lights come up, the object rises and
+// settles, the copy arrives word by word, the action settles last. Each step
+// is a class; the delay is a custom property so a section can stagger its
+// children without inventing keyframes. All of it collapses to the final
+// frame under reduced motion.
+
+@keyframes tt-lights-up {
+  from { opacity: 0; transform: scaleY(0.6); }
+  to { opacity: 1; transform: scaleY(1); }
+}
+/* Transform only, no opacity: the object is the largest paint on the page and
+   must count as painted the moment it is drawn, not when it finishes rising. */
+@keyframes tt-rise-settle {
+  0% { transform: translateY(34px) scale(0.95); }
+  70% { transform: translateY(-4px) scale(1.01); }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes tt-word-in {
+  from { opacity: 0; transform: translateY(14px); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+@keyframes tt-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes tt-glow-once {
+  0% { box-shadow: inset 0 1px 0 rgba(255, 252, 244, 0.55), 0 1px 2px rgba(0, 0, 0, 0.35); }
+  45% { box-shadow: inset 0 1px 0 rgba(255, 252, 244, 0.6), 0 0 0 6px rgba(212, 180, 106, 0.18), 0 8px 26px rgba(212, 180, 106, 0.25); }
+  100% { box-shadow: inset 0 1px 0 rgba(255, 252, 244, 0.55), 0 1px 2px rgba(0, 0, 0, 0.35); }
+}
+@keyframes tt-float {
+  from { transform: translateY(0); }
+  to { transform: translateY(-6px); }
+}
+
+.seq { animation-fill-mode: both; animation-timing-function: var(--tt-ease-out); animation-delay: var(--seq-delay, 0ms); }
+.seq--lights { animation-name: tt-lights-up; animation-duration: var(--tt-seq-lights); transform-origin: top; }
+.seq--fade { animation-name: tt-fade-in; animation-duration: var(--tt-seq-lights); }
+.seq--object { animation-name: tt-rise-settle; animation-duration: var(--tt-seq-object); }
+.seq--word { animation-name: tt-word-in; animation-duration: var(--tt-seq-copy); }
+.seq--glow { animation-name: tt-glow-once; animation-duration: 1400ms; animation-timing-function: var(--tt-ease); }
+.tt-float { animation: tt-float 6s var(--tt-ease) infinite alternate; }
+
+@media (prefers-reduced-motion: reduce) {
+  .seq { animation: none !important; opacity: 1 !important; transform: none !important; filter: none !important; }
+  .tt-float { animation: none; }
+}
+
 /* The state a buy button takes for a moment after it worked. */
 .tt-btn--done {
   background: var(--tt-success) !important;

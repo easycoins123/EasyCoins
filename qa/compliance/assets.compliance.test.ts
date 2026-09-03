@@ -163,37 +163,42 @@ test('FcPlayer is data only: no image, render, portrait, avatar, photo or card-a
   assert.deepEqual(offenders, [], `Image fields on FcPlayer:\n  ${offenders.join('\n  ')}`);
 });
 
-test('every product raster asset ships as both AVIF and WebP', () => {
-  const dir = join(ROOT, 'src', 'assets', 'products');
-  const files = existsSync(dir) ? readdirSync(dir) : [];
+/** Directories that hold baked raster art: the coins and the world. */
+const RASTER_DIRS = ['products', 'ui'].map((name) => join(ROOT, 'src', 'assets', name));
+
+test('every raster asset ships as both AVIF and WebP', () => {
   const missing: string[] = [];
-  for (const file of files) {
-    const ext = extname(file).toLowerCase();
-    if (ext !== '.avif' && ext !== '.webp') {
-      continue;
-    }
-    const sibling = basename(file, ext) + (ext === '.avif' ? '.webp' : '.avif');
-    if (!files.includes(sibling)) {
-      missing.push(`${file} has no ${sibling}`);
+  for (const dir of RASTER_DIRS) {
+    const files = existsSync(dir) ? readdirSync(dir) : [];
+    for (const file of files) {
+      const ext = extname(file).toLowerCase();
+      if (ext !== '.avif' && ext !== '.webp') {
+        continue;
+      }
+      const sibling = basename(file, ext) + (ext === '.avif' ? '.webp' : '.avif');
+      if (!files.includes(sibling)) {
+        missing.push(`${show(join(dir, file))} has no ${sibling}`);
+      }
     }
   }
   assert.deepEqual(missing, [], `Raster pairs incomplete:\n  ${missing.join('\n  ')}`);
 });
 
 test('raster art stays within its weight ceiling', () => {
-  // A coin composition is decorative; it must never cost more than the page
-  // it decorates. Per file and in total, measured on disk.
-  const dir = join(ROOT, 'src', 'assets', 'products');
+  // Coins and crowd are decorative; they must never cost more than the page
+  // they decorate. Per file and in total, measured on disk.
   const PER_FILE = 160 * 1024;
   const TOTAL = 640 * 1024;
-  const files = existsSync(dir) ? readdirSync(dir).filter((file) => /\.(?:avif|webp)$/i.test(file)) : [];
   const heavy: string[] = [];
   let total = 0;
-  for (const file of files) {
-    const size = statSync(join(dir, file)).size;
-    total += size;
-    if (size > PER_FILE) {
-      heavy.push(`${file}: ${(size / 1024).toFixed(1)} KB`);
+  for (const dir of RASTER_DIRS) {
+    const files = existsSync(dir) ? readdirSync(dir).filter((file) => /\.(?:avif|webp)$/i.test(file)) : [];
+    for (const file of files) {
+      const size = statSync(join(dir, file)).size;
+      total += size;
+      if (size > PER_FILE) {
+        heavy.push(`${show(join(dir, file))}: ${(size / 1024).toFixed(1)} KB`);
+      }
     }
   }
   assert.deepEqual(heavy, [], `Raster files over ${PER_FILE / 1024} KB:\n  ${heavy.join('\n  ')}`);
@@ -201,10 +206,16 @@ test('raster art stays within its weight ceiling', () => {
 });
 
 test('every registered art source points at files that exist', () => {
-  const registry = join(ROOT, 'src', 'app', 'ui', 'components', 'cards', 'art-sources.ts');
-  assert.ok(existsSync(registry), 'art-sources.ts is missing');
-  const source = readFileSync(registry, 'utf8');
-  const paths = [...source.matchAll(/(?:avif|webp)\s*:\s*['"]([^'"]+)['"]/g)].map((match) => match[1]);
-  const missing = paths.filter((path) => !existsSync(join(ROOT, 'src', path)));
+  const registries = [
+    join(ROOT, 'src', 'app', 'ui', 'components', 'cards', 'art-sources.ts'),
+    join(ROOT, 'src', 'app', 'ui', 'components', 'world', 'world-assets.ts'),
+  ];
+  const missing: string[] = [];
+  for (const registry of registries) {
+    assert.ok(existsSync(registry), `${show(registry)} is missing`);
+    const source = readFileSync(registry, 'utf8');
+    const paths = [...source.matchAll(/(?:avif|webp)\s*:\s*['"]([^'"]+)['"]/g)].map((match) => match[1]);
+    missing.push(...paths.filter((path) => !existsSync(join(ROOT, 'src', path))));
+  }
   assert.deepEqual(missing, [], `Registered art files not found under src/:\n  ${missing.join('\n  ')}`);
 });

@@ -41,7 +41,7 @@ import {
            tiers turns a dead end back into the shop, instead of leaving four
            hundred pixels of black above the footer. -->
       <ng-container *ngIf="cart.isEmpty()">
-        <tt-empty-state icon="cart"
+        <tt-empty-state icon="cart" pose="walk"
                         title="העגלה ריקה"
                         message="עדיין לא הוספתם כלום. אלה החבילות הזמינות."
                         actionLabel="לכל החבילות"
@@ -87,7 +87,9 @@ import {
             </li>
           </ul>
 
-          <aside class="summary tt-plate tt-card--pad">
+          <aside class="summary tt-ticket tt-ticket--gold">
+            <div class="tt-ticket__main summary__main">
+            <p class="tt-ticket__eyebrow"><span>כרטיס · ההזמנה שלך</span><span>{{ cart.items().length }} פריטים</span></p>
             <h2>סיכום</h2>
 
             <div class="row"><span>סכום ביניים</span><span>{{ cart.totals().subtotal | money }}</span></div>
@@ -119,6 +121,11 @@ import {
               המחירים והזמינות נבדקים מחדש מול הקטלוג לפני התשלום.
             </p>
             <a class="tt-btn tt-btn--quiet tt-btn--block" routerLink="/store">המשך קנייה</a>
+            </div>
+            <div class="tt-ticket__stub">
+              <span class="tt-ticket__tally"></span>
+              <span class="summary__stub">מחיר סופי · נבדק מול הקטלוג</span>
+            </div>
           </aside>
         </div>
       </ng-container>
@@ -137,7 +144,9 @@ import {
     .details { display: flex; flex-direction: column; gap: var(--tt-space-1); flex: 1; min-inline-size: 180px; }
     .controls { display: flex; align-items: center; gap: var(--tt-space-3); }
     .line-total { font-weight: 700; min-inline-size: 84px; }
-    .summary { display: flex; flex-direction: column; gap: var(--tt-space-3); position: sticky; inset-block-start: 88px; }
+    .summary { position: sticky; inset-block-start: 88px; }
+    .summary__main { display: flex; flex-direction: column; gap: var(--tt-space-3); padding: var(--tt-space-5); }
+    .summary__stub { font-size: var(--tt-caption); font-weight: 700; color: var(--tt-text-muted); }
     .summary h2 { font-size: var(--tt-text-lg); margin: 0; }
     .row { display: flex; justify-content: space-between; font-size: var(--tt-text-sm); }
     .row.total { font-size: var(--tt-text-lg); font-weight: 700; padding-block-start: var(--tt-space-2); border-block-start: 1px solid var(--tt-border); }

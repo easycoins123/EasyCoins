@@ -143,3 +143,11 @@ the interface.
   with the build.
 
 > Asset policy (what may and may not be used, and how it is enforced): see [CONTRIBUTING.md](../CONTRIBUTING.md#asset-policy).
+
+## The world, the cast and the ticket
+
+Since September 2026 the storefront lives in a stadium after dark (`tt-stadium`),
+its customers' journey is acted out by a faceless squad in the EasyCoins kit
+(`tt-squad`: walk, strike, keeper, celebrate), and every order is presented as a
+ticket (`.tt-ticket`). The rules for all three, and the bake commands for the
+raster pieces, are in [CONTRIBUTING.md](../CONTRIBUTING.md#asset-policy).

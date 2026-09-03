@@ -7,9 +7,9 @@ import { LocalizePipe } from '../../core/i18n';
 import { formatQuantity, rankByValue } from '../../core/value';
 import { Platform, ProductDetail } from '../../domain';
 import { TIERS, Tier, tierForAmount } from './cards/tiers';
-import { RevealDirective } from '../reveal.directive';
 import { HeroSceneComponent } from './hero-scene.component';
 import { IconComponent } from './icon.component';
+import { StadiumComponent } from './world/stadium.component';
 
 /** A real tier, pinned to the artwork as a price tag. */
 interface PriceTag {
@@ -39,34 +39,31 @@ interface PriceTag {
 @Component({
   selector: 'tt-hero',
   standalone: true,
-  imports: [CommonModule, RouterLink, LocalizePipe, HeroSceneComponent, IconComponent, RevealDirective],
+  imports: [CommonModule, RouterLink, LocalizePipe, HeroSceneComponent, IconComponent, StadiumComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="hero">
-      <div class="hero__ground" aria-hidden="true">
-        <span class="wash"></span>
-        <span class="wash wash--warm"></span>
-        <span class="bands"></span>
-      </div>
+      <!-- The world: a stadium after dark, lights coming up as the page opens. -->
+      <tt-stadium scene="hero" [animated]="true"></tt-stadium>
 
       <div class="tt-container hero__inner">
         <div class="copy">
-          <p class="kicker tt-eyebrow" ttReveal="0">
+          <p class="kicker tt-eyebrow seq seq--word" style="--seq-delay: 260ms">
             <tt-icon name="football" [size]="15"></tt-icon>
-            <span>{{ gameName }} · Ultimate Team</span>
+            <span>{{ gameName }} · ערב משחק מתחיל כאן</span>
           </p>
 
-          <h1 ttReveal="1">
-            <span class="h1__what">קוינס ל־<span class="latin" dir="ltr">Ultimate Team</span></span>
-            <span class="hl">בלי כאב ראש.</span>
+          <h1>
+            <span class="h1__what seq seq--word" style="--seq-delay: 380ms">קוינס ל־<span class="latin" dir="ltr">Ultimate Team</span></span>
+            <span class="hl seq seq--word" style="--seq-delay: 500ms">בלי כאב ראש.</span>
           </h1>
 
-          <p class="lede" ttReveal="2">
+          <p class="lede seq seq--word" style="--seq-delay: 620ms">
             בוחרים כמות, משלמים בתשלום מאובטח ומקבלים דף מעקב עד האספקה.
             הפלטפורמה ואזור החנות מוצגים לפני שמשלמים.
           </p>
 
-          <div class="deal" *ngIf="best as price" ttReveal="3">
+          <div class="deal seq seq--word" *ngIf="best as price" style="--seq-delay: 720ms">
             <div class="deal__figure">
               <span class="deal__from">מ־</span>
               <span class="deal__value tt-figure">{{ price }}</span>
@@ -78,14 +75,14 @@ interface PriceTag {
             </div>
           </div>
 
-          <div class="cta" ttReveal="4">
-            <a class="tt-btn tt-btn--buy tt-btn--lg" routerLink="/store">
+          <div class="cta seq seq--word" style="--seq-delay: 820ms">
+            <a class="tt-btn tt-btn--buy tt-btn--lg seq seq--glow" style="--seq-delay: 1350ms" routerLink="/store">
               לבחירת חבילה <tt-icon name="arrow" [size]="18" dir="auto"></tt-icon>
             </a>
             <a class="tt-btn tt-btn--ghost tt-btn--lg" routerLink="/delivery">איך זה עובד</a>
           </div>
 
-          <ul class="facts" *ngIf="platforms.length > 0" ttReveal="5">
+          <ul class="facts seq seq--word" *ngIf="platforms.length > 0" style="--seq-delay: 920ms">
             <li class="facts__label">
               <tt-icon name="platform" [size]="15"></tt-icon>
               זמין ל־
@@ -94,7 +91,8 @@ interface PriceTag {
           </ul>
         </div>
 
-        <div class="art"
+        <div class="art seq seq--object"
+             style="--seq-delay: 120ms"
              aria-hidden="true"
              (pointermove)="tilt($event)"
              (pointerleave)="rest()">
@@ -122,39 +120,13 @@ interface PriceTag {
       isolation: isolate;
       overflow: hidden;
       margin-block-start: calc(var(--tt-header-height) * -1);
-      padding-block: calc(var(--tt-header-height) + var(--tt-space-7)) var(--tt-space-7);
+      padding-block: calc(var(--tt-header-height) + var(--tt-space-8)) var(--tt-space-8);
       border-block-end: 1px solid var(--tt-border);
+      min-block-size: min(92vh, 860px);
+      display: flex;
+      align-items: center;
     }
-    .hero__ground { position: absolute; inset: 0; z-index: -1; }
-    /* Two low washes: a cool one behind the object, a warm one behind the
-       copy. Low enough that the ground still reads as one material. */
-    .wash {
-      position: absolute;
-      inset-block-start: -40%;
-      inset-inline-end: -10%;
-      inline-size: min(70vw, 760px);
-      block-size: min(70vw, 760px);
-      border-radius: 50%;
-      background: var(--tt-brand-500);
-      opacity: 0.09;
-      filter: blur(130px);
-    }
-    .wash--warm {
-      inset-block-start: 10%;
-      inset-inline-end: auto;
-      inset-inline-start: -6%;
-      inline-size: min(48vw, 520px);
-      block-size: min(48vw, 520px);
-      background: var(--tt-gold-500);
-      opacity: 0.05;
-    }
-    .bands {
-      position: absolute;
-      inset: 0;
-      background-image: repeating-linear-gradient(99deg, var(--tt-border) 0 1px, transparent 1px 74px);
-      -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,0.85), transparent 78%);
-      mask-image: linear-gradient(180deg, rgba(0,0,0,0.85), transparent 78%);
-    }
+    .hero__inner { inline-size: 100%; }
 
     .hero__inner {
       display: grid;
@@ -162,6 +134,8 @@ interface PriceTag {
       align-items: center;
       gap: var(--tt-space-6);
     }
+    /* The glass price tags read best over the night sky. */
+    .tag { box-shadow: var(--tt-glass-highlight), 0 10px 30px rgba(0, 0, 0, 0.5); }
     .copy { display: flex; flex-direction: column; align-items: flex-start; }
 
     /* A label, not a badge: the game name in small caps with the football
@@ -241,12 +215,12 @@ interface PriceTag {
     .tag__qty { font-size: var(--tt-text-xl); }
     .tag__price { font-size: var(--tt-text-xs); font-weight: 700; color: var(--tt-gold-400); }
     .tag--a { inset-block-start: 20%; inset-inline-start: 2%; }
-    .tag--b { inset-block-end: 24%; inset-inline-end: 2%; }
+    .tag--b { inset-block-end: 36%; inset-inline-end: 0; }
 
     @media (max-width: 1100px) { .hero__inner { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); } }
 
     @media (max-width: 760px) {
-      .hero { padding-block: calc(var(--tt-header-height) + var(--tt-space-2)) var(--tt-space-6); }
+      .hero { padding-block: calc(var(--tt-header-height) + var(--tt-space-2)) var(--tt-space-6); min-block-size: 0; display: block; }
       .hero__inner { display: flex; flex-direction: column; gap: 0; }
       .art { order: -1; inline-size: 100%; margin-block-end: var(--tt-space-2); perspective: none; }
       .art__stage { inline-size: min(100%, 380px); transform: none !important; }

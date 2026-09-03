@@ -64,9 +64,21 @@ Do not add it "temporarily".
 - **Tiers** are EasyCoins' own: Starter, Pro, Elite, Legend, defined once in
   `src/app/ui/components/cards/tiers.ts` and in `src/styles/_tokens.scss`.
   They are not a bronze / silver / gold imitation.
-- **Football atmosphere** without player IP: stadium light, pitch textures,
-  crowds, abstract motion. Nominative use of a game's name in text is fine;
-  its logo is not.
+- **The world** is a stadium after dark, drawn by `tt-stadium`
+  (`src/app/ui/components/world/`): sky washes, floodlight shafts, pitch
+  geometry in perspective, and one baked raster of the crowd out of focus
+  (`src/assets/ui/stadium-bokeh.avif|webp`, from `node qa/bake-stadium.mjs`,
+  registered in `world-assets.ts`). Nominative use of a game's name in text
+  is fine; its logo is not.
+- **The cast** is `tt-squad`: faceless, backlit silhouettes in the EasyCoins
+  kit with the brand's E on the chest, in four poses (walk, strike, keeper,
+  celebrate). They never get a face, a number, a crest, a name or a likeness,
+  and they are always decorative (`aria-hidden`), with the meaning in text.
+- **The ticket** (`.tt-ticket` in `_base.scss`) is how an order is shown:
+  the picker's quote, the cart and checkout summaries, the product page's
+  buy card and the order page. The stub carries the real order reference
+  where one exists and the tally pattern is the brand's E repeated, not a
+  barcode of anything real.
 - **Flags**, if nation data is ever shown, come from `flag-icons` (MIT).
 - **Player data**, if ever needed, uses the `FcPlayer` type in
   `src/app/domain/catalog/fc-player.ts`. It has no image field and may not

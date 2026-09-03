@@ -25,3 +25,7 @@ export * from './components/cards/tiers';
 export * from './components/cards/art-sources';
 export * from './components/cards/coin-art.component';
 export * from './components/cards/easycoins-card.component';
+export * from './parallax.directive';
+export * from './components/world/world-assets';
+export * from './components/world/stadium.component';
+export * from './components/world/squad.component';

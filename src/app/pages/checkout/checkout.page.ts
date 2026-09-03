@@ -10,7 +10,7 @@ import {
 } from '../../domain';
 import { CartFacade, CatalogFacade, CheckoutFacade } from '../../state';
 import {
-  FulfillmentBadgeComponent, IconComponent, MoneyPipe, RegionBadgeComponent,
+  FulfillmentBadgeComponent, IconComponent, MoneyPipe, RegionBadgeComponent, SquadComponent,
 } from '../../ui';
 
 /**
@@ -28,7 +28,7 @@ import {
 @Component({
   selector: 'tt-checkout-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, LocalizePipe, MoneyPipe, RegionBadgeComponent, FulfillmentBadgeComponent, IconComponent],
+  imports: [CommonModule, FormsModule, RouterLink, LocalizePipe, MoneyPipe, RegionBadgeComponent, FulfillmentBadgeComponent, IconComponent, SquadComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-container tt-section">
@@ -108,6 +108,14 @@ import {
                         *ngIf="issueFor(requirement.key) as issue">{{ issue | t }}</span>
                 </div>
               </ng-container>
+
+              <!-- What happens next, in the world's language: the squad walks
+                   the customer from payment to delivery before they commit. -->
+              <ol class="next" aria-label="מה קורה אחרי התשלום">
+                <li><span class="next__figure" aria-hidden="true"><tt-squad pose="keeper"></tt-squad></span><span><strong>תשלום מאובטח</strong><span class="tt-faint">פרטי האשראי עוברים לספק הסליקה ולא נשמרים אצלנו.</span></span></li>
+                <li><span class="next__figure" aria-hidden="true"><tt-squad pose="walk"></tt-squad></span><span><strong>דף מעקב אישי</strong><span class="tt-faint">נפתח מיד אחרי התשלום, עם מספר הזמנה.</span></span></li>
+                <li><span class="next__figure" aria-hidden="true"><tt-squad pose="celebrate"></tt-squad></span><span><strong>אספקה ועדכון</strong><span class="tt-faint">הסטטוס מתעדכן בדף ההזמנה עד שהקוינס אצלכם.</span></span></li>
+              </ol>
 
               <p class="tt-hint">
                 אנחנו לעולם לא מבקשים סיסמה, קוד אימות או קודי גיבוי, בשום שלב.
@@ -211,7 +219,9 @@ import {
           </section>
         </div>
 
-        <aside class="summary tt-plate tt-card--pad" *ngIf="lookups$ | async as lookups">
+        <aside class="summary tt-ticket tt-ticket--gold" *ngIf="lookups$ | async as lookups">
+          <div class="tt-ticket__main summary__main">
+          <p class="tt-ticket__eyebrow"><span>כרטיס · ההזמנה שלך</span><span>{{ cart.items().length }} פריטים</span></p>
           <h2>מה קונים</h2>
           <ul>
             <li *ngFor="let item of cart.items()">
@@ -231,14 +241,17 @@ import {
             <span class="tt-price tt-numeric">{{ cart.totals().total | money }}</span>
           </div>
 
-          <p class="eta" *ngIf="cart.items()[0] as first">
-            <tt-fulfillment-badge [descriptor]="lookups.fulfillment.get(first.fulfillmentMethod)">
-            </tt-fulfillment-badge>
-          </p>
-
           <a class="back" routerLink="/cart">
             <tt-icon name="chevron" [size]="14" dir="auto"></tt-icon>חזרה לעגלה
           </a>
+          </div>
+          <div class="tt-ticket__stub">
+            <span class="tt-ticket__tally"></span>
+            <span class="eta" *ngIf="cart.items()[0] as first">
+              <tt-fulfillment-badge [descriptor]="lookups.fulfillment.get(first.fulfillmentMethod)">
+              </tt-fulfillment-badge>
+            </span>
+          </div>
         </aside>
       </div>
     </div>
@@ -259,6 +272,13 @@ import {
 
     /* The amount lives on the action. */
     .pay { justify-content: space-between; padding-inline: var(--tt-space-4); }
+    .summary__main { display: flex; flex-direction: column; gap: var(--tt-space-3); padding: var(--tt-space-5); }
+    .next { display: grid; gap: var(--tt-space-3); grid-template-columns: repeat(3, minmax(0, 1fr)); margin: var(--tt-space-2) 0 var(--tt-space-4); padding: 0; list-style: none; }
+    .next li { display: flex; flex-direction: column; gap: var(--tt-space-2); padding: var(--tt-space-3); border: 1px solid var(--tt-border); border-radius: var(--tt-radius-md); background: var(--tt-surface-2); font-size: var(--tt-text-sm); }
+    .next li strong { display: block; margin-block-end: 2px; }
+    .next li .tt-faint { display: block; line-height: var(--tt-leading-snug); }
+    .next__figure { display: block; inline-size: 44px; margin-inline-start: -4px; }
+    @media (max-width: 640px) { .next { grid-template-columns: 1fr; } .next li { flex-direction: row; align-items: center; } }
     .progress { display: flex; gap: var(--tt-space-2); margin: calc(var(--tt-space-2) * -1) 0 var(--tt-space-5); padding: 0; list-style: none; font-size: var(--tt-text-xs); font-weight: 700; color: var(--tt-text-faint); }
     .progress li { display: inline-flex; align-items: center; gap: 6px; padding: 0.3rem 0.7rem 0.3rem 0.4rem; border: 1px solid var(--tt-border); border-radius: var(--tt-radius-pill); }
     .progress li span { display: grid; place-items: center; inline-size: 20px; block-size: 20px; border-radius: 50%; background: var(--tt-surface-3); font-family: var(--tt-font-display); font-size: var(--tt-text-sm); color: var(--tt-text); }

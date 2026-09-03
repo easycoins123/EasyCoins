@@ -103,7 +103,9 @@ interface Tier {
 
       <!-- The quote: the one bordered surface in the module, because this is
            the part that takes money and should look like it. -->
-      <aside class="quote tt-plate" [style.--mat]="currentTier().color" [style.--mat-glow]="currentTier().glow">
+      <aside class="quote tt-ticket" [style.--mat]="currentTier().color" [style.--mat-glow]="currentTier().glow">
+        <div class="tt-ticket__main quote__main">
+        <p class="tt-ticket__eyebrow"><span>כרטיס · ההזמנה שלך</span><span>{{ currentTier().labelHe }}</span></p>
         <div class="quote__stage">
           <tt-coin-art class="quote__art" [tier]="currentTier().name" variant="quote"></tt-coin-art>
         </div>
@@ -147,6 +149,11 @@ interface Tier {
           <tt-icon name="lock" [size]="13"></tt-icon>
           מחיר סופי. הפלטפורמה ואזור החנות נבחרים לפני התשלום.
         </p>
+        </div>
+        <div class="tt-ticket__stub">
+          <span class="tt-ticket__tally"></span>
+          <span class="quote__stub tt-numeric">{{ label(current.provided) }} · <span dir="ltr">Ultimate Team</span></span>
+        </div>
       </aside>
     </section>
   `,
@@ -266,20 +273,14 @@ interface Tier {
     .exact input { text-align: start; direction: ltr; }
 
     /* --- The quote ---------------------------------------------------------- */
-    .quote {
-      display: flex;
-      flex-direction: column;
-      gap: var(--tt-space-3);
-      padding: var(--tt-space-4);
-      border-radius: var(--tt-radius-xl);
-      border-color: var(--mat);
-      box-shadow: inset 0 1px 0 rgba(255, 248, 235, 0.06), var(--tt-shadow-2);
-    }
+    .quote { border-color: var(--mat); }
+    .quote__main { display: flex; flex-direction: column; gap: var(--tt-space-3); }
+    .quote__stub { font-size: var(--tt-caption); font-weight: 700; color: var(--tt-text-muted); }
     .quote__stage {
       display: grid;
       place-items: center;
-      margin: calc(var(--tt-space-4) * -1) calc(var(--tt-space-4) * -1) 0;
-      padding-block: var(--tt-space-3) 0;
+      margin: calc(var(--tt-space-2) * -1) calc(var(--tt-space-4) * -1) 0;
+      padding-block: var(--tt-space-2) 0;
       background: radial-gradient(60% 70% at 50% 60%, var(--mat-glow), transparent 70%);
     }
     .quote__art { inline-size: 200px; filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.5)); }

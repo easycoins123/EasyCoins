@@ -17,7 +17,7 @@ import { CartFacade, CatalogFacade, CatalogLookups } from '../../state';
 import {
   EasyCoinsCardComponent, EmptyStateComponent, ErrorStateComponent, FilterBarComponent,
   FilterChange, FilterGroup, IconComponent, ProductCardComponent, RevealDirective,
-  SkeletonGridComponent,
+  SkeletonGridComponent, StadiumComponent,
 } from '../../ui';
 
 interface StoreViewModel {
@@ -47,10 +47,14 @@ interface StoreViewModel {
   imports: [
     CommonModule,
     ProductCardComponent, EasyCoinsCardComponent, SkeletonGridComponent, EmptyStateComponent,
-    ErrorStateComponent, FilterBarComponent, IconComponent, RevealDirective,
+    ErrorStateComponent, FilterBarComponent, IconComponent, RevealDirective, StadiumComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <div class="store-page">
+      <!-- The shop stands in the same stadium as the rest of the site; the
+           world fades out before the shelf so the cards keep their ground. -->
+      <div class="store__world" aria-hidden="true"><tt-stadium scene="band"></tt-stadium></div>
     <div class="tt-container tt-section store">
       <header class="tt-head tt-head--tight">
         <span class="tt-eyebrow">{{ gameName }} · Ultimate Team</span>
@@ -83,7 +87,7 @@ interface StoreViewModel {
         <ng-container *ngIf="vm$ | async as vm; else loading">
           <p class="count tt-faint">{{ countLabel(vm) }}</p>
 
-          <tt-empty-state *ngIf="isEmpty(vm)"
+          <tt-empty-state *ngIf="isEmpty(vm)" pose="keeper"
                           title="לא נמצאו מוצרים"
                           message="נסו לשנות את החיפוש או לאפס את הסינון."
                           actionLabel="איפוס סינון"
@@ -113,8 +117,16 @@ interface StoreViewModel {
 
       <ng-template #loading><tt-skeleton-grid [count]="6"></tt-skeleton-grid></ng-template>
     </div>
+    </div>
   `,
   styles: [`
+    .store-page { position: relative; isolation: isolate; }
+    .store__world {
+      position: absolute; inset-inline: 0; inset-block-start: 0; block-size: min(520px, 70vh); z-index: -1;
+      isolation: isolate;
+      -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+      mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+    }
     .store { position: relative; }
 
     .filters { display: block; margin-block-end: var(--tt-space-3); }

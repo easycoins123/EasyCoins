@@ -262,6 +262,28 @@
   --tt-z-drawer: 50;
   --tt-z-overlay: 60;
   --tt-z-toast: 80;
+
+  // --- The world: a stadium after dark ------------------------------------
+  // Floodlight is a cool near-white; the warm one is the same light bounced
+  // off the metal. The pitch is a desaturated green that only ever appears in
+  // lines at a few percent alpha: an environment, never an interface colour.
+  --tt-flood: rgba(214, 226, 255, 0.9);
+  --tt-flood-soft: rgba(214, 226, 255, 0.10);
+  --tt-flood-warm: rgba(247, 235, 203, 0.14);
+  --tt-pitch: rgba(126, 196, 150, 0.12);
+  --tt-pitch-glow: rgba(96, 160, 118, 0.10);
+  --tt-night: #07080C;
+  --tt-night-2: #0B0D14;
+
+  // Parallax depth steps: how much a layer moves relative to scroll.
+  --tt-depth-far: 0.06;
+  --tt-depth-mid: 0.14;
+  --tt-depth-near: 0.26;
+
+  // The entrance sequence, one timeline for the whole hero.
+  --tt-seq-lights: 700ms;
+  --tt-seq-object: 900ms;
+  --tt-seq-copy: 520ms;
 }
 
 // The light theme re-declares only the tokens that change role, so no component
