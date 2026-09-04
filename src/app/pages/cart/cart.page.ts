@@ -13,11 +13,14 @@ import { formatQuantity } from '../../core/value';
 import { LocalizePipe } from '../../core/i18n';
 import { CartItem, ProductType, ProductVariant } from '../../domain';
 import { CartFacade, CatalogFacade } from '../../state';
+import { GrowthFacade } from '../../state/growth.facade';
 import {
   BundleLadderComponent, CoinArtComponent,
   EmptyStateComponent, FulfillmentBadgeComponent, MoneyPipe, PlatformBadgeComponent,
   QuantitySelectorComponent, RegionBadgeComponent,
 } from '../../ui';
+import { BenefitsNoteComponent } from '../../ui/components/growth/benefits-note.component';
+import { RewardPickerComponent } from '../../ui/components/growth/reward-picker.component';
 
 /**
  * The cart.
@@ -33,6 +36,7 @@ import {
     CommonModule, FormsModule, RouterLink, LocalizePipe, MoneyPipe,
     QuantitySelectorComponent, PlatformBadgeComponent, RegionBadgeComponent,
     FulfillmentBadgeComponent, EmptyStateComponent, BundleLadderComponent, CoinArtComponent,
+    RewardPickerComponent, BenefitsNoteComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -112,9 +116,18 @@ import {
             </div>
             <div class="row"><span>סכום ביניים</span><span>{{ cart.totals().subtotal | money }}</span></div>
             <div class="row" *ngIf="cart.totals().discount.amountMinor > 0">
-              <span>הנחה</span><span>−{{ cart.totals().discount | money }}</span>
+              <span>{{ discountLabel() }}</span><span>−{{ cart.totals().discount | money }}</span>
             </div>
             <div class="row total"><span>לתשלום</span><span>{{ cart.totals().total | money }}</span></div>
+            <tt-benefits-note [benefits]="cart.benefits()"></tt-benefits-note>
+
+            <!-- Earned rewards: one per order, chosen here, priced by the server. -->
+            <tt-reward-picker class="rewards"
+                              [rewards]="growth.redeemable()"
+                              [selectedId]="cart.rewardId()"
+                              [busy]="cart.busy()"
+                              (select)="useReward($event)"
+                              (clear)="cart.clearReward()"></tt-reward-picker>
 
             <label class="tt-field coupon">
               <span class="tt-label">קוד קופון</span>
@@ -178,6 +191,7 @@ import {
     .row { display: flex; justify-content: space-between; font-size: var(--tt-text-sm); }
     .row.total { font-size: var(--tt-text-lg); font-weight: 700; padding-block-start: var(--tt-space-2); border-block-start: 1px solid var(--tt-border); }
     .coupon { margin-block-start: var(--tt-space-2); }
+    .rewards { margin-block-start: var(--tt-space-2); }
   `],
 })
 export class CartPage {
@@ -191,6 +205,7 @@ export class CartPage {
   private readonly catalog = inject(CatalogFacade);
   private readonly router = inject(Router);
   private readonly analytics = inject(AnalyticsService);
+  readonly growth = inject(GrowthFacade);
 
   readonly lookups$ = this.catalog.lookups$;
 
@@ -217,8 +232,16 @@ export class CartPage {
     { initialValue: new Map<string, ProductVariant>() },
   );
 
-  /** Coins across every coin line, bonus included; undefined when no line is coins. */
+  /**
+   * Coins across every coin line, launch bonus and applied reward included;
+   * undefined when no line is coins. The server states each line's coins; a
+   * line restored from storage before that existed falls back to the catalog.
+   */
   readonly totalCoins = computed<string | undefined>(() => {
+    const fromServer = this.cart.totalCoins();
+    if (fromServer !== undefined) {
+      return formatQuantity(fromServer);
+    }
     let sum = 0;
     let any = false;
     for (const item of this.cart.items()) {
@@ -228,23 +251,44 @@ export class CartPage {
         sum += (variant.quantityValue + launchBonusOf(variant)) * item.quantity;
       }
     }
-    return any ? formatQuantity(sum) : undefined;
+    return any ? formatQuantity(sum + (this.cart.benefits()?.rewardCoins ?? 0)) : undefined;
   });
 
   couponCode = '';
 
   constructor() {
     this.analytics.pageView('/cart', 'Cart');
+    // The wallet is loaded by the facade with the sign-in state and re-read
+    // after every reveal and paid order, so the cart only shows it.
   }
 
-  /** Base plus bonus equals received, for a coin line with a bonus. */
+  /** Base plus bonus equals received, for a coin line with a bonus. Per unit. */
   receipt(item: CartItem): { base: string; bonus: string; total: string } | undefined {
+    if (item.coins !== undefined && item.bonusCoins !== undefined) {
+      if (item.coins <= 0 || item.bonusCoins <= 0) {
+        return undefined;
+      }
+      const base = item.coins / item.quantity;
+      const bonus = item.bonusCoins / item.quantity;
+      return { base: formatQuantity(base), bonus: formatQuantity(bonus), total: formatQuantity(base + bonus) };
+    }
     const variant = this.variants().get(item.variantId);
     const bonus = launchBonusOf(variant);
     if (!variant?.quantityValue || bonus <= 0) {
       return undefined;
     }
     return { base: formatQuantity(variant.quantityValue), bonus: formatQuantity(bonus), total: formatQuantity(variant.quantityValue + bonus) };
+  }
+
+  /** What the discount row is, in the customer's words. */
+  discountLabel(): string {
+    const applied = this.cart.benefits()?.applied ?? [];
+    const reward = applied.find((benefit) => benefit.kind === 'REWARD' && benefit.effect.discount.amountMinor > 0);
+    return reward ? `הטבה: ${reward.label.he}` : 'הנחה';
+  }
+
+  useReward(rewardId: string): void {
+    this.cart.applyReward(rewardId).subscribe();
   }
 
   applyCoupon(): void {

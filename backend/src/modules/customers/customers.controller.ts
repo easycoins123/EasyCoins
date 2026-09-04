@@ -17,6 +17,7 @@ import { unauthorizedError } from '../../common/errors/api-error';
 import { APP_CONFIG } from '../../config/config.module';
 import { AppConfig } from '../../config/environment';
 import { PrismaService } from '../../database/prisma.service';
+import { GrowthClaimService } from '../growth/growth-claim.service';
 import { OrderAccessService } from '../orders/order-access.service';
 import { AccountService } from './account.service';
 import { AuthService } from './auth.service';
@@ -41,10 +42,20 @@ export class CustomersController {
     private readonly sessions: SessionService,
     private readonly prisma: PrismaService,
     private readonly orderAccess: OrderAccessService,
+    private readonly growthClaim: GrowthClaimService,
     private readonly accounts: AccountService,
     private readonly google: GoogleOAuthService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
+
+  /**
+   * What a guest session earned follows them into the account: the orders,
+   * and with them the EasyDrop and rewards those orders produced.
+   */
+  private async claimSession(sessionId: string, customerId: string): Promise<void> {
+    await this.orderAccess.claimSessionOrders(sessionId, customerId);
+    await this.growthClaim.claimSession(sessionId, customerId);
+  }
 
   /**
    * Which sign-in methods this deployment can actually offer.
@@ -89,10 +100,10 @@ export class CustomersController {
     );
 
     if (customer) {
-      await this.orderAccess.claimSessionOrders(
-        (await this.sessions.resolve(request))?.id ?? '',
-        customer.id,
-      );
+      const previous = await this.sessions.resolve(request);
+      if (previous) {
+        await this.claimSession(previous.id, customer.id);
+      }
       await this.sessions.attachToCustomer(request, response, customer.id);
     }
   }
@@ -113,7 +124,7 @@ export class CustomersController {
 
     const previous = await this.sessions.resolve(request);
     if (previous) {
-      await this.orderAccess.claimSessionOrders(previous.id, customer.id);
+      await this.claimSession(previous.id, customer.id);
     }
     await this.sessions.attachToCustomer(request, response, customer.id);
 
@@ -226,7 +237,7 @@ export class CustomersController {
 
       const previous = await this.sessions.resolve(request);
       if (previous) {
-        await this.orderAccess.claimSessionOrders(previous.id, customer.id);
+        await this.claimSession(previous.id, customer.id);
       }
       await this.sessions.attachToCustomer(request, response, customer.id);
 
@@ -301,7 +312,7 @@ export class CustomersController {
 
     const previous = await this.sessions.resolve(request);
     if (previous) {
-      await this.orderAccess.claimSessionOrders(previous.id, customer.id);
+      await this.claimSession(previous.id, customer.id);
     }
 
     await this.sessions.attachToCustomer(request, response, customer.id);

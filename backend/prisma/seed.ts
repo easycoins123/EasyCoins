@@ -18,6 +18,8 @@
  * id, so running it twice produces the same database as running it once.
  */
 import {
+  CampaignKind,
+  CampaignStatus,
   FulfillmentMethod,
   InventoryStatus,
   PlatformFamily,
@@ -388,6 +390,30 @@ const PROMOTIONS = [
   { id: 'promo-ps-plus', slug: 'ps-plus-annual', kind: PromotionKind.AMOUNT_OFF, title: t('PlayStation Plus שנתי במחיר מיוחד', 'PlayStation Plus annual deal'), description: t('מנוי ל-12 חודשים ב-329 ₪ במקום 399 ₪.', 'A 12-month membership for 329 ILS instead of 399 ILS.'), percentOff: null, amountOffMinor: 7000, currency: 'ILS', productIds: ['prod-ps-plus'], startsAt: '2026-01-01T00:00:00.000Z' },
 ];
 
+/**
+ * The Drop Zone's first entry, as a DRAFT.
+ *
+ * Invisible to customers until an operator schedules or activates it from the
+ * admin API. Created once and never overwritten by a rerun: the seed must not
+ * be able to switch a live drop back to draft on the next deploy.
+ */
+const CAMPAIGNS = [
+  {
+    id: 'camp-weekend-01',
+    slug: 'weekend-drop-01',
+    kind: CampaignKind.WEEKEND_DROP,
+    status: CampaignStatus.DRAFT,
+    title: t('דרופ סוף שבוע', 'Weekend drop'),
+    lede: t('בונוס קוינס להזמנה הבאה על כל הזמנה מעל 500K בסוף השבוע. התאריך יפורסם כאן כשייקבע.', 'A next-order coin bonus on every order above 500K over the weekend. The date is published here once it is set.'),
+    points: [t('בונוס בקוינס, לא הנחה על נייר', 'A bonus in coins, not a discount on paper'), t('נכנס ל־EASYCLUB אחרי התשלום', 'Lands in EASYCLUB after payment')],
+    eligibility: { minOrderMinor: 3900 },
+    reward: { kind: 'NEXT_ORDER_COINS', value: 20000, minOrderMinor: 3100, title: t('+20K קוינס להזמנה הבאה', '+20K coins on your next order') },
+    capTotal: 200,
+    ctaLabel: t('לחנות', 'To the store'),
+    ctaLink: '/store',
+  },
+];
+
 // ---------------------------------------------------------------------------
 
 const minor = (major: number): number => Math.round(major * 100);
@@ -544,6 +570,12 @@ async function main(): Promise<void> {
     // redemptionCount is live state and is deliberately not reset.
     update: { ...coupon, redemptionCount: undefined },
   });
+
+  for (const campaign of CAMPAIGNS) {
+    // Create only. A campaign's status is live commercial state once an
+    // operator touches it, and the seed must never drag it back.
+    await prisma.campaign.upsert({ where: { id: campaign.id }, create: campaign, update: {} });
+  }
 
   process.stdout.write(
     `Seed complete in ${Date.now() - startedAt}ms: ` +

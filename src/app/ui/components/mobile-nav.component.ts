@@ -357,6 +357,7 @@ export class MobileNavComponent implements OnChanges {
       title: 'החשבון שלי',
       items: [
         { route: '/account/orders', icon: 'clock', label: 'ההזמנות שלי' },
+        { route: '/account/club', icon: 'crown', label: 'EASYCLUB', signedIn: true },
         { route: '/account', icon: 'user', label: 'החשבון שלי', exact: true },
         { route: '/account/security', icon: 'lock', label: 'אבטחת החשבון', signedIn: true },
       ],

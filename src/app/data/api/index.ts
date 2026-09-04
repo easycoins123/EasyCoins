@@ -3,6 +3,7 @@ export * from './catalog-api.service';
 export * from './checkout-api.service';
 export * from './customer-api.service';
 export * from './fulfillment-api.service';
+export * from './growth-api.service';
 export * from './order-api.service';
 export * from './payment-api.service';
 export * from './promotion-api.service';

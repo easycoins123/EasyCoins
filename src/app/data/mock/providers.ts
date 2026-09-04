@@ -3,8 +3,8 @@ import { Provider } from '@angular/core';
 import { bind } from '../providers';
 import {
   MockCartApiService, MockCatalogApiService, MockCheckoutApiService, MockCustomerApiService,
-  MockFulfillmentApiService, MockOrderApiService, MockPaymentApiService, MockProductApiService,
-  MockPromotionApiService, MockReviewApiService, MockSupportApiService,
+  MockFulfillmentApiService, MockGrowthApiService, MockOrderApiService, MockPaymentApiService,
+  MockProductApiService, MockPromotionApiService, MockReviewApiService, MockSupportApiService,
 } from './index';
 
 /**
@@ -28,5 +28,6 @@ export function provideMockDataLayer(): Provider[] {
     promotion: MockPromotionApiService,
     review: MockReviewApiService,
     support: MockSupportApiService,
+    growth: MockGrowthApiService,
   });
 }

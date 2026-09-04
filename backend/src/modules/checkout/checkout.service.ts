@@ -11,23 +11,40 @@ import {
 import { generateId } from '../../common/crypto/tokens';
 import { PrismaService } from '../../database/prisma.service';
 import { PricingService, RequestedLine } from '../cart/pricing.service';
+import { ownerOfSession } from '../growth/growth-shared';
 
 /** How long a checkout session stays usable. Prices are only honoured this long. */
 const CHECKOUT_TTL_MINUTES = 30;
 
 /**
  * A checkout plus its lines, each carrying the product and variant its offer
- * points at. Loaded together so the response never needs a second query.
+ * points at. Loaded together so the response never needs a second query. The
+ * variant's quantity and metadata ride along so the response can state the
+ * coins each line delivers without a catalog lookup.
  */
 export const CHECKOUT_INCLUDE = {
   items: {
-    include: { offer: { select: { productId: true, variantId: true } } },
+    include: {
+      offer: {
+        select: {
+          productId: true,
+          variantId: true,
+          variant: { select: { quantityValue: true, metadata: true } },
+          product: { select: { type: true } },
+        },
+      },
+    },
     orderBy: { id: 'asc' },
   },
 } as const;
 
 export type CheckoutItemWithOffer = CheckoutItem & {
-  offer: { productId: string; variantId: string };
+  offer: {
+    productId: string;
+    variantId: string;
+    variant: { quantityValue: number | null; metadata: unknown };
+    product: { type: string };
+  };
 };
 
 export type CheckoutSessionWithItems = CheckoutSession & { items: CheckoutItemWithOffer[] };
@@ -64,9 +81,14 @@ export class CheckoutService {
    */
   async createSession(
     requested: readonly RequestedLine[],
-    options: { session: CustomerSession; couponCode?: string | null },
+    options: { session: CustomerSession; couponCode?: string | null; rewardId?: string | null },
   ): Promise<CheckoutSessionWithItems> {
-    const priced = await this.pricing.priceCart(requested, { couponCode: options.couponCode });
+    const priced = await this.pricing.priceCart(requested, {
+      couponCode: options.couponCode,
+      rewardId: options.rewardId,
+      owner: ownerOfSession(options.session),
+    });
+    const couponApplied = priced.benefits.applied.some((benefit) => benefit.kind === 'COUPON');
 
     if (priced.lines.length === 0) {
       throw badRequestError('Cannot open a checkout with an empty cart', 'CART_EMPTY');
@@ -99,7 +121,13 @@ export class CheckoutService {
           subtotalMinor: priced.subtotalMinor,
           discountMinor: priced.discountMinor,
           totalMinor: priced.totalMinor,
-          couponCode: options.couponCode ?? null,
+          // Only a code the stacking policy accepted is recorded; a code that
+          // was set aside is not on the order and must not look as if it were.
+          couponCode: couponApplied ? options.couponCode ?? null : null,
+          // Likewise the reward: the pricing sets `rewardId` only when the
+          // reward actually applies, and the snapshot freezes its effect.
+          rewardId: priced.benefits.rewardId,
+          benefitsSnapshot: priced.benefits as unknown as Prisma.InputJsonValue,
           pricingSnapshot: {
             pricedAt: new Date().toISOString(),
             lines: priced.lines.map((line) => ({

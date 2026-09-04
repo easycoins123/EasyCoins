@@ -32,6 +32,13 @@ export class CreateCheckoutSessionDto {
   @MaxLength(40)
   @Matches(/^[a-zA-Z0-9_-]*$/, { message: 'couponCode contains invalid characters' })
   couponCode?: string;
+
+  /** An earned reward to use on this order. An id; the ledger says what it is worth. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @Matches(/^[a-zA-Z0-9_-]*$/, { message: 'rewardId contains invalid characters' })
+  rewardId?: string;
 }
 
 /**

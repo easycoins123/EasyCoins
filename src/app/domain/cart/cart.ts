@@ -3,6 +3,7 @@ import {
   ProductId, RegionId, VariantId,
 } from '../common';
 import { FulfillmentMethod } from '../fulfillment';
+import { CartBenefits } from '../growth';
 
 /**
  * A cart line. It references catalog entities by id and keeps a *display* copy of
@@ -27,6 +28,13 @@ export interface CartItem {
   readonly displayVariantName: LocalizedText;
   readonly imageUrl?: string;
   readonly addedAt: IsoDateTime;
+  /**
+   * What the line delivers, stated by the server: coins across the quantity
+   * and the launch bonus on top. Absent from older lines restored from
+   * storage; a screen falls back to the catalog variant then.
+   */
+  readonly coins?: number;
+  readonly bonusCoins?: number;
 }
 
 export interface CartTotals {
@@ -41,6 +49,10 @@ export interface Cart {
   readonly items: readonly CartItem[];
   readonly totals: CartTotals;
   readonly couponCode?: string;
+  /** An earned reward the customer chose to use. The server decides whether it applies. */
+  readonly rewardId?: string;
+  /** The server's stacking decision, once the cart has been priced. */
+  readonly benefits?: CartBenefits;
   readonly updatedAt: IsoDateTime;
 }
 
@@ -49,7 +61,10 @@ export type CartIssueCode =
   | 'PRICE_CHANGED'
   | 'QUANTITY_REDUCED'
   | 'OUT_OF_STOCK'
-  | 'COUPON_INVALID';
+  | 'COUPON_INVALID'
+  | 'COUPON_NOT_COMBINABLE'
+  | 'COUPON_NOT_APPLICABLE'
+  | 'REWARD_NOT_APPLICABLE';
 
 export interface CartIssue {
   readonly code: CartIssueCode;

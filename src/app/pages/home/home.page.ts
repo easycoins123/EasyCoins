@@ -11,6 +11,8 @@ import { CoinPlan, coinProductsFrom, formatQuantity, withBestValue } from '../..
 import { LocalizePipe } from '../../core/i18n';
 import { CoinProduct, LocalizedText, Offer, Platform } from '../../domain';
 import { CampaignsFacade, CartFacade, CatalogFacade } from '../../state';
+import { GrowthFacade } from '../../state/growth.facade';
+import { TrustMetricsComponent } from '../../ui/components/growth/trust-metrics.component';
 // Imported by file rather than through the barrel: the barrel re-exports every
 // component in the library, and a chunk that imports it carries the store's
 // filters, search box and product cards to the first screen of the home page.
@@ -47,7 +49,7 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
     CommonModule, RouterLink, LocalizePipe,
     HeroComponent, IconComponent, AmountSelectorComponent, EasyCoinsCardComponent, CoinArtComponent,
     ProcessArtComponent, ReviewsSectionComponent, SkeletonGridComponent, LiveDirective, RevealDirective, StadiumComponent,
-    LaunchStripComponent, ValueCalloutsComponent, RewardsComponent,
+    LaunchStripComponent, ValueCalloutsComponent, RewardsComponent, TrustMetricsComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -149,15 +151,18 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
         <div class="tt-container">
           <div class="chapter chapter--start" ttReveal>
             <h2>סיבות לחזור</h2>
-            <p class="tt-muted">מה שפעיל מסומן פעיל. מה שבהכנה כתוב שהוא בהכנה. בלי שעונים מזויפים.</p>
+            <p class="tt-muted">EASYDROP אחרי כל הזמנה ששולמה, EASYCLUB שצובר על כל שקל, ודרופים עם שעון אמיתי בלבד. מה שפעיל מסומן פעיל.</p>
           </div>
           <tt-rewards [campaigns]="campaigns$ | async" ttReveal="1"></tt-rewards>
         </div>
       </section>
 
-      <!-- The trust rail: five things the shop keeps. -->
+      <!-- The trust rail: five things the shop keeps. Above it, the figures the
+           shop has actually earned, once the server publishes them; nothing
+           renders until it does. -->
       <div class="rail-band rail-band--late">
         <div class="tt-container">
+          <tt-trust-metrics [snapshot]="trust$ | async"></tt-trust-metrics>
           <ul class="rail" ttReveal>
             <li class="rail__item" *ngFor="let item of trust">
               <span class="rail__glyph" [class.rail__glyph--gold]="item.gold"><tt-icon [name]="item.icon" [size]="20"></tt-icon></span>
@@ -218,7 +223,7 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
             <a class="tt-btn tt-btn--buy tt-btn--lg" routerLink="/store"><tt-icon name="cart" [size]="18"></tt-icon> לקניית קוינס</a>
             <a class="tt-btn tt-btn--ghost tt-btn--lg" routerLink="/faq">שאלות נפוצות</a>
           </div>
-          <p class="close__fine"><tt-icon name="lock" [size]="13"></tt-icon> תשלום מאובטח · מחיר סופי · בונוס ההשקה בכל הזמנה</p>
+          <p class="close__fine"><tt-icon name="lock" [size]="13"></tt-icon> תשלום מאובטח · מחיר סופי · בונוס ההשקה בכל הזמנה · EASYDROP אחרי כל הזמנה ששולמה</p>
         </div>
         <div class="close__art" aria-hidden="true"><tt-coin-art variant="bundle" artKey="fut-podium" tier="legend"></tt-coin-art></div>
       </div>
@@ -340,9 +345,11 @@ export class HomePage {
   private readonly cart = inject(CartFacade);
   private readonly analytics = inject(AnalyticsService);
   private readonly campaignsFacade = inject(CampaignsFacade);
+  private readonly growth = inject(GrowthFacade);
 
   readonly gameName = STOREFRONT.focusGameName;
   readonly campaigns$ = this.campaignsFacade.campaigns$;
+  readonly trust$ = this.growth.trust$;
 
   /** Only what the shop actually keeps. Five, so the rail reads at a glance. */
   readonly trust: readonly TrustItem[] = [

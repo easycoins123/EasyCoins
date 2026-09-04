@@ -5,6 +5,7 @@ export * from './common';
 export * from './customer';
 export * from './errors';
 export * from './fulfillment';
+export * from './growth';
 export * from './marketing';
 export * from './order';
 export * from './payment';

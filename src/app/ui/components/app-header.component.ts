@@ -85,6 +85,9 @@ import { MobileNavComponent } from './mobile-nav.component';
                 <a role="menuitem" routerLink="/account/orders" [queryParams]="{ track: 1 }" (click)="closeUserMenu()">
                   <tt-icon name="delivery" [size]="16"></tt-icon> מעקב הזמנה
                 </a>
+                <a role="menuitem" routerLink="/account/club" (click)="closeUserMenu()">
+                  <tt-icon name="crown" [size]="16"></tt-icon> EASYCLUB
+                </a>
                 <a role="menuitem" routerLink="/account" (click)="closeUserMenu()">
                   <tt-icon name="user" [size]="16"></tt-icon> החשבון שלי
                 </a>

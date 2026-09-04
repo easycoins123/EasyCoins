@@ -70,16 +70,21 @@ export class AutoFulfillmentService {
         customerInstruction: { equals: Prisma.DbNull },
       },
       include: {
+        order: { select: { metadata: true } },
         orderItem: {
           include: {
             product: { select: { type: true } },
-            variant: { select: { quantityValue: true } },
+            variant: { select: { quantityValue: true, metadata: true } },
           },
         },
       },
+      orderBy: { id: 'asc' },
     });
 
     let planned = 0;
+    // Coins an applied reward adds to the order. Delivered once, with the
+    // first coin item, so two coin lines cannot each add them.
+    let rewardCoinsLeft = rewardCoinsOf(fulfillments[0]?.order.metadata);
 
     for (const fulfillment of fulfillments) {
       const { product, variant, quantity } = fulfillment.orderItem;
@@ -97,7 +102,10 @@ export class AutoFulfillmentService {
       }
 
       // Quantity multiplies the variant: two 100K packs is 200K in one delivery.
-      const coins = variant.quantityValue * quantity;
+      // The launch bonus the customer was promised on the shelf is part of the
+      // variant's metadata and is delivered with it, not remembered by hand.
+      const coins = (variant.quantityValue + launchBonusOf(variant.metadata)) * quantity + rewardCoinsLeft;
+      rewardCoinsLeft = 0;
 
       try {
         await this.issue(fulfillment.id, coins);
@@ -190,6 +198,18 @@ export class AutoFulfillmentService {
       listings: plan.trades.length,
     });
   }
+}
+
+/** Launch bonus coins on a variant, per unit. Zero when the campaign is off. */
+function launchBonusOf(metadata: unknown): number {
+  const bonus = metadata && typeof metadata === 'object' ? (metadata as Record<string, unknown>)['launchBonus'] : undefined;
+  return typeof bonus === 'number' && bonus > 0 ? Math.round(bonus) : 0;
+}
+
+/** Coins an applied reward adds to an order, from the order's own record. */
+function rewardCoinsOf(metadata: unknown): number {
+  const value = metadata && typeof metadata === 'object' ? (metadata as Record<string, unknown>)['rewardCoins'] : undefined;
+  return typeof value === 'number' && value > 0 ? Math.round(value) : 0;
 }
 
 /**

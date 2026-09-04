@@ -7,6 +7,7 @@
 | [ARCHITECTURE.md](ARCHITECTURE.md) | How the Angular application is put together and why |
 | [COMMERCE-FLOWS.md](COMMERCE-FLOWS.md) | What actually happens, end to end, when someone buys something |
 | [API-CONTRACT.md](API-CONTRACT.md) | The versioned REST contract the frontend already consumes |
+| [GROWTH-AND-REWARDS.md](GROWTH-AND-REWARDS.md) | EasyDrop, EasyClub, custom coins, referral, drops and trust: what is active, every configured value, every anti-abuse rule |
 | [BACKEND-ARCHITECTURE.md](BACKEND-ARCHITECTURE.md) | The service to be built: layers, modules, stack, transactions |
 | [DATABASE-DESIGN.md](DATABASE-DESIGN.md) | Conceptual schema, constraints and data-integrity invariants |
 | [PAYMENT-ARCHITECTURE.md](PAYMENT-ARCHITECTURE.md) | Provider abstraction, intent lifecycle, webhooks, refunds |

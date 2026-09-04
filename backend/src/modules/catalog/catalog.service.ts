@@ -6,6 +6,7 @@ import { PrismaService } from '../../database/prisma.service';
 import {
   OfferWithRelations,
   ProductWithRelations,
+  isCustomVariant,
   toGameDto,
   toOfferDto,
   toPlatformDto,
@@ -268,11 +269,15 @@ export class CatalogService {
 
     const offers = await this.prisma.offer.findMany({
       where: { productId: product.id, active: true },
-      include: { inventory: true },
+      include: { inventory: true, variant: { select: { metadata: true } } },
       orderBy: { priceAmountMinor: 'asc' },
     });
 
-    return (offers as OfferWithRelations[]).map(toOfferDto);
+    // Custom coin offers are real but belong to the customer who quoted them,
+    // not on the shelf.
+    return (offers as (OfferWithRelations & { variant: { metadata: unknown } })[])
+      .filter((offer) => !isCustomVariant(offer.variant.metadata))
+      .map(toOfferDto);
   }
 
   async getOfferById(offerId: string) {

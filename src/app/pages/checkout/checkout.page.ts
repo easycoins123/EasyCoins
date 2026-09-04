@@ -18,6 +18,7 @@ import { CartFacade, CatalogFacade, CheckoutFacade } from '../../state';
 import {
   FulfillmentBadgeComponent, IconComponent, MoneyPipe, RegionBadgeComponent,
 } from '../../ui';
+import { BenefitsNoteComponent } from '../../ui/components/growth/benefits-note.component';
 
 /**
  * Checkout.
@@ -34,7 +35,7 @@ import {
 @Component({
   selector: 'tt-checkout-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, LocalizePipe, MoneyPipe, RegionBadgeComponent, FulfillmentBadgeComponent, IconComponent],
+  imports: [CommonModule, FormsModule, RouterLink, LocalizePipe, MoneyPipe, RegionBadgeComponent, FulfillmentBadgeComponent, IconComponent, BenefitsNoteComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-container tt-section">
@@ -135,16 +136,18 @@ import {
                 </div>
               </ng-container>
 
-              <!-- What happens next, in the world's language: the squad walks
-                   the customer from payment to delivery before they commit. -->
+              <!-- What happens next, before the customer commits: the payment,
+                   the tracking page, the delivery, and what happens if it
+                   stalls. Every line is something the product actually does. -->
               <ol class="next" aria-label="מה קורה אחרי התשלום">
                 <li><span class="next__glyph" aria-hidden="true"><tt-icon name="shield" [size]="20"></tt-icon></span><span><strong>תשלום מאובטח</strong><span class="tt-faint">פרטי האשראי עוברים לספק הסליקה ולא נשמרים אצלנו.</span></span></li>
-                <li><span class="next__glyph" aria-hidden="true"><tt-icon name="truck" [size]="20"></tt-icon></span><span><strong>דף מעקב אישי</strong><span class="tt-faint">נפתח מיד אחרי התשלום, עם מספר הזמנה.</span></span></li>
+                <li><span class="next__glyph" aria-hidden="true"><tt-icon name="truck" [size]="20"></tt-icon></span><span><strong>דף מעקב אישי</strong><span class="tt-faint">נפתח מיד אחרי התשלום, עם מספר הזמנה. שם גם ה־EASYDROP שלכם.</span></span></li>
                 <li><span class="next__glyph" aria-hidden="true"><tt-icon name="coins" [size]="20"></tt-icon></span><span><strong>אספקה ועדכון</strong><span class="tt-faint">הסטטוס מתעדכן בדף ההזמנה עד שהקוינס אצלכם.</span></span></li>
+                <li><span class="next__glyph" aria-hidden="true"><tt-icon name="headset" [size]="20"></tt-icon></span><span><strong>אם משהו נתקע</strong><span class="tt-faint">ההזמנה נעצרת ומעודכנת בדף, התמיכה עונה במייל, והזמנה שלא סופקה ניתנת לביטול והחזר.</span></span></li>
               </ol>
 
               <p class="tt-hint">
-                אנחנו לעולם לא מבקשים סיסמה, קוד אימות או קודי גיבוי, בשום שלב.
+                מבקשים רק את מה שמופיע בטופס הזה: שם, אימייל ושם המשתמש הפומבי בפלטפורמה. לעולם לא סיסמה, קוד אימות או קודי גיבוי, בשום שלב.
               </p>
 
               <button type="submit" class="tt-btn tt-btn--buy tt-btn--lg tt-btn--block pay"
@@ -265,10 +268,15 @@ import {
           <div class="row row--coins" *ngIf="totalCoins() as coins">
             <span>סה״כ קוינס שתקבלו</span><span class="tt-numeric coins">{{ coins }}</span>
           </div>
+          <div class="row row--discount" *ngIf="cart.totals().discount.amountMinor > 0">
+            <span>הנחה / הטבה</span><span class="tt-numeric">−{{ cart.totals().discount | money }}</span>
+          </div>
           <div class="row total">
             <span>לתשלום</span>
             <span class="tt-price tt-numeric">{{ cart.totals().total | money }}</span>
           </div>
+          <!-- Which benefit is on this order and which is not, in the server's words. -->
+          <tt-benefits-note [benefits]="cart.benefits()"></tt-benefits-note>
 
           <a class="back" routerLink="/cart">
             <tt-icon name="chevron" [size]="14" dir="auto"></tt-icon>חזרה לעגלה
@@ -302,7 +310,7 @@ import {
     /* The amount lives on the action. */
     .pay { justify-content: space-between; padding-inline: var(--tt-space-4); }
     .summary__main { display: flex; flex-direction: column; gap: var(--tt-space-3); padding: var(--tt-space-5); }
-    .next { display: grid; gap: var(--tt-space-3); grid-template-columns: repeat(3, minmax(0, 1fr)); margin: var(--tt-space-2) 0 var(--tt-space-4); padding: 0; list-style: none; }
+    .next { display: grid; gap: var(--tt-space-3); grid-template-columns: repeat(2, minmax(0, 1fr)); margin: var(--tt-space-2) 0 var(--tt-space-4); padding: 0; list-style: none; }
     .next li { display: flex; flex-direction: column; gap: var(--tt-space-2); padding: var(--tt-space-3); border: 1px solid var(--tt-border); border-radius: var(--tt-radius-md); background: var(--tt-surface-2); font-size: var(--tt-text-sm); }
     .next li strong { display: block; margin-block-end: 2px; }
     .next li .tt-faint { display: block; line-height: var(--tt-leading-snug); }
@@ -376,7 +384,9 @@ import {
     .line__meta { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; font-size: var(--tt-text-xs); color: var(--tt-text-muted); }
     .row--coins { display: flex; justify-content: space-between; gap: var(--tt-space-3); padding: var(--tt-space-2) var(--tt-space-3); margin-block-end: var(--tt-space-2); border: 1px solid var(--tt-gold-600); border-radius: var(--tt-radius-md); background: var(--tt-gold-tint); font-weight: 700; font-size: var(--tt-text-sm); }
     .row--coins .coins { color: var(--tt-gold-400); font-size: var(--tt-text-lg); font-weight: 900; }
-    .row.total { display: flex; justify-content: space-between; font-weight: 700; padding-block-start: var(--tt-space-2); border-block-start: 1px solid var(--tt-border); margin-block-end: var(--tt-space-3); }
+    .row--discount { display: flex; justify-content: space-between; font-size: var(--tt-text-sm); color: var(--tt-text-muted); }
+    .row.total { display: flex; justify-content: space-between; font-weight: 700; padding-block-start: var(--tt-space-2); border-block-start: 1px solid var(--tt-border); margin-block-end: var(--tt-space-2); }
+    tt-benefits-note { margin-block-end: var(--tt-space-2); }
     .tt-check .tt-hint { display: block; }
     .tt-check-field { display: flex; flex-direction: column; gap: var(--tt-space-2); }
     .waiting { display: flex; flex-direction: column; gap: var(--tt-space-3); margin-block-end: var(--tt-space-4); }
@@ -418,6 +428,12 @@ export class CheckoutPage implements OnDestroy {
   );
 
   readonly totalCoins = computed<string | undefined>(() => {
+    // The server states each line's coins and any reward coins; a line from
+    // older storage falls back to the catalog variant.
+    const fromServer = this.cart.totalCoins();
+    if (fromServer !== undefined) {
+      return formatQuantity(fromServer);
+    }
     let sum = 0;
     let any = false;
     for (const item of this.cart.items()) {
@@ -427,7 +443,7 @@ export class CheckoutPage implements OnDestroy {
         sum += (variant.quantityValue + launchBonusOf(variant)) * item.quantity;
       }
     }
-    return any ? formatQuantity(sum) : undefined;
+    return any ? formatQuantity(sum + (this.cart.benefits()?.rewardCoins ?? 0)) : undefined;
   });
 
   /** True once opening the session has taken longer than a customer expects. */

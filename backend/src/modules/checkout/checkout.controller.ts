@@ -37,6 +37,7 @@ export class CheckoutController {
     const checkout = await this.checkout.createSession(body.items, {
       session,
       couponCode: body.couponCode,
+      rewardId: body.rewardId,
     });
     return toCheckoutSessionDto(checkout);
   }

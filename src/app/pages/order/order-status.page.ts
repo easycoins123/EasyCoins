@@ -9,11 +9,15 @@ import { LocalizePipe } from '../../core/i18n';
 import {
   AppError, AppErrorKind, Fulfillment, Order, OrderStatus, isTerminalOrderStatus, toAppError,
 } from '../../domain';
+import { formatQuantity } from '../../core/value';
 import { CampaignsFacade, CatalogFacade, OrderFacade } from '../../state';
 import {
   DeliveryPayloadComponent, ErrorStateComponent, FulfillmentBadgeComponent, MoneyPipe,
   OrderStatusTimelineComponent, PlatformBadgeComponent, RegionBadgeComponent, IconComponent,
 } from '../../ui';
+import { BenefitsNoteComponent } from '../../ui/components/growth/benefits-note.component';
+import { EasyDropRevealComponent } from '../../ui/components/growth/easydrop-reveal.component';
+import { ReviewFormComponent } from '../../ui/components/growth/review-form.component';
 
 /** How often a still-moving order re-checks its status. */
 const POLL_INTERVAL_MS = 2500;
@@ -29,7 +33,8 @@ const POLL_INTERVAL_MS = 2500;
   imports: [
     CommonModule, RouterLink, LocalizePipe, MoneyPipe,
     OrderStatusTimelineComponent, DeliveryPayloadComponent, FulfillmentBadgeComponent,
-    PlatformBadgeComponent, RegionBadgeComponent, ErrorStateComponent, IconComponent],
+    PlatformBadgeComponent, RegionBadgeComponent, ErrorStateComponent, IconComponent,
+    EasyDropRevealComponent, BenefitsNoteComponent, ReviewFormComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-container tt-section">
@@ -67,6 +72,10 @@ const POLL_INTERVAL_MS = 2500;
             </span>
           </div>
 
+          <!-- EASYDROP: the guaranteed reward a paid order earns. The component
+               asks the server; a refresh finds the same card open. -->
+          <tt-easydrop-reveal *ngIf="isPaid(vm.order.status)" [orderId]="vm.order.id"></tt-easydrop-reveal>
+
           <!-- The opening squad: shown only while the launch bonus is live, and
                only on a fresh success. Nothing here is a balance or a count. -->
           <section class="squad" *ngIf="celebrate && (launchActive$ | async)">
@@ -82,7 +91,7 @@ const POLL_INTERVAL_MS = 2500;
               <ul class="squad__next">
                 <li><tt-icon name="delivery" [size]="14"></tt-icon> הסטטוס מתעדכן כאן, מהתשלום ועד האספקה</li>
                 <li><tt-icon name="headset" [size]="14"></tt-icon> שאלה על ההזמנה? <a routerLink="/support">התמיכה</a> עונה במייל</li>
-                <li><tt-icon name="bolt" [size]="14"></tt-icon> הדרופ הראשון בהכנה. <a routerLink="/deals">דף המבצעים</a> יתעדכן ראשון</li>
+                <li><tt-icon name="gift" [size]="14"></tt-icon> ה־EASYDROP שלכם נפתח למעלה; ההטבה נשמרת ב־<a routerLink="/account/club">EASYCLUB</a></li>
               </ul>
             </div>
           </section>
@@ -120,11 +129,15 @@ const POLL_INTERVAL_MS = 2500;
               <div class="tt-ticket__main summary__main">
               <p class="tt-ticket__eyebrow"><span>כרטיס · ההזמנה שלך</span><span class="tt-numeric">{{ vm.order.reference }}</span></p>
               <h2>סיכום</h2>
+              <div class="row row--coins" *ngIf="coinsOf(vm.order) as coins">
+                <span>סה״כ קוינס בהזמנה</span><span class="tt-numeric coins">{{ coins }}</span>
+              </div>
               <div class="row"><span>סכום ביניים</span><span>{{ vm.order.totals.subtotal | money }}</span></div>
               <div class="row" *ngIf="vm.order.totals.discount.amountMinor > 0">
-                <span>הנחה</span><span>−{{ vm.order.totals.discount | money }}</span>
+                <span>הנחה / הטבה</span><span>−{{ vm.order.totals.discount | money }}</span>
               </div>
               <div class="row total"><span>שולם</span><span>{{ vm.order.totals.total | money }}</span></div>
+              <tt-benefits-note [benefits]="vm.order.benefits"></tt-benefits-note>
               <a class="tt-btn tt-btn--ghost tt-btn--block" routerLink="/support">צריך עזרה?</a>
               <a class="tt-btn tt-btn--quiet tt-btn--block" routerLink="/store">המשך קנייה</a>
               </div>
@@ -134,6 +147,9 @@ const POLL_INTERVAL_MS = 2500;
               </div>
             </aside>
           </div>
+
+          <!-- Delivered: the one moment a verified review can be written. -->
+          <tt-review-form *ngIf="vm.order.status === 'FULFILLED'" [orderId]="vm.order.id"></tt-review-form>
         </ng-container>
       </ng-template>
 
@@ -171,7 +187,10 @@ const POLL_INTERVAL_MS = 2500;
     .line-head { display: flex; justify-content: space-between; gap: var(--tt-space-3); margin-block-end: var(--tt-space-2); }
     .summary h2 { margin-block-start: 0; }
     .row { display: flex; justify-content: space-between; font-size: var(--tt-text-sm); margin-block-end: var(--tt-space-2); }
-    .row.total { font-weight: 700; font-size: var(--tt-text-md); padding-block-start: var(--tt-space-2); border-block-start: 1px solid var(--tt-border); margin-block-end: var(--tt-space-4); }
+    .row.total { font-weight: 700; font-size: var(--tt-text-md); padding-block-start: var(--tt-space-2); border-block-start: 1px solid var(--tt-border); margin-block-end: var(--tt-space-2); }
+    .row--coins { padding: var(--tt-space-2) var(--tt-space-3); border: 1px solid var(--tt-gold-600); border-radius: var(--tt-radius-md); background: var(--tt-gold-tint); font-weight: 700; }
+    .row--coins .coins { color: var(--tt-gold-400); font-size: var(--tt-text-lg); font-weight: 900; }
+    tt-benefits-note { margin-block-end: var(--tt-space-3); }
   `],
 })
 export class OrderStatusPage {
@@ -188,7 +207,21 @@ export class OrderStatusPage {
 
   /** The order's own lines say whether a bonus was promised; the snapshot, not today's catalog. */
   hasBonus(order: Order): boolean {
-    return order.items.some((item) => /בונוס/.test(item.displayVariantName.he ?? '') || /bonus/i.test(item.displayVariantName.en ?? ''));
+    return order.items.some((item) => (item.bonusCoins ?? 0) > 0 || /בונוס/.test(item.displayVariantName.he ?? '') || /bonus/i.test(item.displayVariantName.en ?? ''));
+  }
+
+  /** Coins the order delivers: lines, launch bonus and any reward, from the order's record. */
+  coinsOf(order: Order): string | undefined {
+    const lines = order.items.reduce((sum, item) => sum + (item.coins ?? 0) + (item.bonusCoins ?? 0), 0);
+    const total = lines + (order.rewardCoins ?? 0);
+    return total > 0 ? formatQuantity(total) : undefined;
+  }
+
+  /** Paid, or past paid: the states in which an EasyDrop exists. */
+  isPaid(status: OrderStatus): boolean {
+    return [
+      OrderStatus.Paid, OrderStatus.Processing, OrderStatus.FulfillmentPending, OrderStatus.FulfillmentProcessing, OrderStatus.Fulfilled,
+    ].includes(status);
   }
 
   /**

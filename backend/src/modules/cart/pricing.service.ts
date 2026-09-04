@@ -4,6 +4,9 @@ import type { Inventory, Offer, Platform, Product, ProductVariant, Region } from
 import { badRequestError, notFoundError } from '../../common/errors/api-error';
 import { CheckoutRequirement, sanitizeRequirements } from '../../common/checkout/requirement-keys';
 import { PrismaService } from '../../database/prisma.service';
+import { BenefitKind, BenefitRequest, resolveBenefits } from '../growth/benefit-policy';
+import { RewardOwner, localizedOf } from '../growth/growth-shared';
+import { RewardsService } from '../growth/rewards.service';
 
 /**
  * The fields every order needs, whatever is in it.
@@ -84,7 +87,45 @@ export interface PricedLine {
   readonly unitPriceMinor: number;
   readonly totalPriceMinor: number;
   readonly currency: string;
+  /** Coins the line delivers before any bonus; zero for anything that is not game currency. */
+  readonly coins: number;
+  /** Launch bonus coins the line delivers on top, across its quantity. */
+  readonly bonusCoins: number;
 }
+
+/** A benefit that is on the order, and what it does to it. */
+export interface AppliedBenefit {
+  readonly kind: BenefitKind;
+  readonly label: { he: string; en: string };
+  readonly effect: { readonly discountMinor?: number; readonly coins?: number };
+  readonly rewardId?: string;
+  readonly couponCode?: string;
+}
+
+/** A benefit that was asked for and set aside, with the reason in the customer's words. */
+export interface RejectedBenefit {
+  readonly kind: BenefitKind;
+  readonly label: { he: string; en: string };
+  readonly code: string;
+  readonly reason: { he: string; en: string };
+  readonly rewardId?: string;
+  readonly couponCode?: string;
+}
+
+/**
+ * The stacking decision for a cart, made once here and repeated by every
+ * screen. `rewardId` is set only when the reward actually applies, so a
+ * checkout or an order can never hold a reward the policy refused.
+ */
+export interface CartBenefits {
+  readonly applied: readonly AppliedBenefit[];
+  readonly rejected: readonly RejectedBenefit[];
+  readonly rewardId: string | null;
+  /** Extra coins an applied reward adds to the delivery. */
+  readonly rewardCoins: number;
+}
+
+export const NO_BENEFITS: CartBenefits = { applied: [], rejected: [], rewardId: null, rewardCoins: 0 };
 
 export interface PricedCart {
   readonly lines: readonly PricedLine[];
@@ -93,6 +134,14 @@ export interface PricedCart {
   readonly discountMinor: number;
   readonly totalMinor: number;
   readonly issues: readonly CartIssue[];
+  readonly benefits: CartBenefits;
+}
+
+export interface PricingOptions {
+  readonly couponCode?: string | null;
+  /** An earned reward the customer chose to use. Ownership is checked against `owner`. */
+  readonly rewardId?: string | null;
+  readonly owner?: RewardOwner | null;
 }
 
 export interface CartIssue {
@@ -100,6 +149,9 @@ export interface CartIssue {
   readonly offerId?: string;
   readonly message: { he: string; en: string };
 }
+
+const LAUNCH_BONUS_LABEL = { he: 'בונוס ההשקה', en: 'Launch bonus' };
+const NOBODY: RewardOwner = { customerId: null, sessionId: null };
 
 /**
  * Pricing, and the only place allowed to decide what anything costs.
@@ -113,18 +165,21 @@ export interface CartIssue {
  * order, which is what stops the three from disagreeing.
  */
 /**
- * True when the line's variant carries launch bonus coins, set by the catalog
- * seed as `metadata.launchBonus`. The single fact behind "one benefit per order".
+ * Launch bonus coins on a variant, per unit, set by the catalog seed as
+ * `metadata.launchBonus`. Zero when the campaign is off. A line that carries
+ * a bonus is the LAUNCH_BONUS benefit the stacking matrix reasons about.
  */
-function carriesLaunchBonus(line: PricedLine): boolean {
-  const metadata = (line.offer as { variant?: { metadata?: unknown } }).variant?.metadata;
+function launchBonusOf(metadata: unknown): number {
   const bonus = metadata && typeof metadata === 'object' ? (metadata as Record<string, unknown>)['launchBonus'] : undefined;
-  return typeof bonus === 'number' && bonus > 0;
+  return typeof bonus === 'number' && bonus > 0 ? Math.round(bonus) : 0;
 }
 
 @Injectable()
 export class PricingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly rewards: RewardsService,
+  ) {}
 
   /**
    * Validates one requested line and prices it.
@@ -153,7 +208,7 @@ export class PricingService {
    */
   async priceCart(
     requested: readonly RequestedLine[],
-    options: { couponCode?: string | null } = {},
+    options: PricingOptions = {},
   ): Promise<PricedCart> {
     if (requested.length > MAX_CART_LINES) {
       throw badRequestError(
@@ -228,51 +283,112 @@ export class PricingService {
       lines.push(this.toLine(offer, capped));
     }
 
-    return this.total(lines, options.couponCode ?? null, issues);
+    return this.total(lines, options, issues);
   }
 
   /**
-   * Adds up priced lines. The only arithmetic that produces a total.
+   * Adds up priced lines and settles which benefits apply. The only arithmetic
+   * that produces a total, and the only place the stacking matrix is asked.
    *
    * Integer minor units throughout, so there is no floating-point rounding to
-   * argue about at the till.
+   * argue about at the till. The matrix lives in `growth/benefit-policy.ts`;
+   * here its answer is turned into money, coins and the issues the customer
+   * reads: which benefit is on the order, which was set aside, and why.
    */
-  private async totalise(
-    lines: readonly PricedLine[],
-    couponCode: string | null,
-  ): Promise<{ currency: string; subtotalMinor: number; discountMinor: number; totalMinor: number }> {
-    const currency = lines[0]?.currency ?? 'ILS';
-    const subtotalMinor = lines.reduce((sum, line) => sum + line.totalPriceMinor, 0);
-    // One benefit per order. A line that already carries the launch bonus takes
-    // no code, whatever the code is; the storefront only repeats this answer.
-    const discountMinor = lines.some(carriesLaunchBonus) ? 0 : await this.discountFor(subtotalMinor, couponCode);
-
-    return {
-      currency,
-      subtotalMinor,
-      discountMinor,
-      // Clamped so a misconfigured promotion can never produce a negative total,
-      // which is a refund dressed up as a purchase.
-      totalMinor: Math.max(0, subtotalMinor - discountMinor),
-    };
-  }
-
   private async total(
     lines: readonly PricedLine[],
-    couponCode: string | null,
+    options: PricingOptions,
     issues: CartIssue[],
   ): Promise<PricedCart> {
-    const totals = await this.totalise(lines, couponCode);
+    const currency = lines[0]?.currency ?? 'ILS';
+    const subtotalMinor = lines.reduce((sum, line) => sum + line.totalPriceMinor, 0);
+    const couponCode = options.couponCode?.trim() || null;
+    const hasLines = lines.length > 0;
+    const launchCoins = lines.reduce((sum, line) => sum + line.bonusCoins, 0);
 
-    if (couponCode && lines.length > 0 && lines.some(carriesLaunchBonus)) {
-      issues.push({
-        code: 'COUPON_NOT_COMBINABLE',
-        message: {
-          he: 'בונוס ההשקה כבר בהזמנה. הטבה אחת להזמנה.',
-          en: 'The launch bonus is already on this order. One benefit per order.',
-        },
+    const requests: BenefitRequest[] = [];
+    const rejected: RejectedBenefit[] = [];
+
+    if (launchCoins > 0) {
+      requests.push({ kind: 'LAUNCH_BONUS', label: LAUNCH_BONUS_LABEL });
+    }
+    if (couponCode && hasLines) {
+      requests.push({ kind: 'COUPON', label: { he: couponCode.toUpperCase(), en: couponCode.toUpperCase() } });
+    }
+
+    // An earned reward is checked for ownership and eligibility before the
+    // matrix sees it. A reward that is not the caller's is simply not found.
+    let reward: Awaited<ReturnType<RewardsService['redeemable']>>['reward'] = null;
+    if (options.rewardId && hasLines) {
+      const check = await this.rewards.redeemable(options.owner ?? NOBODY, options.rewardId, {
+        subtotalMinor,
+        hasCoinLine: lines.some((line) => line.coins > 0),
       });
-    } else if (couponCode && totals.discountMinor === 0 && lines.length > 0) {
+      if (check.eligible && check.reward) {
+        reward = check.reward;
+        requests.push({ kind: 'REWARD', label: localizedOf(reward.title) });
+      } else {
+        rejected.push({
+          kind: 'REWARD',
+          label: check.reward ? localizedOf(check.reward.title) : { he: 'ההטבה', en: 'The reward' },
+          code: check.reason?.code ?? 'REWARD_NOT_AVAILABLE',
+          reason: { he: check.reason?.he ?? 'ההטבה אינה זמינה.', en: check.reason?.en ?? 'The reward is not available.' },
+          rewardId: options.rewardId,
+        });
+      }
+    }
+
+    const resolution = resolveBenefits(requests);
+    for (const entry of resolution.rejected) {
+      rejected.push({
+        kind: entry.kind,
+        label: entry.label,
+        code: entry.code === 'NOT_COMBINABLE' ? `${entry.kind}_NOT_COMBINABLE` : 'ONE_PER_ORDER',
+        reason: entry.reason,
+        ...(entry.kind === 'COUPON' && couponCode ? { couponCode } : {}),
+        ...(entry.kind === 'REWARD' && reward ? { rewardId: reward.id } : {}),
+      });
+    }
+
+    const couponApplied = resolution.applied.some((entry) => entry.kind === 'COUPON');
+    const rewardApplied = reward !== null && resolution.applied.some((entry) => entry.kind === 'REWARD');
+    const couponDiscount = couponApplied ? await this.discountFor(subtotalMinor, couponCode) : 0;
+
+    let rewardCredit = 0;
+    let rewardCoins = 0;
+    if (rewardApplied && reward) {
+      if (reward.kind === 'NEXT_ORDER_CREDIT') {
+        rewardCredit = Math.max(0, Math.min(reward.value, subtotalMinor - couponDiscount));
+      } else if (reward.kind === 'NEXT_ORDER_COINS') {
+        rewardCoins = reward.value;
+      }
+    }
+
+    const discountMinor = couponDiscount + rewardCredit;
+    const applied: AppliedBenefit[] = [];
+    if (launchCoins > 0) {
+      applied.push({ kind: 'LAUNCH_BONUS', label: LAUNCH_BONUS_LABEL, effect: { coins: launchCoins } });
+    }
+    if (couponApplied && couponDiscount > 0 && couponCode) {
+      applied.push({ kind: 'COUPON', label: { he: couponCode.toUpperCase(), en: couponCode.toUpperCase() }, effect: { discountMinor: couponDiscount }, couponCode });
+    }
+    if (rewardApplied && reward) {
+      applied.push({
+        kind: 'REWARD',
+        label: localizedOf(reward.title),
+        effect: { ...(rewardCredit > 0 ? { discountMinor: rewardCredit } : {}), ...(rewardCoins > 0 ? { coins: rewardCoins } : {}) },
+        rewardId: reward.id,
+      });
+    }
+
+    for (const entry of rejected) {
+      if (entry.kind === 'COUPON') {
+        issues.push({ code: 'COUPON_NOT_COMBINABLE', message: entry.reason });
+      } else if (entry.kind === 'REWARD') {
+        issues.push({ code: 'REWARD_NOT_APPLICABLE', message: entry.reason });
+      }
+    }
+    if (couponApplied && couponDiscount === 0 && hasLines) {
       issues.push({
         code: 'COUPON_NOT_APPLICABLE',
         message: {
@@ -282,7 +398,22 @@ export class PricingService {
       });
     }
 
-    return { lines, ...totals, issues };
+    return {
+      lines,
+      currency,
+      subtotalMinor,
+      discountMinor,
+      // Clamped so a misconfigured promotion can never produce a negative total,
+      // which is a refund dressed up as a purchase.
+      totalMinor: Math.max(0, subtotalMinor - discountMinor),
+      issues,
+      benefits: {
+        applied,
+        rejected,
+        rewardId: rewardApplied && reward ? reward.id : null,
+        rewardCoins,
+      },
+    };
   }
 
   /**
@@ -326,6 +457,7 @@ export class PricingService {
 
   private toLine(offer: PricedOffer, quantity: number): PricedLine {
     const unitPriceMinor = offer.priceAmountMinor;
+    const isCoins = offer.product.type === 'GAME_CURRENCY';
     return {
       // Stable across requests for the same offer, so the client can reconcile
       // a line without the server holding cart state.
@@ -335,6 +467,11 @@ export class PricingService {
       unitPriceMinor,
       totalPriceMinor: unitPriceMinor * quantity,
       currency: offer.priceCurrency,
+      // Stated by the server so the cart can say what it delivers without
+      // looking the variant up again, and so a custom amount, whose variant is
+      // hidden from the catalog, still shows its coins.
+      coins: isCoins ? (offer.variant.quantityValue ?? 0) * quantity : 0,
+      bonusCoins: isCoins ? launchBonusOf(offer.variant.metadata) * quantity : 0,
     };
   }
 

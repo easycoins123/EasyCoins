@@ -95,6 +95,19 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import('./pages/account/account-security.page').then((m) => m.AccountSecurityPage),
   },
   {
+    // EASYCLUB is computed from the customer's paid orders, so it needs one.
+    path: 'account/club',
+    title: brandTitle('EASYCLUB'),
+    canActivate: [authRequiredGuard],
+    loadComponent: () => import('./pages/account/club.page').then((m) => m.ClubPage),
+  },
+  {
+    // A friend's referral link. Records the attribution and continues home.
+    path: 'r/:code',
+    title: brandTitle(),
+    loadComponent: () => import('./pages/referral/referral-landing.page').then((m) => m.ReferralLandingPage),
+  },
+  {
     path: 'account/order/:orderId',
     loadComponent: () => import('./pages/order/order-status.page').then((m) => m.OrderStatusPage),
   },

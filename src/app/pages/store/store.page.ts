@@ -11,16 +11,20 @@ import { STOREFRONT } from '../../core/brand';
 import { isCurated, roleLabel } from '../../core/commerce';
 import { coinProductsFrom, formatQuantity, withBestValue } from '../../core/value';
 import {
-  AppError, CatalogQuery, CatalogSort, CoinProduct, DEFAULT_PAGE_SIZE, Offer, Page, Platform, Product,
+  AppError, CatalogQuery, CatalogSort, CoinProduct, CustomCoinsQuote, DEFAULT_PAGE_SIZE, Offer, Page, Platform, Product,
   ProductDetail, ProductType, toAppError,
 } from '../../domain';
 import { CartFacade, CatalogFacade, CatalogLookups } from '../../state';
+import { GrowthFacade } from '../../state/growth.facade';
 import {
   EasyCoinsCardComponent, EmptyStateComponent, ErrorStateComponent, FilterBarComponent,
   FilterChange, FilterGroup, IconComponent, ProductCardComponent, RevealDirective,
   SkeletonGridComponent, StadiumComponent,
 } from '../../ui';
 import { CoinLadderComponent } from '../../ui/components/commerce/coin-ladder.component';
+import { CustomCoinsComponent } from '../../ui/components/growth/custom-coins.component';
+import { PlayerGoalComponent } from '../../ui/components/growth/player-goal.component';
+import { StoreLane, StoreLanesComponent } from '../../ui/components/growth/store-lanes.component';
 
 interface StoreViewModel {
   readonly page: Page<Product>;
@@ -52,6 +56,7 @@ interface StoreViewModel {
     CommonModule,
     ProductCardComponent, EasyCoinsCardComponent, SkeletonGridComponent, EmptyStateComponent,
     ErrorStateComponent, FilterBarComponent, IconComponent, RevealDirective, StadiumComponent, CoinLadderComponent,
+    StoreLanesComponent, CustomCoinsComponent, PlayerGoalComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -99,7 +104,11 @@ interface StoreViewModel {
           </tt-empty-state>
 
           <h2 class="tt-visually-hidden">תוצאות</h2>
-          <div class="tt-grid shelf" *ngIf="vm.curated.length > 0">
+
+          <!-- Everything the store sells or does, each a real destination. -->
+          <tt-store-lanes class="lanes" [lanes]="lanes(vm)"></tt-store-lanes>
+
+          <div class="tt-grid shelf" id="coins" *ngIf="vm.curated.length > 0">
             <tt-easycoins-card *ngFor="let product of vm.curated; let i = index; trackBy: trackByOffer"
                                [ttReveal]="i"
                                [product]="product"
@@ -115,6 +124,25 @@ interface StoreViewModel {
           <section class="ladder" *ngIf="vm.products.length > 0" ttReveal>
             <h2 class="ladder__title">כל הגדלים <span class="tt-muted">· {{ vm.products.length }} חבילות, מ־{{ smallest(vm.products) }} עד {{ largest(vm.products) }}</span></h2>
             <tt-coin-ladder [products]="vm.products" [busy]="adding()" (buy)="buyOffer($event)"></tt-coin-ladder>
+          </section>
+
+          <!-- Custom coins: an exact amount or a budget, priced by the server. -->
+          <section class="lane-block" *ngIf="(rules$ | async) as rules" ttReveal>
+            <tt-custom-coins *ngIf="rules.enabled && vm.coins"
+                             [rules]="rules"
+                             [platformOptions]="coinPlatforms(vm)"
+                             [busy]="adding()"
+                             [presetAmount]="goalAmount()"
+                             (add)="buyQuote($event)"></tt-custom-coins>
+          </section>
+
+          <!-- Player goal: how much is missing, and the smallest purchase that covers it. -->
+          <section class="lane-block" *ngIf="vm.products.length > 0" ttReveal>
+            <tt-player-goal [products]="vm.products"
+                            [stepCoins]="(rules$ | async)?.stepCoins ?? 10000"
+                            [busy]="adding()"
+                            (buy)="buyOffer($event)"
+                            (custom)="toCustom($event)"></tt-player-goal>
           </section>
 
           <div class="tt-grid others" *ngIf="vm.others.length > 0">
@@ -137,6 +165,8 @@ interface StoreViewModel {
     </div>
   `,
   styles: [`
+    .lanes { display: block; margin-block-end: var(--tt-space-4); }
+    .lane-block { margin-block-start: var(--tt-space-6); }
     .ladder { margin-block-start: var(--tt-space-7); }
     /* On a phone the fifth card spans the row as the flagship instead of sitting alone. */
     @media (max-width: 700px) { .shelf > :last-child:nth-child(odd) { grid-column: 1 / -1; } }
@@ -186,8 +216,12 @@ export class StorePage {
   private readonly cart = inject(CartFacade);
   private readonly analytics = inject(AnalyticsService);
   private readonly route = inject(ActivatedRoute);
+  private readonly growth = inject(GrowthFacade);
 
   readonly gameName = STOREFRONT.focusGameName;
+  readonly rules$ = this.growth.customRules$;
+  /** An amount the player goal handed to the custom-coins box. */
+  readonly goalAmount = signal<number | null>(null);
 
   private readonly querySubject = new BehaviorSubject<CatalogQuery>({
     sort: 'relevance',
@@ -273,14 +307,52 @@ export class StorePage {
   }
 
   buyOffer(offer: Offer): void {
+    this.buyOfferId(offer.id);
+  }
+
+  /** A custom quote carries a real offer id; it is added like any other. */
+  buyQuote(quote: CustomCoinsQuote): void {
+    this.buyOfferId(quote.offerId);
+  }
+
+  private buyOfferId(offerId: string): void {
     if (this.adding()) {
       return;
     }
     this.adding.set(true);
-    this.cart.add({ offerId: offer.id, quantity: 1 }).subscribe({
+    this.cart.add({ offerId, quantity: 1 }).subscribe({
       complete: () => this.adding.set(false),
       error: () => this.adding.set(false),
     });
+  }
+
+  /** The player goal asked for an exact amount: hand it to the custom box and go there. */
+  toCustom(amount: number): void {
+    this.goalAmount.set(amount);
+    setTimeout(() => document.getElementById('custom')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
+
+  /** The platforms the coin product is sold on, for the custom-coins chooser. */
+  coinPlatforms(vm: StoreViewModel): readonly Platform[] {
+    return (vm.coins?.product.platformIds ?? [])
+      .map((id) => vm.lookups.platforms.get(id))
+      .filter((platform): platform is Platform => platform !== undefined);
+  }
+
+  /** The store's lanes: only what can actually be bought or used today. */
+  lanes(vm: StoreViewModel): readonly StoreLane[] {
+    const lanes: StoreLane[] = [
+      { id: 'coins', label: 'חבילות קוינס', note: `${vm.products.length || 11} גדלים, מחיר סופי`, icon: 'coin', href: '#coins', state: 'live' },
+      { id: 'custom', label: 'כמות מותאמת', note: 'כמות מדויקת או תקציב', icon: 'edit', href: '#custom', state: 'live' },
+      { id: 'goal', label: 'PLAYER GOAL', note: 'כמה חסר לי?', icon: 'football', href: '#goal', state: 'live' },
+      { id: 'drops', label: 'DROP ZONE', note: 'דרופים עם שעון אמיתי', icon: 'bolt', href: '/deals', state: 'live' },
+      { id: 'club', label: 'EASYCLUB', note: 'נקודות, דרגות, הטבות', icon: 'crown', href: '/account/club', state: 'live' },
+    ];
+    const sbc = vm.others.find((product) => product.slug === 'ea-fc-sbc-service');
+    if (sbc) {
+      lanes.push({ id: 'sbc', label: 'שירות SBC', note: 'נציג משלים אתגר, בתיאום', icon: 'gamepad', href: `/products/${sbc.slug}`, state: 'live' });
+    }
+    return lanes;
   }
 
   isEmpty(vm: StoreViewModel): boolean {

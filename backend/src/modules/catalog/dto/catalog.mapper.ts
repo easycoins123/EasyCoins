@@ -167,12 +167,22 @@ export type ProductWithRelations = Product & {
 };
 
 /**
+ * A variant minted for one customer's custom coin amount. Real and
+ * purchasable, but not a bundle on the shelf: the catalog listing hides it so
+ * the ladder stays the ladder. The offer is still served by id.
+ */
+export function isCustomVariant(metadata: unknown): boolean {
+  return typeof metadata === 'object' && metadata !== null && (metadata as Record<string, unknown>)['custom'] === true;
+}
+
+/**
  * Platform, region and fulfillment lists are derived from the product's live
  * offers. Storing them separately was removed in Phase B precisely because the
  * copy could claim a platform no offer actually served.
  */
 export function toProductDto(product: ProductWithRelations) {
-  const sellable = product.offers.filter((offer) => offer.active);
+  const customVariantIds = new Set(product.variants.filter((variant) => isCustomVariant(variant.metadata)).map((variant) => variant.id));
+  const sellable = product.offers.filter((offer) => offer.active && !customVariantIds.has(offer.variantId));
 
   const cheapest = sellable.reduce<OfferWithRelations | null>(
     (best, offer) =>
@@ -192,7 +202,7 @@ export function toProductDto(product: ProductWithRelations) {
     regionIds: [...new Set(sellable.map((offer) => offer.regionId))],
     images: Array.isArray(product.images) ? product.images : [],
     metadata: (product.metadata ?? {}) as Record<string, string | number | boolean>,
-    variants: product.variants.filter((variant) => variant.active).map(toVariantDto),
+    variants: product.variants.filter((variant) => variant.active && !customVariantIds.has(variant.id)).map(toVariantDto),
     fulfillmentMethods: [...new Set(sellable.map((offer) => offer.fulfillmentMethod))],
     tags: product.tags,
     fromPrice: cheapest
@@ -210,8 +220,9 @@ export function toProductDto(product: ProductWithRelations) {
 }
 
 export function toProductDetailDto(product: ProductWithRelations) {
+  const customVariantIds = new Set(product.variants.filter((variant) => isCustomVariant(variant.metadata)).map((variant) => variant.id));
   return {
     product: toProductDto(product),
-    offers: product.offers.filter((offer) => offer.active).map(toOfferDto),
+    offers: product.offers.filter((offer) => offer.active && !customVariantIds.has(offer.variantId)).map(toOfferDto),
   };
 }

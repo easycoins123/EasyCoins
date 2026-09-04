@@ -5,13 +5,13 @@ import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import {
   CartApiService, CatalogApiService, CheckoutApiService, CustomerApiService,
-  FulfillmentApiService, OrderApiService, PaymentApiService, ProductApiService,
+  FulfillmentApiService, GrowthApiService, OrderApiService, PaymentApiService, ProductApiService,
   PromotionApiService, ReviewApiService, SupportApiService,
 } from './api';
 import { CorrelationInterceptor } from './http';
 import {
   HttpCartApiService, HttpCatalogApiService, HttpCheckoutApiService, HttpCustomerApiService,
-  HttpFulfillmentApiService, HttpOrderApiService, HttpPaymentApiService, HttpProductApiService,
+  HttpFulfillmentApiService, HttpGrowthApiService, HttpOrderApiService, HttpPaymentApiService, HttpProductApiService,
   HttpPromotionApiService, HttpReviewApiService, HttpSupportApiService,
 } from './http';
 
@@ -57,6 +57,7 @@ export function bind(
     promotion: Type<PromotionApiService>;
     review: Type<ReviewApiService>;
     support: Type<SupportApiService>;
+    growth: Type<GrowthApiService>;
   },
 ): Provider[] {
   return [
@@ -71,6 +72,7 @@ export function bind(
     { provide: PromotionApiService, useClass: implementations.promotion },
     { provide: ReviewApiService, useClass: implementations.review },
     { provide: SupportApiService, useClass: implementations.support },
+    { provide: GrowthApiService, useClass: implementations.growth },
   ];
 }
 
@@ -88,6 +90,7 @@ export function provideHttpDataLayer(): Provider[] {
       promotion: HttpPromotionApiService,
       review: HttpReviewApiService,
       support: HttpSupportApiService,
+      growth: HttpGrowthApiService,
     }),
     // Only registered in HTTP mode; there is nothing to correlate in mock mode.
     { provide: HTTP_INTERCEPTORS, useClass: CorrelationInterceptor, multi: true },

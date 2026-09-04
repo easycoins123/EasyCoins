@@ -9,18 +9,20 @@ import { STOREFRONT } from '../../core/brand';
 import { CampaignView } from '../../core/commerce';
 import { LocalizePipe } from '../../core/i18n';
 import { coinProductsFrom, hasRealDiscount } from '../../core/value';
-import { CoinProduct, Product } from '../../domain';
+import { CoinProduct, Drop, Offer, Product } from '../../domain';
 import { CampaignsFacade, CatalogFacade, CatalogLookups } from '../../state';
+import { CartFacade } from '../../state/cart.facade';
+import { GrowthFacade } from '../../state/growth.facade';
 import { CoinLadderComponent } from '../../ui/components/commerce/coin-ladder.component';
 import { LaunchStripComponent } from '../../ui/components/commerce/launch-strip.component';
+import { DropZoneComponent } from '../../ui/components/growth/drop-zone.component';
 import { IconComponent } from '../../ui/components/icon.component';
 import { ProductCardComponent } from '../../ui/components/product-card.component';
-import { CartFacade } from '../../state/cart.facade';
-import { Offer } from '../../domain';
 
 interface OffersView {
   readonly live: readonly CampaignView[];
   readonly coming: readonly CampaignView[];
+  readonly drops: readonly Drop[];
   readonly products: readonly CoinProduct[];
   readonly discounted: readonly Product[];
   readonly lookups: CatalogLookups;
@@ -30,23 +32,24 @@ interface OffersView {
  * The offers hub: everything that gives a player a reason to buy now or come
  * back, each with its real state.
  *
- * Live campaigns lead, with their numbers. Campaigns in preparation are listed
- * as exactly that, so a returning visitor can see what is coming without
- * being sold something that does not exist yet. The ladder sits here too,
- * because the bonus only means something next to the prices.
+ * Live programmes lead, with their numbers: the launch bonus, EASYDROP,
+ * EASYCLUB, the founders, referral, custom coins. The Drop Zone shows a
+ * live or dated drop, or says the next one is cooking. What is scheduled or
+ * in preparation is listed as exactly that, so a returning visitor can see
+ * what is coming without being sold something that does not exist yet.
  */
 @Component({
   selector: 'tt-deals-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, LocalizePipe, IconComponent, LaunchStripComponent, CoinLadderComponent, ProductCardComponent],
+  imports: [CommonModule, RouterLink, LocalizePipe, IconComponent, LaunchStripComponent, CoinLadderComponent, ProductCardComponent, DropZoneComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="offers">
       <div class="tt-container tt-section tt-section--tight">
         <header class="tt-head tt-head--tight">
           <span class="tt-eyebrow">EASYCOINS · {{ gameName }}</span>
-          <h1>מבצעים ובונוסים</h1>
-          <p class="tt-head__lede">מה שפעיל מסומן פעיל, עם המספרים. מה שבהכנה כתוב שהוא בהכנה. בלי שעונים מזויפים ובלי "נותרו 3".</p>
+          <h1>מבצעים, דרופים והטבות</h1>
+          <p class="tt-head__lede">מה שפעיל מסומן פעיל, עם המספרים. מה שמתוזמן מופיע עם תאריך אמיתי. מה שבהכנה כתוב שהוא בהכנה. בלי שעונים מזויפים ובלי "נותרו 3".</p>
         </header>
       </div>
 
@@ -56,7 +59,7 @@ interface OffersView {
         <section class="tt-container tt-section tt-section--tight" *ngIf="vm.live.length > 0">
           <h2 class="section-title"><span class="live-dot" aria-hidden="true"></span>פעיל עכשיו</h2>
           <div class="live">
-            <article class="campaign campaign--live" *ngFor="let campaign of vm.live">
+            <article class="campaign campaign--live" *ngFor="let campaign of vm.live" [id]="campaign.kind">
               <header class="campaign__head">
                 <span class="campaign__glyph" aria-hidden="true"><tt-icon [name]="campaign.icon" [size]="22"></tt-icon></span>
                 <span class="campaign__eyebrow">{{ campaign.eyebrow }}</span>
@@ -72,13 +75,18 @@ interface OffersView {
           </div>
         </section>
 
+        <section class="tt-container tt-section tt-section--tight" id="drop-zone">
+          <h2 class="section-title"><tt-icon name="bolt" [size]="18"></tt-icon> DROP ZONE</h2>
+          <tt-drop-zone [drops]="vm.drops"></tt-drop-zone>
+        </section>
+
         <section class="tt-container tt-section tt-section--tight" *ngIf="vm.products.length > 0">
           <h2 class="section-title">הסולם המלא, עם הבונוס</h2>
           <tt-coin-ladder [products]="vm.products" [busy]="adding()" (buy)="buyOffer($event)"></tt-coin-ladder>
         </section>
 
         <section class="tt-container tt-section tt-section--tight" *ngIf="vm.coming.length > 0">
-          <h2 class="section-title">בהכנה</h2>
+          <h2 class="section-title">בקרוב ובהכנה</h2>
           <ul class="coming">
             <li class="coming__item" *ngFor="let campaign of vm.coming">
               <span class="campaign__glyph campaign__glyph--sm" aria-hidden="true"><tt-icon [name]="campaign.icon" [size]="18"></tt-icon></span>
@@ -106,22 +114,23 @@ interface OffersView {
   `,
   styles: [`
     .section-title { display: flex; align-items: center; gap: var(--tt-space-2); margin: 0 0 var(--tt-space-4); font-size: var(--tt-text-xl); }
+    .section-title tt-icon { color: var(--tt-gold-400); }
     .live-dot { inline-size: 8px; block-size: 8px; border-radius: 50%; background: var(--tt-energy); box-shadow: 0 0 0 4px rgba(47, 211, 111, 0.15); }
     .live { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--tt-space-4); }
-    .campaign { display: flex; flex-direction: column; gap: var(--tt-space-2); padding: var(--tt-space-5); border-radius: var(--tt-radius-lg); border: 1px solid var(--tt-gold-600); background: linear-gradient(135deg, rgba(212, 180, 106, 0.14), transparent 55%), linear-gradient(180deg, #17161A, var(--tt-surface) 70%); }
+    .campaign { display: flex; flex-direction: column; gap: var(--tt-space-2); padding: var(--tt-space-5); border-radius: var(--tt-radius-lg); border: 1px solid var(--tt-gold-600); background: linear-gradient(135deg, rgba(212, 180, 106, 0.14), transparent 55%), linear-gradient(180deg, #17161A, var(--tt-surface) 70%); scroll-margin-block-start: calc(var(--tt-header-height) + var(--tt-space-4)); }
     .campaign__head { display: flex; align-items: center; gap: var(--tt-space-2); }
     .campaign__glyph { display: grid; place-items: center; inline-size: 44px; block-size: 44px; border-radius: var(--tt-radius-md); background: var(--tt-gold-metal); color: var(--tt-text-on-gold); transform: skewX(-9deg); }
     .campaign__glyph tt-icon { transform: skewX(9deg); }
     .campaign__glyph--sm { inline-size: 36px; block-size: 36px; background: var(--tt-surface-2); color: var(--tt-gold-400); border: 1px solid var(--tt-gold-600); }
     .campaign__eyebrow { font-size: var(--tt-caption); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tt-text-muted); }
-    .status { margin-inline-start: auto; padding: 3px 9px; border-radius: var(--tt-radius-pill); font-size: 10px; font-weight: 800; letter-spacing: 0.04em; border: 1px solid var(--tt-border-strong); }
+    .status { margin-inline-start: auto; padding: 3px 9px; border-radius: var(--tt-radius-pill); font-size: 10px; font-weight: 800; letter-spacing: 0.04em; border: 1px solid var(--tt-border-strong); white-space: nowrap; }
     .status--live { color: var(--tt-energy); border-color: rgba(47, 211, 111, 0.4); }
     .status--soon { color: var(--tt-gold-400); border-color: var(--tt-gold-600); margin-inline-start: var(--tt-space-2); }
     .campaign h3 { margin: var(--tt-space-1) 0 0; font-size: var(--tt-text-2xl); line-height: 1.15; }
     .campaign p { margin: 0; color: var(--tt-text-muted); line-height: var(--tt-leading); }
     .points { margin: var(--tt-space-1) 0 var(--tt-space-2); padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: var(--tt-text-sm); font-weight: 700; }
     .points li { display: flex; align-items: center; gap: 6px; }
-    .points tt-icon { color: var(--tt-energy); }
+    .points tt-icon { color: var(--tt-energy); flex: none; }
     .campaign .tt-btn { align-self: flex-start; margin-block-start: auto; }
     .coming { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--tt-space-2); }
     .coming__item { display: flex; align-items: center; gap: var(--tt-space-3); padding: var(--tt-space-3) var(--tt-space-4); border: 1px solid var(--tt-border); border-radius: var(--tt-radius-lg); background: var(--tt-surface); }
@@ -138,6 +147,7 @@ export class DealsPage {
   private readonly campaigns = inject(CampaignsFacade);
   private readonly catalog = inject(CatalogFacade);
   private readonly cart = inject(CartFacade);
+  private readonly growth = inject(GrowthFacade);
   private readonly analytics = inject(AnalyticsService);
 
   readonly gameName = STOREFRONT.focusGameName;
@@ -157,10 +167,12 @@ export class DealsPage {
     catchError(() => of([] as readonly Product[])),
   );
 
-  readonly vm$ = combineLatest([this.campaigns.campaigns$, this.ladder$, this.discounted$, this.catalog.lookups$]).pipe(
-    map(([campaigns, products, discounted, lookups]): OffersView => ({
-      live: campaigns.filter((campaign) => campaign.status === 'active'),
-      coming: campaigns.filter((campaign) => campaign.status !== 'active' && campaign.status !== 'ended'),
+  readonly vm$ = combineLatest([this.campaigns.campaigns$, this.growth.drops$, this.ladder$, this.discounted$, this.catalog.lookups$]).pipe(
+    map(([campaigns, drops, products, discounted, lookups]): OffersView => ({
+      // The drop zone has its own section, so the drop campaign is not repeated as a card.
+      live: campaigns.filter((campaign) => campaign.status === 'active' && campaign.kind !== 'weekend-drop'),
+      coming: campaigns.filter((campaign) => (campaign.status === 'upcoming' || campaign.status === 'planned') && campaign.kind !== 'weekend-drop'),
+      drops,
       products,
       discounted,
       lookups,

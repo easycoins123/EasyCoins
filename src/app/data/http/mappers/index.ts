@@ -1,15 +1,20 @@
 import {
-  AuthState, Cart, CartIssue, CartItem, CartTotals, CartValidationResult, CatalogFacets,
+  AppliedBenefit, AuthState, BenefitKind, Cart, CartBenefits, CartIssue, CartIssueCode, CartItem,
+  CartTotals, CartValidationResult, CatalogFacets,
   CheckoutFieldControl, CheckoutFieldKey, CheckoutFieldValues, CheckoutRequirement,
-  CheckoutSession, CheckoutStep, CheckoutSubmitResult, CouponApplication, Coupon, Customer,
-  Delivery, DeliveryPayload, FaqEntry, Fulfillment, FulfillmentDescriptor, FulfillmentMethod,
-  FulfillmentStatus, Game, ImageAsset, ImageRole, Inventory, InventoryStatus, LocaleCode,
-  LocalizedText, Money, Offer, Order, OrderItem, OrderStatus, OrderStatusSnapshot, Page,
+  CheckoutSession, CheckoutStep, CheckoutSubmitResult, ClubSummary, ClubTier, ClubTierId,
+  CouponApplication, Coupon, Customer, CustomCoinsQuote, CustomCoinsRules,
+  Delivery, DeliveryPayload, Drop, DropKind, DropStatus, EasyDrop, EasyDropTier, FaqEntry,
+  FoundersStatus, Fulfillment, FulfillmentDescriptor, FulfillmentMethod,
+  FulfillmentStatus, Game, GrowthProgrammes, ImageAsset, ImageRole, Inventory, InventoryStatus, LocaleCode,
+  LocalizedText, Money, NO_BENEFITS, Offer, Order, OrderItem, OrderStatus, OrderStatusSnapshot, Page,
   PaymentAction, PaymentIntent, PaymentProviderDescriptor, PaymentProviderId, PaymentResult,
   PaymentSession, PaymentStatus, Platform, PlatformFamily, PlatformKind, Price, Product,
-  ProductDetail, ProductType, ProductVariant, Promotion, PromotionKind, Region, RegionCode,
-  Review, ReviewSummary, SimulatedInstrument, SupportTicket, SupportTicketStatus, SupportTopic,
-  computeTotals, localized,
+  ProductDetail, ProductType, ProductVariant, Promotion, PromotionKind, ReferralAttachOutcome,
+  ReferralAttachResult, ReferralSummary, Region, RegionCode, RejectedBenefit, Review, ReviewSummary,
+  Reward, RewardKind, RewardSource, RewardStatus, RewardUsage, RewardWallet, SimulatedInstrument,
+  SubmitReviewResult, SupportTicket, SupportTicketStatus, SupportTopic, TrustMetric, TrustMetricKey,
+  TrustSnapshot, computeTotals, localized,
 } from '../../../domain';
 import * as Dto from '../dto';
 
@@ -288,6 +293,46 @@ export function toCartItem(dto: Dto.CartItemDto): CartItem {
     displayVariantName: toLocalized(dto.displayVariantName),
     imageUrl: dto.imageUrl ?? undefined,
     addedAt: dto.addedAt ?? new Date(0).toISOString(),
+    coins: typeof dto.coins === 'number' ? dto.coins : undefined,
+    bonusCoins: typeof dto.bonusCoins === 'number' ? dto.bonusCoins : undefined,
+  };
+}
+
+// --- benefits (the stacking decision) --------------------------------------
+
+const BENEFIT_KINDS: readonly BenefitKind[] = ['LAUNCH_BONUS', 'REWARD', 'LOYALTY', 'COUPON'];
+
+function toBenefitKind(value: string): BenefitKind {
+  return BENEFIT_KINDS.find((kind) => kind === value) ?? 'REWARD';
+}
+
+export function toBenefits(dto: Dto.BenefitsDto | null | undefined, currency: Money['currency'] = 'ILS'): CartBenefits {
+  if (!dto) {
+    return NO_BENEFITS;
+  }
+  const applied: AppliedBenefit[] = (dto.applied ?? []).map((entry) => ({
+    kind: toBenefitKind(entry.kind),
+    label: toLocalized(entry.label),
+    effect: {
+      discount: { amountMinor: Math.max(0, Math.round(entry.effect?.discountMinor ?? 0)), currency },
+      coins: Math.max(0, Math.round(entry.effect?.coins ?? 0)),
+    },
+    rewardId: entry.rewardId ?? undefined,
+    couponCode: entry.couponCode ?? undefined,
+  }));
+  const rejected: RejectedBenefit[] = (dto.rejected ?? []).map((entry) => ({
+    kind: toBenefitKind(entry.kind),
+    label: toLocalized(entry.label),
+    code: entry.code,
+    reason: toLocalized(entry.reason),
+    rewardId: entry.rewardId ?? undefined,
+    couponCode: entry.couponCode ?? undefined,
+  }));
+  return {
+    applied,
+    rejected,
+    rewardId: dto.rewardId ?? undefined,
+    rewardCoins: Math.max(0, Math.round(dto.rewardCoins ?? 0)),
   };
 }
 
@@ -305,16 +350,22 @@ export function toCartTotals(dto: Dto.CartTotalsDto | null | undefined, items: r
 
 export function toCart(dto: Dto.CartDto): Cart {
   const items = (dto.items ?? []).map(toCartItem);
+  const totals = toCartTotals(dto.totals, items);
   return {
     id: dto.id,
     items,
-    totals: toCartTotals(dto.totals, items),
+    totals,
     couponCode: dto.couponCode ?? undefined,
+    rewardId: dto.rewardId ?? undefined,
+    benefits: toBenefits(dto.benefits, totals.total.currency),
     updatedAt: dto.updatedAt ?? new Date().toISOString(),
   };
 }
 
-const CART_ISSUE_CODES = ['OFFER_UNAVAILABLE', 'PRICE_CHANGED', 'QUANTITY_REDUCED', 'OUT_OF_STOCK', 'COUPON_INVALID'] as const;
+const CART_ISSUE_CODES: readonly CartIssueCode[] = [
+  'OFFER_UNAVAILABLE', 'PRICE_CHANGED', 'QUANTITY_REDUCED', 'OUT_OF_STOCK', 'COUPON_INVALID',
+  'COUPON_NOT_COMBINABLE', 'COUPON_NOT_APPLICABLE', 'REWARD_NOT_APPLICABLE',
+];
 
 export function toCartValidation(dto: Dto.CartValidationDto): CartValidationResult {
   const issues: CartIssue[] = (dto.issues ?? []).map((issue) => ({
@@ -496,10 +547,13 @@ export function toOrderItem(dto: Dto.OrderItemDto): OrderItem {
     displayName: toLocalized(dto.displayName),
     displayVariantName: toLocalized(dto.displayVariantName),
     imageUrl: dto.imageUrl ?? undefined,
+    coins: typeof dto.coins === 'number' ? dto.coins : undefined,
+    bonusCoins: typeof dto.bonusCoins === 'number' ? dto.bonusCoins : undefined,
   };
 }
 
 export function toOrder(dto: Dto.OrderDto): Order {
+  const total = toMoney(dto.totals?.total);
   return {
     id: dto.id,
     reference: dto.reference,
@@ -512,12 +566,16 @@ export function toOrder(dto: Dto.OrderDto): Order {
     totals: {
       subtotal: toMoney(dto.totals?.subtotal),
       discount: toMoney(dto.totals?.discount),
-      total: toMoney(dto.totals?.total),
+      total,
     },
     fulfillments: (dto.fulfillments ?? []).map(toFulfillment),
     payment: dto.payment ? toPaymentIntent(dto.payment) : undefined,
     checkoutValues: (dto.checkoutValues ?? {}) as CheckoutFieldValues,
     couponCode: dto.couponCode ?? undefined,
+    rewardId: dto.rewardId ?? undefined,
+    rewardCoins: Math.max(0, Math.round(dto.rewardCoins ?? 0)),
+    benefits: toBenefits(dto.benefits, total.currency),
+    paidAt: dto.paidAt ?? undefined,
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt,
     statusMessage: toOptionalLocalized(dto.statusMessage),
@@ -629,16 +687,273 @@ export function toSupportTicket(dto: Dto.SupportTicketDto): SupportTicket {
  * prices are the server's to decide, so sending ours would be meaningless at
  * best and a tampering vector at worst.
  */
-export function cartToRequest(cart: Cart): { items: { offerId: string; quantity: number }[]; couponCode?: string } {
+export function cartToRequest(cart: Cart): { items: { offerId: string; quantity: number }[]; couponCode?: string; rewardId?: string } {
   return {
     items: cart.items.map((item) => ({ offerId: item.offerId, quantity: item.quantity })),
     couponCode: cart.couponCode,
+    // An id only. What the reward is worth, and whether it is the caller's,
+    // is the server's to say.
+    rewardId: cart.rewardId,
   };
 }
 
-/** Unused today but part of the contract surface; kept beside its sibling. */
-export function couponToRequest(cart: Cart, code: string): { items: { offerId: string; quantity: number }[]; code: string } {
-  return { items: cartToRequest(cart).items, code };
+export function couponToRequest(cart: Cart, code: string): { items: { offerId: string; quantity: number }[]; code: string; rewardId?: string } {
+  return { items: cartToRequest(cart).items, code, rewardId: cart.rewardId };
 }
 
 export type { Coupon };
+
+// --- growth ----------------------------------------------------------------
+
+const REWARD_KINDS: readonly RewardKind[] = ['NEXT_ORDER_COINS', 'NEXT_ORDER_CREDIT', 'POINTS_BONUS', 'POINTS_MULTIPLIER', 'TIER_BOOST', 'OFFER_UNLOCK', 'EXTRA_COINS'];
+const REWARD_SOURCES: readonly RewardSource[] = ['EASYDROP', 'EASYBACK', 'REFERRAL_REFERRER', 'REFERRAL_FRIEND', 'STREAK', 'FOUNDER', 'CAMPAIGN'];
+const REWARD_STATUSES: readonly RewardStatus[] = ['AVAILABLE', 'RESERVED', 'REDEEMED', 'EXPIRED', 'REVOKED'];
+const REWARD_USAGES: readonly RewardUsage[] = ['checkout', 'automatic', 'immediate'];
+const CLUB_TIER_IDS: readonly ClubTierId[] = ['STARTER', 'PRO', 'ELITE', 'ICON'];
+const DROP_KINDS: readonly DropKind[] = ['WEEKEND_DROP', 'MATCHDAY_DROP', 'PAYDAY_DROP', 'PROMO_DROP', 'COMMUNITY_DROP', 'VIP_DROP'];
+const TRUST_KEYS: readonly TrustMetricKey[] = ['completedOrders', 'coinsDelivered', 'medianFulfillmentMinutes', 'repeatCustomers', 'verifiedReviews'];
+const ATTACH_OUTCOMES: readonly ReferralAttachOutcome[] = ['ATTACHED', 'ALREADY_ATTACHED', 'SELF', 'EXISTING_CUSTOMER', 'UNKNOWN_CODE', 'DISABLED'];
+
+function pick<T extends string>(allowed: readonly T[], value: string | null | undefined, fallback: T): T {
+  return allowed.find((entry) => entry === value) ?? fallback;
+}
+
+/** When a kind takes effect, should an older server omit the field. */
+function usageOfKind(kind: RewardKind): RewardUsage {
+  switch (kind) {
+    case 'NEXT_ORDER_COINS':
+    case 'NEXT_ORDER_CREDIT':
+    case 'OFFER_UNLOCK':
+    case 'EXTRA_COINS':
+      return 'checkout';
+    case 'POINTS_MULTIPLIER':
+      return 'automatic';
+    default:
+      return 'immediate';
+  }
+}
+
+export function toReward(dto: Dto.RewardDto): Reward {
+  const kind = pick(REWARD_KINDS, dto.kind, 'POINTS_BONUS');
+  return {
+    id: dto.id,
+    source: pick(REWARD_SOURCES, dto.source, 'EASYDROP'),
+    kind,
+    value: Math.max(0, Math.round(Number(dto.value) || 0)),
+    title: toLocalized(dto.title),
+    // An unknown status is treated as spent, never as usable.
+    status: pick(REWARD_STATUSES, dto.status, 'REDEEMED'),
+    usage: pick(REWARD_USAGES, dto.usage, usageOfKind(kind)),
+    minOrder: typeof dto.minOrderMinor === 'number' ? { amountMinor: dto.minOrderMinor, currency: 'ILS' } : undefined,
+    expiresAt: dto.expiresAt ?? undefined,
+    sourceOrderId: dto.sourceOrderId ?? undefined,
+    redeemedOrderId: dto.redeemedOrderId ?? undefined,
+    createdAt: dto.createdAt,
+  };
+}
+
+export function toRewardWallet(dto: Dto.RewardWalletDto | null | undefined): RewardWallet {
+  return {
+    available: (dto?.available ?? []).map(toReward),
+    history: (dto?.history ?? []).map(toReward),
+  };
+}
+
+export function toEasyDrop(dto: Dto.EasyDropDto | null | undefined): EasyDrop | undefined {
+  if (!dto) {
+    return undefined;
+  }
+  return {
+    orderId: dto.orderId,
+    tier: pick<EasyDropTier>(['DROP', 'DROP_PLUS', 'VIP'], dto.tier, 'DROP'),
+    tierName: toLocalized(dto.tierName, dto.tier),
+    status: dto.status === 'REVEALED' ? 'REVEALED' : 'ISSUED',
+    cardCount: Math.max(1, Math.round(dto.cardCount || 1)),
+    pickedIndex: typeof dto.pickedIndex === 'number' ? dto.pickedIndex : undefined,
+    reward: dto.reward ? toReward(dto.reward) : undefined,
+    issuedAt: dto.issuedAt,
+    revealedAt: dto.revealedAt ?? undefined,
+  };
+}
+
+export function toClubTier(dto: Dto.ClubTierDto): ClubTier {
+  return {
+    id: pick(CLUB_TIER_IDS, dto.id, 'STARTER'),
+    name: toLocalized(dto.name, dto.id),
+    minPoints: Math.max(0, Math.round(dto.minPoints || 0)),
+    perks: (dto.perks ?? []).map((perk) => toLocalized(perk)),
+  };
+}
+
+export function toFounders(dto: Dto.FoundersDto): FoundersStatus & { seatNumber?: number } {
+  return {
+    enabled: dto.enabled === true,
+    name: toLocalized(dto.name, 'FIRST XI'),
+    cap: Math.max(0, Math.round(dto.cap || 0)),
+    taken: Math.max(0, Math.round(dto.taken || 0)),
+    remaining: Math.max(0, Math.round(dto.remaining || 0)),
+    reward: toOptionalLocalized(dto.reward),
+    seatNumber: typeof dto.seatNumber === 'number' ? dto.seatNumber : undefined,
+  };
+}
+
+export function toReferralSummary(dto: Dto.ReferralSummaryDto): ReferralSummary {
+  return {
+    enabled: dto.enabled === true,
+    code: dto.code ?? undefined,
+    path: dto.path ?? undefined,
+    friendReward: toLocalized(dto.friendReward),
+    referrerReward: toLocalized(dto.referrerReward),
+    stats: {
+      pending: dto.stats?.pending ?? 0,
+      rewarded: dto.stats?.rewarded ?? 0,
+      rejected: dto.stats?.rejected ?? 0,
+    },
+    monthlyCap: dto.monthlyCap ?? 0,
+  };
+}
+
+export function toReferralAttach(dto: Dto.ReferralAttachDto): ReferralAttachResult {
+  return {
+    attached: dto.attached === true,
+    outcome: pick(ATTACH_OUTCOMES, dto.outcome, 'UNKNOWN_CODE'),
+    friendReward: toOptionalLocalized(dto.friendReward),
+  };
+}
+
+export function toClubSummary(dto: Dto.ClubSummaryDto): ClubSummary {
+  return {
+    tier: { id: pick(CLUB_TIER_IDS, dto.tier.id, 'STARTER'), name: toLocalized(dto.tier.name, dto.tier.id), index: dto.tier.index ?? 0 },
+    boost: dto.boost ? { tiers: dto.boost.tiers, until: dto.boost.until ?? undefined } : undefined,
+    points: {
+      total: Math.max(0, Math.round(dto.points?.total ?? 0)),
+      base: Math.max(0, Math.round(dto.points?.base ?? 0)),
+      bonus: Math.max(0, Math.round(dto.points?.bonus ?? 0)),
+      perShekel: dto.points?.perShekel ?? 0,
+    },
+    nextTier: dto.nextTier
+      ? {
+        id: pick(CLUB_TIER_IDS, dto.nextTier.id, 'PRO'),
+        name: toLocalized(dto.nextTier.name, dto.nextTier.id),
+        minPoints: dto.nextTier.minPoints,
+        pointsToGo: Math.max(0, dto.nextTier.pointsToGo),
+        percent: Math.min(100, Math.max(0, dto.nextTier.percent)),
+      }
+      : undefined,
+    tiers: (dto.tiers ?? []).map(toClubTier),
+    perks: (dto.perks ?? []).map((perk) => toLocalized(perk)),
+    orders: {
+      count: dto.orders?.count ?? 0,
+      lifetime: { amountMinor: dto.orders?.lifetimeMinor ?? 0, currency: 'ILS' },
+      lastPaidAt: dto.orders?.lastPaidAt ?? undefined,
+    },
+    streak: {
+      enabled: dto.streak?.enabled === true,
+      count: dto.streak?.count ?? 0,
+      windowDays: dto.streak?.windowDays ?? 0,
+      activeUntil: dto.streak?.activeUntil ?? undefined,
+      nextRewardAt: dto.streak?.nextRewardAt ?? undefined,
+      nextRewardTitle: toOptionalLocalized(dto.streak?.nextRewardTitle),
+    },
+    founders: toFounders(dto.founders),
+    rewards: toRewardWallet(dto.rewards),
+    referral: toReferralSummary(dto.referral),
+  };
+}
+
+export function toDrop(dto: Dto.DropDto): Drop {
+  return {
+    id: dto.id,
+    slug: dto.slug,
+    kind: pick(DROP_KINDS, dto.kind, 'PROMO_DROP'),
+    status: pick<DropStatus>(['active', 'scheduled'], dto.status, 'scheduled'),
+    title: toLocalized(dto.title, dto.slug),
+    lede: toLocalized(dto.lede),
+    points: (dto.points ?? []).map((point) => toLocalized(point)),
+    startsAt: dto.startsAt ?? undefined,
+    endsAt: dto.endsAt ?? undefined,
+    reward: dto.reward ? { title: toLocalized(dto.reward.title), kind: pick(REWARD_KINDS, dto.reward.kind, 'POINTS_BONUS'), value: dto.reward.value } : undefined,
+    eligibility: {
+      minOrder: typeof dto.eligibility?.minOrderMinor === 'number' ? { amountMinor: dto.eligibility.minOrderMinor, currency: 'ILS' } : undefined,
+      firstOrderOnly: dto.eligibility?.firstOrderOnly === true,
+    },
+    cta: dto.cta && typeof dto.cta.link === 'string' ? { label: toLocalized(dto.cta.label), link: dto.cta.link } : undefined,
+    remaining: typeof dto.remaining === 'number' ? dto.remaining : undefined,
+  };
+}
+
+export function toTrustSnapshot(dto: Dto.TrustSnapshotDto): TrustSnapshot {
+  const metrics: TrustMetric[] = (dto.metrics ?? []).map((metric) => ({
+    key: pick(TRUST_KEYS, metric.key, 'completedOrders'),
+    label: toLocalized(metric.label, metric.key),
+    unit: pick<TrustMetric['unit']>(['count', 'coins', 'minutes'], metric.unit, 'count'),
+    // A value is only a value when the server published it. Never derived here.
+    value: metric.published === true && typeof metric.value === 'number' ? metric.value : undefined,
+    published: metric.published === true && typeof metric.value === 'number',
+    sampleSize: metric.sampleSize ?? 0,
+    threshold: metric.threshold ?? 0,
+  }));
+  return { enabled: dto.enabled === true, asOf: dto.asOf, metrics };
+}
+
+export function toCustomRules(dto: Dto.CustomRulesDto): CustomCoinsRules {
+  return {
+    enabled: dto.enabled === true,
+    minCoins: dto.minCoins,
+    maxCoins: dto.maxCoins,
+    stepCoins: dto.stepCoins,
+    platformIds: dto.platformIds ?? [],
+  };
+}
+
+export function toCustomQuote(dto: Dto.CustomQuoteDto): CustomCoinsQuote {
+  const currency = (dto.currency as Money['currency']) ?? 'ILS';
+  return {
+    offerId: dto.offerId,
+    productSlug: dto.productSlug,
+    variantId: dto.variantId,
+    platformId: dto.platformId,
+    regionId: dto.regionId,
+    amount: dto.amount,
+    price: { amountMinor: dto.priceMinor, currency },
+    bonus: dto.bonus ?? 0,
+    totalCoins: dto.totalCoins,
+    perMillion: { amountMinor: dto.perMillionMinor, currency },
+    rungAmount: dto.rungAmount,
+    mode: dto.mode === 'budget' ? 'budget' : 'amount',
+    rules: dto.rules,
+  };
+}
+
+export function toProgrammes(dto: Dto.ProgrammesDto): GrowthProgrammes {
+  return {
+    easydrop: {
+      enabled: dto.easydrop?.enabled === true,
+      cardsPerDrop: dto.easydrop?.cardsPerDrop ?? 3,
+      expiresInDays: dto.easydrop?.expiresInDays ?? 30,
+      tiers: (dto.easydrop?.tiers ?? []).map((tier) => ({
+        tier: pick<EasyDropTier>(['DROP', 'DROP_PLUS', 'VIP'], tier.tier, 'DROP'),
+        name: toLocalized(tier.name, tier.tier),
+        minTotal: { amountMinor: tier.minTotalMinor, currency: 'ILS' },
+      })),
+    },
+    easyclub: { pointsPerShekel: dto.easyclub?.pointsPerShekel ?? 0, tiers: (dto.easyclub?.tiers ?? []).map(toClubTier) },
+    founders: toFounders(dto.founders),
+    streak: {
+      enabled: dto.streak?.enabled === true,
+      windowDays: dto.streak?.windowDays ?? 0,
+      rewards: (dto.streak?.rewards ?? []).map((entry) => ({ purchase: entry.purchase, title: toLocalized(entry.title) })),
+    },
+    referral: {
+      enabled: dto.referral?.enabled === true,
+      friendReward: toLocalized(dto.referral?.friendReward),
+      referrerReward: toLocalized(dto.referral?.referrerReward),
+    },
+    customCoins: toCustomRules(dto.customCoins),
+    easyback: { enabled: dto.easyback?.enabled === true },
+  };
+}
+
+export function toSubmitReviewResult(dto: Dto.SubmitReviewResultDto): SubmitReviewResult {
+  return { id: dto.id, published: dto.published === true, verifiedPurchase: true };
+}

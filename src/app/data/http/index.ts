@@ -7,3 +7,4 @@ export * from './mappers';
 export * from './http-catalog-api.service';
 export * from './http-commerce-api.service';
 export * from './http-content-api.service';
+export * from './http-growth-api.service';

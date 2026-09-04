@@ -7,13 +7,25 @@ import { AppLogger } from '../../common/logging/app-logger.service';
 import { IdempotencyService } from '../../common/idempotency/idempotency.service';
 import { PrismaService } from '../../database/prisma.service';
 import { CheckoutService } from '../checkout/checkout.service';
+import type { CartBenefits } from '../cart/pricing.service';
+import { RewardsService } from '../growth/rewards.service';
 import { InventoryService } from './inventory.service';
 
 const ENDPOINT = 'POST /orders';
 
-/** Everything an order response needs, loaded with the order itself. */
+/**
+ * Everything an order response needs, loaded with the order itself. The
+ * variant's quantity and metadata come along so an item can state the coins
+ * it delivers, custom amounts included, without a catalog lookup.
+ */
 export const ORDER_INCLUDE = {
-  items: { orderBy: { id: 'asc' } },
+  items: {
+    orderBy: { id: 'asc' },
+    include: {
+      variant: { select: { quantityValue: true, metadata: true } },
+      product: { select: { type: true } },
+    },
+  },
   fulfillments: { orderBy: { id: 'asc' } },
   paymentIntents: { orderBy: { createdAt: 'desc' }, take: 1 },
 } as const;
@@ -51,6 +63,7 @@ export class OrderCreationService {
     private readonly checkout: CheckoutService,
     private readonly inventory: InventoryService,
     private readonly idempotency: IdempotencyService,
+    private readonly rewards: RewardsService,
     private readonly logger: AppLogger,
   ) {}
 
@@ -153,6 +166,9 @@ export class OrderCreationService {
       const lines = await this.revalidateLines(tx, checkout.items);
       const totals = this.recomputeTotals(checkout, lines);
 
+      const benefits = (checkout.benefitsSnapshot as unknown as CartBenefits | null) ?? null;
+      const rewardCoins = checkout.rewardId ? benefits?.rewardCoins ?? 0 : 0;
+
       const orderNumber = await this.nextOrderNumber(tx);
 
       await tx.order.create({
@@ -169,6 +185,13 @@ export class OrderCreationService {
           subtotalMinor: totals.subtotalMinor,
           discountMinor: totals.discountMinor,
           totalMinor: totals.totalMinor,
+          // What the order owes beyond its lines: the reward it used and the
+          // coins that reward adds to the delivery. Fulfillment reads this.
+          metadata: {
+            ...(checkout.rewardId ? { rewardId: checkout.rewardId } : {}),
+            ...(rewardCoins > 0 ? { rewardCoins } : {}),
+            ...(benefits ? { benefits: benefits as unknown as Prisma.InputJsonValue } : {}),
+          } as Prisma.InputJsonValue,
           // The order carries its own copy of what was quoted. Reading it later
           // never touches the catalog, so a price change cannot rewrite history.
           pricingSnapshot: {
@@ -179,6 +202,7 @@ export class OrderCreationService {
             discountMinor: totals.discountMinor,
             totalMinor: totals.totalMinor,
             couponCode: checkout.couponCode,
+            rewardId: checkout.rewardId,
             lines: lines.map((line) => ({
               offerId: line.offerId,
               quantity: line.quantity,
@@ -194,6 +218,18 @@ export class OrderCreationService {
           couponCode: checkout.couponCode,
         },
       });
+
+      // The reward the checkout froze is held for this order now, in the same
+      // transaction and after the order row exists (the hold references it),
+      // by a conditional update the customer's ownership is part of. Two
+      // orders racing for one credit cannot both take it; an order that fails
+      // to write leaves it untouched.
+      if (checkout.rewardId) {
+        await this.rewards.reserve(tx, checkout.rewardId, orderId, {
+          customerId: session?.customerId ?? null,
+          sessionId: session?.id ?? null,
+        });
+      }
 
       await tx.orderItem.createMany({
         data: lines.map((line) => ({

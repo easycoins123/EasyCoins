@@ -1,5 +1,7 @@
 import type { CheckoutSession } from '@prisma/client';
 
+import { NO_BENEFITS, type CartBenefits } from '../../cart/pricing.service';
+import { toBenefitsDto } from '../../cart/dto/cart.mapper';
 import type { CheckoutItemWithOffer, CheckoutSessionWithItems } from '../checkout.service';
 
 /**
@@ -23,7 +25,14 @@ function localized(value: unknown): { he: string; en?: string | null } {
   return { he: '' };
 }
 
+/** Launch bonus coins on a variant, per unit. Zero when the campaign is off. */
+function launchBonusOf(metadata: unknown): number {
+  const bonus = metadata && typeof metadata === 'object' ? (metadata as Record<string, unknown>)['launchBonus'] : undefined;
+  return typeof bonus === 'number' && bonus > 0 ? Math.round(bonus) : 0;
+}
+
 function toItemDto(item: CheckoutItemWithOffer, currency: string) {
+  const isCoins = item.offer.product.type === 'GAME_CURRENCY';
   return {
     id: item.id,
     offerId: item.offerId,
@@ -40,6 +49,8 @@ function toItemDto(item: CheckoutItemWithOffer, currency: string) {
     displayName: localized(item.displayName),
     displayVariantName: localized(item.displayVariant),
     imageUrl: item.imageUrl,
+    coins: isCoins ? (item.offer.variant.quantityValue ?? 0) * item.quantity : 0,
+    bonusCoins: isCoins ? launchBonusOf(item.offer.variant.metadata) * item.quantity : 0,
   };
 }
 
@@ -79,6 +90,10 @@ export function toCheckoutSessionDto(checkout: CheckoutSessionWithItems) {
         itemCount: checkout.items.reduce((count, item) => count + item.quantity, 0),
       },
       couponCode: checkout.couponCode,
+      rewardId: checkout.rewardId,
+      // The stacking decision frozen with the prices, so the checkout screen
+      // explains the same thing the cart did.
+      benefits: toBenefitsDto((checkout.benefitsSnapshot as unknown as CartBenefits | null) ?? NO_BENEFITS),
     },
     requirements,
     // Payment providers arrive with the payment phase. An empty list is honest:
