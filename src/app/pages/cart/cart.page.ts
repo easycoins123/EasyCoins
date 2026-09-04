@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -7,8 +8,10 @@ import { catchError, map, switchMap } from 'rxjs/operators';
 
 import { AnalyticsService } from '../../core/analytics';
 import { STOREFRONT } from '../../core/brand';
+import { launchBonusOf } from '../../core/commerce';
+import { formatQuantity } from '../../core/value';
 import { LocalizePipe } from '../../core/i18n';
-import { CartItem, ProductType } from '../../domain';
+import { CartItem, ProductType, ProductVariant } from '../../domain';
 import { CartFacade, CatalogFacade } from '../../state';
 import {
   BundleLadderComponent, CoinArtComponent,
@@ -69,7 +72,16 @@ import {
 
               <div class="details">
                 <strong>{{ item.displayName | t }}</strong>
-                <span class="tt-muted">{{ item.displayVariantName | t }}</span>
+                <ng-container *ngIf="receipt(item) as value; else plainVariant">
+                  <span class="receipt">
+                    <span class="receipt__base tt-numeric">{{ value.base }}</span>
+                    <span class="receipt__plus tt-numeric">+ {{ value.bonus }} בונוס השקה</span>
+                    <span class="receipt__eq">=</span>
+                    <strong class="receipt__total tt-numeric">{{ value.total }} קוינס</strong>
+                    <span class="receipt__per" *ngIf="item.quantity > 1">× {{ item.quantity }}</span>
+                  </span>
+                </ng-container>
+                <ng-template #plainVariant><span class="tt-muted">{{ item.displayVariantName | t }}</span></ng-template>
                 <div class="tt-row">
                   <tt-platform-badge [platform]="lookups.platforms.get(item.platformId)"></tt-platform-badge>
                   <tt-region-badge [region]="lookups.regions.get(item.regionId)"></tt-region-badge>
@@ -95,6 +107,9 @@ import {
             <p class="tt-ticket__eyebrow"><span>כרטיס · ההזמנה שלך</span><span>{{ cart.items().length }} פריטים</span></p>
             <h2>סיכום</h2>
 
+            <div class="row row--coins" *ngIf="totalCoins() as coins">
+              <span>סה״כ קוינס שתקבלו</span><span class="tt-numeric coins">{{ coins }}</span>
+            </div>
             <div class="row"><span>סכום ביניים</span><span>{{ cart.totals().subtotal | money }}</span></div>
             <div class="row" *ngIf="cart.totals().discount.amountMinor > 0">
               <span>הנחה</span><span>−{{ cart.totals().discount | money }}</span>
@@ -106,7 +121,7 @@ import {
               <div class="tt-row">
                 <!-- Enter applies it. Typing a code and pressing return is the
                      obvious thing to do, and it used to do nothing. -->
-                <input class="tt-input" [(ngModel)]="couponCode" name="coupon" placeholder="LAUNCH10"
+                <input class="tt-input" [(ngModel)]="couponCode" name="coupon" placeholder="יש לכם קוד?"
                        (keyup.enter)="couponCode && !cart.busy() && applyCoupon()" />
                 <button type="button" class="tt-btn tt-btn--ghost tt-btn--sm"
                         [disabled]="!couponCode || cart.busy()" (click)="applyCoupon()">
@@ -145,6 +160,14 @@ import {
     .line { display: flex; gap: var(--tt-space-4); padding: var(--tt-space-4); align-items: center; flex-wrap: wrap; }
     .line img { inline-size: 64px; block-size: 64px; object-fit: contain; }
     .line .thumb { inline-size: 84px; flex: none; }
+    .receipt { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; font-size: var(--tt-text-sm); }
+    .receipt__base { color: var(--tt-text-muted); }
+    .receipt__plus { color: var(--tt-gold-400); font-weight: 700; unicode-bidi: isolate; }
+    .receipt__eq { color: var(--tt-text-faint); }
+    .receipt__total { color: var(--tt-text); font-size: var(--tt-text-md); }
+    .receipt__per { color: var(--tt-text-faint); }
+    .row--coins { padding: var(--tt-space-2) var(--tt-space-3); margin-block-end: var(--tt-space-2); border: 1px solid var(--tt-gold-600); border-radius: var(--tt-radius-md); background: var(--tt-gold-tint); font-weight: 700; }
+    .row--coins .coins { color: var(--tt-gold-400); font-size: var(--tt-text-lg); font-weight: 900; }
     .details { display: flex; flex-direction: column; gap: var(--tt-space-1); flex: 1; min-inline-size: 180px; }
     .controls { display: flex; align-items: center; gap: var(--tt-space-3); }
     .line-total { font-weight: 700; min-inline-size: 84px; }
@@ -185,10 +208,43 @@ export class CartPage {
       : of(null))),
   );
 
+  /** The coin product's variants by id, so a line can say what it delivers. */
+  private readonly variants = toSignal(
+    this.catalog.productBySlug(STOREFRONT.focusProductSlug).pipe(
+      map((detail) => new Map<string, ProductVariant>(detail.product.variants.map((variant) => [variant.id, variant]))),
+      catchError(() => of(new Map<string, ProductVariant>())),
+    ),
+    { initialValue: new Map<string, ProductVariant>() },
+  );
+
+  /** Coins across every coin line, bonus included; undefined when no line is coins. */
+  readonly totalCoins = computed<string | undefined>(() => {
+    let sum = 0;
+    let any = false;
+    for (const item of this.cart.items()) {
+      const variant = this.variants().get(item.variantId);
+      if (variant?.quantityValue) {
+        any = true;
+        sum += (variant.quantityValue + launchBonusOf(variant)) * item.quantity;
+      }
+    }
+    return any ? formatQuantity(sum) : undefined;
+  });
+
   couponCode = '';
 
   constructor() {
     this.analytics.pageView('/cart', 'Cart');
+  }
+
+  /** Base plus bonus equals received, for a coin line with a bonus. */
+  receipt(item: CartItem): { base: string; bonus: string; total: string } | undefined {
+    const variant = this.variants().get(item.variantId);
+    const bonus = launchBonusOf(variant);
+    if (!variant?.quantityValue || bonus <= 0) {
+      return undefined;
+    }
+    return { base: formatQuantity(variant.quantityValue), bonus: formatQuantity(bonus), total: formatQuantity(variant.quantityValue + bonus) };
   }
 
   applyCoupon(): void {

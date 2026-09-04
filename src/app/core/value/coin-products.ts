@@ -2,6 +2,8 @@ import {
   CoinPlatform, CoinProduct, CoinTier, GameEdition, Offer, Platform, PlatformFamily, ProductDetail,
 } from '../../domain';
 import { isPurchasable } from '../../domain';
+import { launchBonusOf } from '../commerce/launch-bonus';
+import { roleFor } from '../commerce/merchandising';
 import { rankByValue } from './offer-value';
 
 /**
@@ -16,13 +18,25 @@ export const TIER_THRESHOLDS: readonly { readonly tier: CoinTier; readonly minAm
   { tier: 'starter', minAmount: 0 },
 ];
 
-/** The art key for a bundle size, e.g. 1_000_000 -> "bundle-1m". Mirrors the registry's naming. */
+/**
+ * The art key for a bundle size. Five compositions serve the whole ladder:
+ * a size without its own render takes the composition of the step below it,
+ * so 750K shows the 500K stack and 5M the 2M floor. Mirrors the registry.
+ */
 export function bundleArtKey(amount: number): string {
-  if (amount >= 1_000_000) {
-    const millions = amount / 1_000_000;
-    return `bundle-${Number.isInteger(millions) ? millions : millions.toFixed(1)}m`;
+  if (amount >= 2_000_000) {
+    return 'bundle-2m';
   }
-  return `bundle-${Math.round(amount / 1_000)}k`;
+  if (amount >= 1_000_000) {
+    return 'bundle-1m';
+  }
+  if (amount >= 500_000) {
+    return 'bundle-500k';
+  }
+  if (amount >= 250_000) {
+    return 'bundle-250k';
+  }
+  return 'bundle-100k';
 }
 
 export function tierForAmount(amount: number | undefined): CoinTier {
@@ -68,7 +82,7 @@ export function coinProductsFrom(
   }
   const comparable = pool.filter((offer) => offer.platformId === first.platformId && offer.regionId === first.regionId);
 
-  return rankByValue(comparable, detail.product.variants)
+  const shelf = rankByValue(comparable, detail.product.variants)
     .filter((row) => row.perUnitMinor !== undefined)
     .sort((a, b) => (a.variant.quantityValue ?? 0) - (b.variant.quantityValue ?? 0))
     .flatMap((row): CoinProduct[] => {
@@ -78,6 +92,9 @@ export function coinProductsFrom(
         return [];
       }
       const amount = row.variant.quantityValue ?? 0;
+      const bonus = launchBonusOf(row.variant);
+      const totalCoins = amount + bonus;
+      const priceIls = shekels(row.offer.price.current.amountMinor);
       const tier = tierForAmount(amount);
       return [{
         id: row.offer.id,
@@ -85,18 +102,37 @@ export function coinProductsFrom(
         platform: coinPlatform,
         platformLabel: platform.shortName,
         amount,
-        priceIls: shekels(row.offer.price.current.amountMinor),
+        priceIls,
         compareAtIls: row.offer.price.compareAt ? shekels(row.offer.price.compareAt.amountMinor) : undefined,
         perMillionIls: row.perUnitMinor === undefined ? undefined : shekels(row.perUnitMinor),
+        bonus,
+        totalCoins,
+        effectivePerMillionIls: totalCoins > 0 ? Math.round((priceIls / totalCoins) * 1_000_000) : undefined,
         tier,
         artKey: bundleArtKey(amount),
-        badge: row.isBestValue ? 'best-value' : undefined,
         inStock: purchasable(row.offer),
         productSlug: detail.product.slug,
         variantId: row.variant.id,
         offer: row.offer,
       }];
     });
+
+  return withBestValue(shelf);
+}
+
+/**
+ * Marks the best value of a shelf: the cheapest price per million received,
+ * bonus included, and only when there is something to be better than. Run on
+ * whatever subset is shown, so a curated shelf features its own best deal.
+ */
+export function withBestValue(shelf: readonly CoinProduct[]): readonly CoinProduct[] {
+  const rates = shelf.map((product) => product.effectivePerMillionIls).filter((rate): rate is number => rate !== undefined);
+  const cheapest = rates.length > 1 ? Math.min(...rates) : undefined;
+  const dearest = rates.length > 1 ? Math.max(...rates) : undefined;
+  return shelf.map((product) => {
+    const bestValue = cheapest !== undefined && dearest !== undefined && dearest > cheapest && product.effectivePerMillionIls === cheapest;
+    return { ...product, badge: bestValue ? 'best-value' : undefined, role: roleFor(product.amount, bestValue) };
+  });
 }
 
 function purchasable(offer: Offer): boolean {

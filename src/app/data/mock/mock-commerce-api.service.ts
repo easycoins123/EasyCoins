@@ -90,6 +90,13 @@ export function requirementsForCart(cart: Cart): readonly CheckoutRequirement[] 
 // Cart
 // ---------------------------------------------------------------------------
 
+/** True when the line's variant carries launch bonus coins (see the catalog seed's metadata). */
+function carriesLaunchBonus(item: CartItem): boolean {
+  const variant = PRODUCTS.flatMap((product) => product.variants).find((candidate) => candidate.id === item.variantId);
+  const bonus = variant?.metadata['launchBonus'];
+  return typeof bonus === 'number' && bonus > 0;
+}
+
 @Injectable()
 export class MockCartApiService extends CartApiService {
   private readonly backend = inject(MockBackendService);
@@ -190,6 +197,17 @@ export class MockCartApiService extends CartApiService {
     const coupon = COUPONS.find((candidate) => candidate.code === normalized && candidate.active);
     const subtotal = sumMoney(cart.items.map(lineTotal));
 
+    // One benefit per order: a line that already carries the launch bonus
+    // takes no code, whatever the code is. Mirrors the server's rule.
+    if (cart.items.some((item) => carriesLaunchBonus(item))) {
+      return this.backend.respond<CouponApplication>({
+        applied: false,
+        code: normalized,
+        discount: money(0),
+        message: localized('בונוס ההשקה כבר בהזמנה. הטבה אחת להזמנה.', 'The launch bonus is already on this order. One benefit per order.'),
+      });
+    }
+
     if (!coupon) {
       return this.backend.respond<CouponApplication>({
         applied: false,
@@ -216,7 +234,7 @@ export class MockCartApiService extends CartApiService {
   }
 
   private discountFor(code: string | undefined, items: readonly CartItem[]): ReturnType<typeof money> {
-    if (!code) {
+    if (!code || items.some((item) => carriesLaunchBonus(item))) {
       return money(0);
     }
     const coupon = COUPONS.find((candidate) => candidate.code === code.toUpperCase() && candidate.active);

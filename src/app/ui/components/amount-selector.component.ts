@@ -9,6 +9,7 @@ import {
 import { Money, Offer, ProductDetail, ProductVariant } from '../../domain';
 import { MoneyPipe } from '../money.pipe';
 import { CoinArtComponent } from './cards/coin-art.component';
+import { isCurated } from '../../core/commerce';
 import { TIERS, Tier as TierTokens, tierForAmount } from './cards/tiers';
 import { IconComponent } from './icon.component';
 
@@ -350,6 +351,8 @@ export class AmountSelectorComponent {
   private buildTiers(): readonly Tier[] {
     return rankByValue(this.offers, this.variants)
       .filter((row) => row.perUnitMinor !== undefined && (row.variant.quantityValue ?? 0) > 0)
+      // The picker shows the curated sizes; the plan below draws on every bundle.
+      .filter((row) => isCurated(row.variant.quantityValue ?? 0))
       .sort((a, b) => (a.variant.quantityValue ?? 0) - (b.variant.quantityValue ?? 0))
       .map((row): Tier => ({
         quantity: row.variant.quantityValue ?? 0,

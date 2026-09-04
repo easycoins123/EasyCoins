@@ -8,6 +8,7 @@ import { BehaviorSubject, Observable, of } from 'rxjs';
 import { catchError, filter, map, shareReplay, startWith, switchMap, take } from 'rxjs/operators';
 
 import { STOREFRONT } from '../../core/brand';
+import { isCurated } from '../../core/commerce';
 import { formatQuantity, rankByValue } from '../../core/value';
 import { ProductDetail } from '../../domain';
 import { CatalogFacade } from '../../state/catalog.facade';
@@ -447,6 +448,7 @@ export class MobileNavComponent implements OnChanges {
     const rows = rankByValue(comparable, detail.product.variants)
       .filter((row) => row.perUnitMinor !== undefined)
       .sort((a, b) => (a.variant.quantityValue ?? 0) - (b.variant.quantityValue ?? 0))
+      .filter((row) => isCurated(row.variant.quantityValue ?? 0))
       .slice(0, 5)
       .map((row): QuickTier => ({
         slug: detail.product.slug,

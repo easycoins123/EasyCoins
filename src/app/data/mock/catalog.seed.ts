@@ -392,7 +392,6 @@ interface ProductSeed {
 }
 
 const IN_STOCK: Inventory = { status: InventoryStatus.InStock, maxPerOrder: 10 };
-const LOW_STOCK: Inventory = { status: InventoryStatus.LowStock, remaining: 4, maxPerOrder: 4 };
 
 const PRODUCT_SEEDS: readonly ProductSeed[] = [
   {
@@ -416,11 +415,18 @@ const PRODUCT_SEEDS: readonly ProductSeed[] = [
     termsHe: 'האספקה מתבצעת בתיאום מולכם. לעולם לא נבקש סיסמה, קוד אימות או קודי גיבוי.',
     termsEn: 'Delivery is coordinated with you. We will never ask for a password, a verification code or backup codes.',
     variants: [
-      { key: '100k', nameHe: '100K מטבעות', nameEn: '100K coins', quantityValue: 100000, unitHe: 'מטבעות', unitEn: 'coins', priceMajor: 49 },
-      { key: '250k', nameHe: '250K מטבעות', nameEn: '250K coins', quantityValue: 250000, unitHe: 'מטבעות', unitEn: 'coins', priceMajor: 119, compareAtMajor: 135 },
-      { key: '500k', nameHe: '500K מטבעות', nameEn: '500K coins', quantityValue: 500000, unitHe: 'מטבעות', unitEn: 'coins', priceMajor: 219, compareAtMajor: 249 },
-      { key: '1m', nameHe: '1M מטבעות', nameEn: '1M coins', quantityValue: 1000000, unitHe: 'מטבעות', unitEn: 'coins', priceMajor: 399 },
-      { key: '2m', nameHe: '2M מטבעות', nameEn: '2M coins', quantityValue: 2000000, unitHe: 'מטבעות', unitEn: 'coins', priceMajor: 749, inventory: LOW_STOCK },
+      // Mirrors backend/prisma/seed.ts: the launch ladder with its bonus coins.
+      { key: '100k', nameHe: '100K מטבעות + 10K בונוס השקה', nameEn: '100K coins + 10K launch bonus', quantityValue: 100000, unitHe: 'מטבעות', unitEn: 'coins', priceMajor: 15, metadata: { launchBonus: 10000 } },
+      { key: '200k', nameHe: '200K מטבעות + 20K בונוס השקה', nameEn: '200K coins + 20K launch bonus', quantityValue: 200000, unitHe: 'מטבעות', unitEn: 'coins', priceMajor: 27, metadata: { launchBonus: 20000 } },
+      { key: '250k', nameHe: '250K מטבעות + 25K בונוס השקה', nameEn: '250K coins + 25K launch bonus', quantityValue: 250000, unitHe: 'מטבעות', unitEn: 'coins', priceMajor: 31, metadata: { launchBonus: 25000 } },
+      { key: '300k', nameHe: '300K מטבעות + 30K בונוס השקה', nameEn: '300K coins + 30K launch bonus', quantityValue: 300000, unitHe: 'מטבעות', unitEn: 'coins', priceMajor: 35, metadata: { launchBonus: 30000 } },
+      { key: '500k', nameHe: '500K מטבעות + 50K בונוס השקה', nameEn: '500K coins + 50K launch bonus', quantityValue: 500000, unitHe: 'מטבעות', unitEn: 'coins', priceMajor: 39, metadata: { launchBonus: 50000 } },
+      { key: '750k', nameHe: '750K מטבעות + 75K בונוס השקה', nameEn: '750K coins + 75K launch bonus', quantityValue: 750000, unitHe: 'מטבעות', unitEn: 'coins', priceMajor: 58, metadata: { launchBonus: 75000 } },
+      { key: '1m', nameHe: '1M מטבעות + 100K בונוס השקה', nameEn: '1M coins + 100K launch bonus', quantityValue: 1000000, unitHe: 'מטבעות', unitEn: 'coins', priceMajor: 75, metadata: { launchBonus: 100000 } },
+      { key: '1500k', nameHe: '1.5M מטבעות + 150K בונוס השקה', nameEn: '1.5M coins + 150K launch bonus', quantityValue: 1500000, unitHe: 'מטבעות', unitEn: 'coins', priceMajor: 109, metadata: { launchBonus: 150000 } },
+      { key: '2m', nameHe: '2M מטבעות + 200K בונוס השקה', nameEn: '2M coins + 200K launch bonus', quantityValue: 2000000, unitHe: 'מטבעות', unitEn: 'coins', priceMajor: 143, metadata: { launchBonus: 200000 } },
+      { key: '3m', nameHe: '3M מטבעות + 300K בונוס השקה', nameEn: '3M coins + 300K launch bonus', quantityValue: 3000000, unitHe: 'מטבעות', unitEn: 'coins', priceMajor: 209, metadata: { launchBonus: 300000 } },
+      { key: '5m', nameHe: '5M מטבעות + 500K בונוס השקה', nameEn: '5M coins + 500K launch bonus', quantityValue: 5000000, unitHe: 'מטבעות', unitEn: 'coins', priceMajor: 335, metadata: { launchBonus: 500000 } },
     ],
   },
   {

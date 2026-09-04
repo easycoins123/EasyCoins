@@ -72,10 +72,10 @@ const variantCount = await variantChips.count();
 check('product exposes variants', variantCount >= 5, `${variantCount} variants`);
 
 // Select the 500K variant, then a platform, then read the resolved offer price.
-await variantChips.nth(2).click();
+await variantChips.filter({ hasText: '500K' }).first().click(); // by label: the ladder has eleven sizes
 await page.waitForTimeout(250);
 const priceAfterVariant = await page.locator('.tt-price').first().innerText();
-check('variant selection changes price', priceAfterVariant.includes('219'), `price=${priceAfterVariant}`);
+check('variant selection changes price', priceAfterVariant.includes('39'), `price=${priceAfterVariant}`); // 500K on the launch ladder
 
 const platformChips = page.locator('.chooser').nth(1).locator('.chip');
 const platformCount = await platformChips.count();

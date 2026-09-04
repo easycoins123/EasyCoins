@@ -79,14 +79,17 @@ import { MobileNavComponent } from './mobile-nav.component';
                   <strong>{{ auth.displayName() }}</strong>
                   <span>{{ auth.customer()?.email }}</span>
                 </p>
+                <a role="menuitem" routerLink="/account/orders" (click)="closeUserMenu()">
+                  <tt-icon name="package" [size]="16"></tt-icon> ההזמנות שלי
+                </a>
+                <a role="menuitem" routerLink="/account/orders" [queryParams]="{ track: 1 }" (click)="closeUserMenu()">
+                  <tt-icon name="delivery" [size]="16"></tt-icon> מעקב הזמנה
+                </a>
                 <a role="menuitem" routerLink="/account" (click)="closeUserMenu()">
                   <tt-icon name="user" [size]="16"></tt-icon> החשבון שלי
                 </a>
-                <a role="menuitem" routerLink="/account/orders" (click)="closeUserMenu()">
-                  <tt-icon name="clock" [size]="16"></tt-icon> ההזמנות שלי
-                </a>
-                <a role="menuitem" routerLink="/account/security" (click)="closeUserMenu()">
-                  <tt-icon name="lock" [size]="16"></tt-icon> אבטחת החשבון
+                <a role="menuitem" routerLink="/support" (click)="closeUserMenu()">
+                  <tt-icon name="headset" [size]="16"></tt-icon> תמיכה
                 </a>
                 <button role="menuitem" type="button" class="menu__out" (click)="signOut()">
                   <tt-icon name="logout" [size]="16"></tt-icon> התנתקות

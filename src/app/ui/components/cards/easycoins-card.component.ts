@@ -49,6 +49,11 @@ import { TIERS, Tier } from './tiers';
           <span class="qty__unit">COINS</span>
         </p>
         <span class="chip" *ngIf="chip && !featured">{{ chip }}</span>
+        <p class="bonus" *ngIf="product.bonus > 0">
+          <span class="bonus__plus tt-numeric">+{{ bonusLabel }}</span>
+          <span class="bonus__tag">בונוס השקה</span>
+          <span class="bonus__total tt-numeric">= {{ totalLabel }}</span>
+        </p>
       </div>
 
       <a class="media" [routerLink]="['/products', product.productSlug, product.variantId]"
@@ -59,7 +64,7 @@ import { TIERS, Tier } from './tiers';
       <p class="meta">
         <span class="platform"><tt-icon [name]="platformIcon" [size]="14"></tt-icon>{{ product.platformLabel | t }}</span>
         <span class="edition">{{ edition }}</span>
-        <span class="rate tt-numeric" *ngIf="perMillion as rate">{{ rate | money }} / מיליון</span>
+        <span class="rate tt-numeric" *ngIf="perMillion as rate">{{ rate | money }} / מיליון<ng-container *ngIf="product.bonus > 0"> כולל בונוס</ng-container></span>
       </p>
 
       <p class="price">
@@ -137,6 +142,10 @@ import { TIERS, Tier } from './tiers';
     .amount { font-size: 2.6rem; }
     .qty__unit { margin-block-start: 2px; font-size: var(--tt-caption); font-weight: 800; letter-spacing: 0.22em; color: var(--tt-text-muted); direction: ltr; }
     .card--featured .amount { color: var(--tt-gold-400); }
+    .bonus { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 4px 6px; margin: 0; font-size: var(--tt-caption); font-weight: 800; }
+    .bonus__plus { color: var(--tt-gold-400); font-size: var(--tt-text-sm); direction: ltr; unicode-bidi: isolate; }
+    .bonus__tag { padding: 1px 7px; border-radius: var(--tt-radius-pill); border: 1px solid var(--tt-gold-600); color: var(--tt-gold-400); font-size: 10px; letter-spacing: 0.04em; }
+    .bonus__total { color: var(--tt-text); font-size: var(--tt-text-sm); direction: ltr; unicode-bidi: isolate; }
     .chip {
       padding: 0.15rem 0.6rem;
       border-radius: var(--tt-radius-sm);
@@ -250,10 +259,19 @@ export class EasyCoinsCardComponent {
     return this.product.platform === 'pc' ? 'platform' : 'gamepad';
   }
 
+  get bonusLabel(): string {
+    return formatQuantity(this.product.bonus);
+  }
+
+  get totalLabel(): string {
+    return formatQuantity(this.product.totalCoins);
+  }
+
   get perMillion(): Money | undefined {
-    return this.product.perMillionIls === undefined
+    const rate = this.product.bonus > 0 ? this.product.effectivePerMillionIls : this.product.perMillionIls;
+    return rate === undefined
       ? undefined
-      : { amountMinor: Math.round(this.product.perMillionIls * 100), currency: this.product.offer.price.current.currency };
+      : { amountMinor: Math.round(rate * 100), currency: this.product.offer.price.current.currency };
   }
 
   get saved(): Money | undefined {

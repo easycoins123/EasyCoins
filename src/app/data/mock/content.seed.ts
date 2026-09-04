@@ -17,6 +17,17 @@ export const PROMOTIONS: readonly Promotion[] = [
     ),
     percentOff: 10,
     startsAt: '2026-01-01T00:00:00.000Z',
+    // Off while the launch bonus runs: one benefit per order, as in production.
+    active: false,
+  },
+  {
+    id: 'promo-qa-ten',
+    slug: 'qa-ten',
+    kind: PromotionKind.PercentOff,
+    title: localized('קוד בדיקה (סביבת פיתוח בלבד)', 'Test code (development only)'),
+    description: localized('QA10: 10% על מוצרים ללא בונוס, להזמנות מעל 100 ₪. קיים רק במוק.', 'QA10: 10% on products without a bonus, orders above 100 ILS. Mock only.'),
+    percentOff: 10,
+    startsAt: '2026-01-01T00:00:00.000Z',
     active: true,
   },
   {
@@ -41,6 +52,13 @@ export const COUPONS: readonly Coupon[] = [
     id: 'coupon-launch10',
     code: 'LAUNCH10',
     promotionId: 'promo-launch',
+    minSubtotal: fromMajor(100),
+    active: false,
+  },
+  {
+    id: 'coupon-qa10',
+    code: 'QA10',
+    promotionId: 'promo-qa-ten',
     minSubtotal: fromMajor(100),
     active: true,
   },

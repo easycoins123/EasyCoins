@@ -63,13 +63,25 @@ export const ART_SOURCES: Readonly<Partial<Record<string, ArtSet>>> = {
   'fut-thumb': { card: file('fut-thumb', 240, 160) },
 };
 
-/** The art key for a bundle size, e.g. 1_000_000 -> "bundle-1m". */
+/**
+ * The art key for a bundle size. Five compositions serve the whole ladder: a
+ * size without its own render takes the composition of the step below it.
+ * Mirrors `core/value/coin-products.ts`.
+ */
 export function bundleArtKey(amount: number): string {
-  if (amount >= 1_000_000) {
-    const millions = amount / 1_000_000;
-    return `bundle-${Number.isInteger(millions) ? millions : millions.toFixed(1)}m`;
+  if (amount >= 2_000_000) {
+    return 'bundle-2m';
   }
-  return `bundle-${Math.round(amount / 1_000)}k`;
+  if (amount >= 1_000_000) {
+    return 'bundle-1m';
+  }
+  if (amount >= 500_000) {
+    return 'bundle-500k';
+  }
+  if (amount >= 250_000) {
+    return 'bundle-250k';
+  }
+  return 'bundle-100k';
 }
 
 /** The composition a variant draws. */

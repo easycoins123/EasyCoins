@@ -6,10 +6,11 @@ import { catchError, shareReplay } from 'rxjs/operators';
 
 import { AnalyticsService } from '../../core/analytics';
 import { STOREFRONT } from '../../core/brand';
-import { CoinPlan, coinProductsFrom } from '../../core/value';
+import { isCurated, roleLabel } from '../../core/commerce';
+import { CoinPlan, coinProductsFrom, formatQuantity, withBestValue } from '../../core/value';
 import { LocalizePipe } from '../../core/i18n';
 import { CoinProduct, LocalizedText, Offer, Platform } from '../../domain';
-import { CartFacade, CatalogFacade } from '../../state';
+import { CampaignsFacade, CartFacade, CatalogFacade } from '../../state';
 // Imported by file rather than through the barrel: the barrel re-exports every
 // component in the library, and a chunk that imports it carries the store's
 // filters, search box and product cards to the first screen of the home page.
@@ -22,6 +23,9 @@ import { ProcessArtComponent } from '../../ui/components/process-art.component';
 import { ReviewsSectionComponent } from '../../ui/components/reviews-section.component';
 import { SkeletonGridComponent } from '../../ui/components/state.component';
 import { StadiumComponent } from '../../ui/components/world/stadium.component';
+import { LaunchStripComponent } from '../../ui/components/commerce/launch-strip.component';
+import { RewardsComponent } from '../../ui/components/commerce/rewards.component';
+import { ValueCalloutsComponent } from '../../ui/components/commerce/value-callouts.component';
 import { LiveDirective } from '../../ui/live.directive';
 import { RevealDirective } from '../../ui/reveal.directive';
 
@@ -43,6 +47,7 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
     CommonModule, RouterLink, LocalizePipe,
     HeroComponent, IconComponent, AmountSelectorComponent, EasyCoinsCardComponent, CoinArtComponent,
     ProcessArtComponent, ReviewsSectionComponent, SkeletonGridComponent, LiveDirective, RevealDirective, StadiumComponent,
+    LaunchStripComponent, ValueCalloutsComponent, RewardsComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -53,33 +58,24 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
 
     <ng-container *ngIf="state.vm as vm; else loading">
 
-      <!-- The trust rail: five things the shop keeps, in a strip under the hero. -->
-      <div class="rail-band">
-        <div class="tt-container">
-          <ul class="rail" ttReveal>
-            <li class="rail__item" *ngFor="let item of trust">
-              <span class="rail__glyph" [class.rail__glyph--gold]="item.gold"><tt-icon [name]="item.icon" [size]="20"></tt-icon></span>
-              <span class="rail__text"><strong>{{ item.title }}</strong><span>{{ item.note }}</span></span>
-            </li>
-          </ul>
-        </div>
-      </div>
+      <!-- Launch value, in one line under the hero. Renders only while the catalog carries a bonus. -->
+      <tt-launch-strip [products]="vm.products"></tt-launch-strip>
 
-      <!-- The packages: five bundles, the numbers' favourite featured. -->
+      <!-- The packages: the five leading bundles, roles on the chips, best value from the numbers. -->
       <section class="packages tt-section tt-section--tight" id="bundles">
         <div class="tt-container">
           <div class="chapter" ttReveal>
-            <h2><span class="chapter__rule"></span>חבילות פופולריות<span class="chapter__rule"></span></h2>
-            <p class="tt-muted">מחירים חיים מהקטלוג. הפלטפורמה ואזור החנות נבחרים לפני התשלום.</p>
+            <h2><span class="chapter__rule"></span>בחרו את החבילה שלכם<span class="chapter__rule"></span></h2>
+            <p class="tt-muted">מחיר סופי לכל חבילה, בונוס ההשקה כלול. הפלטפורמה ואזור החנות נבחרים לפני התשלום.</p>
           </div>
 
-          <div class="shelf" *ngIf="vm.products.length > 0; else noShelf">
-            <tt-easycoins-card *ngFor="let product of vm.products; let i = index; trackBy: trackByOffer"
+          <div class="shelf" *ngIf="vm.curated.length > 0; else noShelf">
+            <tt-easycoins-card *ngFor="let product of vm.curated; let i = index; trackBy: trackByOffer"
                                [ttReveal]="i"
                                [product]="product"
                                [featured]="product.badge === 'best-value'"
-                               [chip]="chipFor(product, vm.products)"
-                               [flagship]="i === vm.products.length - 1 && vm.products.length % 2 === 1"
+                               [chip]="chipFor(product)"
+                               [flagship]="i === vm.curated.length - 1 && vm.curated.length % 2 === 1"
                                [busy]="adding()"
                                (buy)="buyOffer($event)">
             </tt-easycoins-card>
@@ -87,7 +83,7 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
           <ng-template #noShelf><tt-skeleton-grid [count]="5"></tt-skeleton-grid></ng-template>
 
           <p class="packages__more" ttReveal>
-            <a class="ghost-link" routerLink="/store"><tt-icon name="chevron" [size]="15" dir="auto"></tt-icon> צפייה בכל החבילות</a>
+            <a class="ghost-link" routerLink="/store"><tt-icon name="chevron" [size]="15" dir="auto"></tt-icon> לכל {{ vm.products.length }} הגדלים, מ־{{ smallest(vm.products) }} עד {{ largest(vm.products) }}</a>
           </p>
 
           <details class="custom tt-plate" *ngIf="vm.ladder as ladder" ttReveal>
@@ -101,6 +97,17 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
               <tt-amount-selector [detail]="ladder" [busy]="adding()" (confirm)="addPlan($event)"></tt-amount-selector>
             </div>
           </details>
+        </div>
+      </section>
+
+      <!-- Why this deal is better: four numbers the catalog can back. -->
+      <section class="value tt-section tt-section--tight" *ngIf="vm.products.length > 0">
+        <div class="tt-container">
+          <div class="chapter chapter--start" ttReveal>
+            <h2>למה הדיל הזה טוב יותר?</h2>
+            <p class="tt-muted">מספרים מהקטלוג, לא סיסמאות. מה שמוצג כאן הוא מה שמשלמים ומה שמקבלים.</p>
+          </div>
+          <tt-value-callouts [products]="vm.products" ttReveal="1"></tt-value-callouts>
         </div>
       </section>
 
@@ -136,6 +143,29 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
           </ol>
         </div>
       </section>
+
+      <!-- Reasons to come back: the drop, the opening squad, friend brings friend. -->
+      <section class="rewards-band tt-section tt-section--tight">
+        <div class="tt-container">
+          <div class="chapter chapter--start" ttReveal>
+            <h2>סיבות לחזור</h2>
+            <p class="tt-muted">מה שפעיל מסומן פעיל. מה שבהכנה כתוב שהוא בהכנה. בלי שעונים מזויפים.</p>
+          </div>
+          <tt-rewards [campaigns]="campaigns$ | async" ttReveal="1"></tt-rewards>
+        </div>
+      </section>
+
+      <!-- The trust rail: five things the shop keeps. -->
+      <div class="rail-band rail-band--late">
+        <div class="tt-container">
+          <ul class="rail" ttReveal>
+            <li class="rail__item" *ngFor="let item of trust">
+              <span class="rail__glyph" [class.rail__glyph--gold]="item.gold"><tt-icon [name]="item.icon" [size]="20"></tt-icon></span>
+              <span class="rail__text"><strong>{{ item.title }}</strong><span>{{ item.note }}</span></span>
+            </li>
+          </ul>
+        </div>
+      </div>
 
       <!-- What verified customers say. -->
       <section class="voices tt-section tt-section--tight">
@@ -188,7 +218,7 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
             <a class="tt-btn tt-btn--buy tt-btn--lg" routerLink="/store"><tt-icon name="cart" [size]="18"></tt-icon> לקניית קוינס</a>
             <a class="tt-btn tt-btn--ghost tt-btn--lg" routerLink="/faq">שאלות נפוצות</a>
           </div>
-          <p class="close__fine"><tt-icon name="lock" [size]="13"></tt-icon> תשלום מאובטח · מחיר סופי · דף מעקב לכל הזמנה</p>
+          <p class="close__fine"><tt-icon name="lock" [size]="13"></tt-icon> תשלום מאובטח · מחיר סופי · בונוס ההשקה בכל הזמנה</p>
         </div>
         <div class="close__art" aria-hidden="true"><tt-coin-art variant="bundle" artKey="fut-podium" tier="legend"></tt-coin-art></div>
       </div>
@@ -198,6 +228,10 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
     h2 { margin: 0; }
     .chapter { display: flex; flex-direction: column; align-items: center; gap: var(--tt-space-2); margin-block-end: var(--tt-space-6); text-align: center; }
     .chapter h2 { display: inline-flex; align-items: center; gap: var(--tt-space-3); }
+    .chapter--start { align-items: flex-start; text-align: start; margin-block-end: var(--tt-space-5); }
+    .chapter--start h2 { display: block; }
+    .chapter--start p { margin: 0; max-inline-size: 60ch }
+    .rail-band--late { margin-block-start: 0; padding-block: var(--tt-space-5); border-block: 1px solid var(--tt-border); background: var(--tt-bg-elevated); }
     .chapter__rule { display: inline-block; inline-size: 36px; block-size: 2px; background: linear-gradient(90deg, transparent, var(--tt-gold-500)); }
     .chapter__rule:last-child { background: linear-gradient(90deg, var(--tt-gold-500), transparent); }
     .chapter p { margin: 0; font-size: var(--tt-text-sm); }
@@ -305,8 +339,10 @@ export class HomePage {
   private readonly catalog = inject(CatalogFacade);
   private readonly cart = inject(CartFacade);
   private readonly analytics = inject(AnalyticsService);
+  private readonly campaignsFacade = inject(CampaignsFacade);
 
   readonly gameName = STOREFRONT.focusGameName;
+  readonly campaigns$ = this.campaignsFacade.campaigns$;
 
   /** Only what the shop actually keeps. Five, so the rail reads at a glance. */
   readonly trust: readonly TrustItem[] = [
@@ -341,7 +377,8 @@ export class HomePage {
         : [];
       const method = ladder?.offers[0]?.fulfillmentMethod;
       const delivery: LocalizedText | undefined = method ? lookups.fulfillment.get(method)?.description : undefined;
-      return { lookups, ladder, platforms, products, delivery };
+      const curated = withBestValue(products.filter((product) => isCurated(product.amount)));
+      return { lookups, ladder, platforms, products, curated, delivery };
     }),
     shareReplay({ bufferSize: 1, refCount: true }),
   );
@@ -352,18 +389,16 @@ export class HomePage {
     return product.id;
   }
 
-  chipFor(product: CoinProduct, shelf: readonly CoinProduct[]): string | undefined {
-    if (product.badge === 'best-value') {
-      return 'הכי משתלם';
-    }
-    const amounts = shelf.map((entry) => entry.amount);
-    if (product.amount === Math.min(...amounts)) {
-      return 'הכי זול';
-    }
-    if (product.amount === Math.max(...amounts)) {
-      return 'הכי גדולה';
-    }
-    return undefined;
+  chipFor(product: CoinProduct): string | undefined {
+    return roleLabel(product.role);
+  }
+
+  smallest(shelf: readonly CoinProduct[]): string {
+    return formatQuantity(shelf[0]?.amount);
+  }
+
+  largest(shelf: readonly CoinProduct[]): string {
+    return formatQuantity(shelf[shelf.length - 1]?.amount);
   }
 
   buyOffer(offer: Offer): void {

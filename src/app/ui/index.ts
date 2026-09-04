@@ -32,3 +32,7 @@ export * from './components/world/stadium.component';
 export * from './components/emblem-card.component';
 export * from './components/process-art.component';
 export * from './components/reviews-section.component';
+export * from './components/commerce/launch-strip.component';
+export * from './components/commerce/value-callouts.component';
+export * from './components/commerce/coin-ladder.component';
+export * from './components/commerce/rewards.component';

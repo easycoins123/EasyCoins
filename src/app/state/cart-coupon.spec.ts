@@ -18,10 +18,14 @@ import { CartFacade } from './cart.facade';
  * assert on `CartFacade.totals()` — the value every price in the UI reads from.
  */
 // A single line worth well over the coupon's hundred-shekel minimum, so the
-// discount qualifies without needing several items.
-const BIG_COIN_OFFER = OFFERS.find(
-  (offer) => offer.productId === 'prod-fc-coins' && offer.price.current.amountMinor >= 10_000,
+// discount qualifies without needing several items. A product without the
+// launch bonus: coin bundles carry the bonus and take no code (one benefit
+// per order), which the last test covers.
+const BIG_PLAIN_OFFER = OFFERS.find(
+  (offer) => offer.productId !== 'prod-fc-coins' && offer.price.current.amountMinor >= 10_000,
 )!;
+const COIN_OFFER = OFFERS.find((offer) => offer.productId === 'prod-fc-coins')!;
+const CODE = 'QA10';
 
 describe('CartFacade coupons', () => {
   let cart: CartFacade;
@@ -33,16 +37,28 @@ describe('CartFacade coupons', () => {
   });
 
   function addQualifyingCart(): void {
-    cart.add({ offerId: BIG_COIN_OFFER.id, quantity: 1 }).subscribe();
+    cart.add({ offerId: BIG_PLAIN_OFFER.id, quantity: 1 }).subscribe();
     tick(500);
   }
+
+  it('refuses a code on a line that carries the launch bonus', fakeAsync(() => {
+    cart.add({ offerId: COIN_OFFER.id, quantity: 1 }).subscribe();
+    tick(500);
+    let applied = true;
+    cart.applyCoupon(CODE).subscribe((result) => (applied = result));
+    tick(500);
+    expect(applied).toBe(false);
+    expect(cart.totals().discount.amountMinor).toBe(0);
+    expect(cart.cart().couponCode).toBeUndefined();
+    flush();
+  }));
 
   it('reduces the total by the discount the server returned', fakeAsync(() => {
     addQualifyingCart();
     const before = cart.totals().total.amountMinor;
 
     let applied = false;
-    cart.applyCoupon('LAUNCH10').subscribe((result) => (applied = result));
+    cart.applyCoupon(CODE).subscribe((result) => (applied = result));
     tick(500);
 
     expect(applied).toBe(true);
@@ -55,7 +71,7 @@ describe('CartFacade coupons', () => {
     addQualifyingCart();
     const subtotal = cart.totals().subtotal.amountMinor;
 
-    cart.applyCoupon('LAUNCH10').subscribe();
+    cart.applyCoupon(CODE).subscribe();
     tick(500);
 
     expect(cart.totals().subtotal.amountMinor).toBe(subtotal);
@@ -65,13 +81,13 @@ describe('CartFacade coupons', () => {
 
   it('carries the discount into the cart the checkout is built from', fakeAsync(() => {
     addQualifyingCart();
-    cart.applyCoupon('LAUNCH10').subscribe();
+    cart.applyCoupon(CODE).subscribe();
     tick(500);
 
     // checkout.facade builds its session from cart.cart(), so the discount has
     // to be inside that object and not only in a display-time computation.
     expect(cart.cart().totals.discount.amountMinor).toBeGreaterThan(0);
-    expect(cart.cart().couponCode).toBe('LAUNCH10');
+    expect(cart.cart().couponCode).toBe(CODE);
     flush();
   }));
 
@@ -92,7 +108,7 @@ describe('CartFacade coupons', () => {
 
   it('drops the discount when the cart no longer qualifies', fakeAsync(() => {
     addQualifyingCart();
-    cart.applyCoupon('LAUNCH10').subscribe();
+    cart.applyCoupon(CODE).subscribe();
     tick(500);
     expect(cart.totals().discount.amountMinor).toBeGreaterThan(0);
 
@@ -107,7 +123,7 @@ describe('CartFacade coupons', () => {
 
   it('forgets the coupon entirely when the cart is cleared', fakeAsync(() => {
     addQualifyingCart();
-    cart.applyCoupon('LAUNCH10').subscribe();
+    cart.applyCoupon(CODE).subscribe();
     tick(500);
 
     cart.clear();

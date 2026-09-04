@@ -1,12 +1,18 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
 import { AnalyticsService } from '../../core/analytics';
+import { STOREFRONT } from '../../core/brand';
+import { launchBonusOf } from '../../core/commerce';
+import { formatQuantity } from '../../core/value';
 import { LocalizePipe } from '../../core/i18n';
 import {
-  CheckoutFieldKey, CheckoutFieldValues, CheckoutRequirement, PaymentProviderId, PaymentStatus,
+  CheckoutFieldKey, CheckoutFieldValues, CheckoutRequirement, PaymentProviderId, PaymentStatus, ProductVariant,
 } from '../../domain';
 import { CartFacade, CatalogFacade, CheckoutFacade } from '../../state';
 import {
@@ -256,6 +262,9 @@ import {
               <span class="tt-numeric">{{ item.totalPrice | money }}</span>
             </li>
           </ul>
+          <div class="row row--coins" *ngIf="totalCoins() as coins">
+            <span>סה״כ קוינס שתקבלו</span><span class="tt-numeric coins">{{ coins }}</span>
+          </div>
           <div class="row total">
             <span>לתשלום</span>
             <span class="tt-price tt-numeric">{{ cart.totals().total | money }}</span>
@@ -365,6 +374,8 @@ import {
     .line { display: flex; flex-direction: column; gap: 3px; min-inline-size: 0; }
     .line__name { font-weight: 600; }
     .line__meta { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; font-size: var(--tt-text-xs); color: var(--tt-text-muted); }
+    .row--coins { display: flex; justify-content: space-between; gap: var(--tt-space-3); padding: var(--tt-space-2) var(--tt-space-3); margin-block-end: var(--tt-space-2); border: 1px solid var(--tt-gold-600); border-radius: var(--tt-radius-md); background: var(--tt-gold-tint); font-weight: 700; font-size: var(--tt-text-sm); }
+    .row--coins .coins { color: var(--tt-gold-400); font-size: var(--tt-text-lg); font-weight: 900; }
     .row.total { display: flex; justify-content: space-between; font-weight: 700; padding-block-start: var(--tt-space-2); border-block-start: 1px solid var(--tt-border); margin-block-end: var(--tt-space-3); }
     .tt-check .tt-hint { display: block; }
     .tt-check-field { display: flex; flex-direction: column; gap: var(--tt-space-2); }
@@ -396,6 +407,28 @@ export class CheckoutPage implements OnDestroy {
 
   /** Answers live in component memory for the length of the flow and nowhere else. */
   private readonly values = signal<CheckoutFieldValues>({});
+
+  /** The coin product's variants by id, so the ticket can total the coins. */
+  private readonly variants = toSignal(
+    this.catalog.productBySlug(STOREFRONT.focusProductSlug).pipe(
+      map((detail) => new Map(detail.product.variants.map((variant) => [variant.id, variant]))),
+      catchError(() => of(new Map<string, ProductVariant>())),
+    ),
+    { initialValue: new Map<string, ProductVariant>() },
+  );
+
+  readonly totalCoins = computed<string | undefined>(() => {
+    let sum = 0;
+    let any = false;
+    for (const item of this.cart.items()) {
+      const variant = this.variants().get(item.variantId);
+      if (variant?.quantityValue) {
+        any = true;
+        sum += (variant.quantityValue + launchBonusOf(variant)) * item.quantity;
+      }
+    }
+    return any ? formatQuantity(sum) : undefined;
+  });
 
   /** True once opening the session has taken longer than a customer expects. */
   readonly slow = signal(false);
