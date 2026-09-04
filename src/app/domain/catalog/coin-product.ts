@@ -1,3 +1,4 @@
+import { CoinRole } from '../../core/commerce/merchandising';
 import { LocalizedText } from '../common';
 import { Offer } from './product';
 
@@ -40,6 +41,14 @@ export interface CoinProduct {
   readonly compareAtIls?: number;
   /** Shekels per million coins, for the value argument on the card. */
   readonly perMillionIls?: number;
+  /** Launch bonus coins delivered on top of the amount; zero when none. */
+  readonly bonus: number;
+  /** Amount plus bonus: what the customer receives. */
+  readonly totalCoins: number;
+  /** Price per million coins received, bonus included. */
+  readonly effectivePerMillionIls?: number;
+  /** The bundle's place on the shelf, in shelf language. */
+  readonly role?: CoinRole;
   readonly tier: CoinTier;
   /** Key into the art registry; `coins-<tier>` unless art is supplied per bundle. */
   readonly artKey: string;

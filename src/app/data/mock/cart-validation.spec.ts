@@ -4,7 +4,7 @@ import {
   Cart, CartItem, CartValidationResult, FulfillmentMethod, computeTotals, fromMajor,
 } from '../../domain';
 import { CartApiService } from '../api';
-import { provideDataLayer } from '../providers';
+import { provideMockDataLayer } from './providers';
 import { OFFERS } from './catalog.seed';
 
 const GIFT_50 = 'offer__prod-ps-gift-card__50__plat-ps5__reg-il';
@@ -43,7 +43,7 @@ describe('cart validation (server re-pricing)', () => {
   let api: CartApiService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideDataLayer()] });
+    TestBed.configureTestingModule({ providers: [provideMockDataLayer()] });
     api = TestBed.inject(CartApiService);
   });
 
@@ -104,7 +104,7 @@ describe('cart validation (server re-pricing)', () => {
   it('applies a valid coupon above its minimum', fakeAsync(() => {
     let applied = false;
     let discountMinor = 0;
-    api.applyCoupon(cartOf([itemFor(GIFT_50, { quantity: 3 })]), 'LAUNCH10').subscribe((application) => {
+    api.applyCoupon(cartOf([itemFor(GIFT_50, { quantity: 3 })]), 'QA10').subscribe((application) => {
       applied = application.applied;
       discountMinor = application.discount.amountMinor;
     });
@@ -115,7 +115,7 @@ describe('cart validation (server re-pricing)', () => {
 
   it('rejects a coupon below its minimum subtotal', fakeAsync(() => {
     let applied = true;
-    api.applyCoupon(cartOf([itemFor(GIFT_50)]), 'LAUNCH10').subscribe((application) => {
+    api.applyCoupon(cartOf([itemFor(GIFT_50)]), 'QA10').subscribe((application) => {
       applied = application.applied;
     });
     tick(400);

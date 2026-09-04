@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, Input, signal } from '@angular/core';
+import {
+  AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, NgZone, ViewChild, inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
@@ -9,6 +11,7 @@ import { GAME_EDITIONS, Platform, PlatformFamily, ProductDetail } from '../../do
 import { TIERS, Tier, tierForAmount } from './cards/tiers';
 import { HeroSceneComponent } from './hero-scene.component';
 import { IconComponent } from './icon.component';
+import { LiveDirective } from '../live.directive';
 import { StadiumComponent } from './world/stadium.component';
 
 /** A real tier, pinned to the artwork as a price tag. */
@@ -33,7 +36,7 @@ interface PriceTag {
 @Component({
   selector: 'tt-hero',
   standalone: true,
-  imports: [CommonModule, RouterLink, LocalizePipe, HeroSceneComponent, IconComponent, StadiumComponent],
+  imports: [CommonModule, RouterLink, LocalizePipe, HeroSceneComponent, IconComponent, StadiumComponent, LiveDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="hero">
@@ -59,11 +62,19 @@ interface PriceTag {
             <li><tt-icon name="check" [size]="14"></tt-icon> דף מעקב לכל הזמנה</li>
           </ul>
 
-          <div class="deal seq seq--word" *ngIf="best as price" style="--seq-delay: 760ms">
-            <span class="deal__from">מ־</span>
-            <span class="deal__value tt-figure">{{ price }}</span>
-            <span class="deal__currency">₪</span>
-            <span class="deal__unit">לכל מיליון קוינס <span class="deal__sub">בחבילה הגדולה</span></span>
+          <div class="deal seq seq--word" *ngIf="best || pending" style="--seq-delay: 760ms">
+            <ng-container *ngIf="best as price; else dealPending">
+              <span class="deal__from">מ־</span>
+              <span class="deal__value tt-figure">{{ price }}</span>
+              <span class="deal__currency">₪</span>
+              <span class="deal__unit">לכל מיליון קוינס <span class="deal__sub">בחבילה הגדולה</span></span>
+            </ng-container>
+            <ng-template #dealPending>
+              <span class="deal__from">מ־</span>
+              <span class="deal__value tt-figure tt-skeleton deal__value--pending" aria-hidden="true">000</span>
+              <span class="deal__currency">₪</span>
+              <span class="deal__unit">לכל מיליון קוינס <span class="deal__sub">בחבילה הגדולה</span></span>
+            </ng-template>
           </div>
 
           <div class="cta seq seq--word" style="--seq-delay: 860ms">
@@ -73,9 +84,12 @@ interface PriceTag {
             <a class="tt-btn tt-btn--ghost tt-btn--lg" routerLink="/delivery">איך זה עובד</a>
           </div>
 
-          <div class="platforms seq seq--word" *ngIf="platforms.length > 0" style="--seq-delay: 960ms">
+          <div class="platforms seq seq--word" *ngIf="platforms.length > 0 || pending" style="--seq-delay: 960ms">
             <span class="platforms__label">תואם לכל הפלטפורמות</span>
             <ul class="pills">
+              <ng-container *ngIf="platforms.length === 0">
+                <li class="pill pill--pending tt-skeleton" *ngFor="let slot of placeholders" aria-hidden="true">PS5</li>
+              </ng-container>
               <li class="pill" *ngFor="let platform of platforms">
                 <tt-icon [name]="platform.family === pc ? 'platform' : 'gamepad'" [size]="13"></tt-icon>
                 {{ platform.shortName | t }}
@@ -84,13 +98,9 @@ interface PriceTag {
           </div>
         </div>
 
-        <div class="art seq seq--object"
-             style="--seq-delay: 120ms"
-             aria-hidden="true"
-             (pointermove)="tilt($event)"
-             (pointerleave)="rest()">
-          <div class="art__stage" [style.transform]="transform()">
-            <tt-hero-scene tier="legend"></tt-hero-scene>
+        <div class="art seq seq--object" #art style="--seq-delay: 120ms" aria-hidden="true">
+          <div class="art__stage" #stage>
+            <tt-hero-scene tier="legend" ttLive></tt-hero-scene>
 
             <span class="tag tag--a tt-glass" *ngIf="tags[0] as tag" [style.--mat]="tag.tier.color">
               <span class="tag__dot"></span>
@@ -165,6 +175,10 @@ interface PriceTag {
     .deal__currency { font-family: var(--tt-font-display); font-weight: 900; font-size: var(--tt-text-xl); color: var(--tt-gold-400); }
     .deal__unit { margin-inline-start: var(--tt-space-2); font-size: var(--tt-text-sm); font-weight: 700; }
     .deal__sub { display: block; font-size: var(--tt-caption); font-weight: 500; color: var(--tt-text-faint); }
+    /* The placeholders are the real elements with their text hidden, so the
+       line boxes match to the pixel and nothing moves when the catalog answers. */
+    .deal__value--pending, .pill--pending { color: transparent; }
+    .pill--pending { border-color: transparent; }
 
     .cta { display: flex; gap: var(--tt-space-3); flex-wrap: wrap; margin-block-start: var(--tt-space-5); }
     .cta .tt-btn { white-space: nowrap; }
@@ -221,12 +235,12 @@ interface PriceTag {
       /* The trophy leads on a phone, small enough that the headline, the
          price and the action share the first screen with it. */
       .art { order: -1; inline-size: 100%; perspective: none; margin-block: 0 var(--tt-space-1); }
-      .art__stage { inline-size: min(64%, 280px); transform: none !important; }
+      .art__stage { inline-size: min(84%, 340px); transform: none !important; }
       .tag { display: none; }
     }
   `],
 })
-export class HeroComponent {
+export class HeroComponent implements AfterViewInit {
   readonly gameName = STOREFRONT.focusGameName;
   readonly editionLabel = String(GAME_EDITIONS[STOREFRONT.focusGameEdition].year);
   readonly pc = PlatformFamily.Pc;
@@ -237,30 +251,63 @@ export class HeroComponent {
 
   @Input() platforms: readonly Platform[] = [];
 
+  /**
+   * True while the catalog has not answered yet.
+   *
+   * The hero renders before the data so the page's largest image is not
+   * held back by the slowest request; the price and the platform pills keep
+   * their place with placeholders until the numbers arrive. Once the catalog
+   * has answered, a missing ladder hides them as before.
+   */
+  @Input() pending = false;
+
+  readonly placeholders = [0, 1, 2, 3];
+
   @Input() set ladder(detail: ProductDetail | null | undefined) {
     this.best = this.cheapestPerMillion(detail);
     this.tags = this.tagsFor(detail);
   }
 
-  /** The tilt of the artwork, following the pointer on a desktop. */
-  readonly transform = signal('');
+  @ViewChild('art') private readonly art?: ElementRef<HTMLElement>;
+  @ViewChild('stage') private readonly stage?: ElementRef<HTMLElement>;
+
+  private readonly zone = inject(NgZone);
+  private frame = 0;
 
   private readonly canTilt = typeof window !== 'undefined'
     && !window.matchMedia('(pointer: coarse)').matches
     && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  tilt(event: PointerEvent): void {
-    if (!this.canTilt) {
+  /**
+   * The tilt of the artwork, following the pointer on a desktop.
+   *
+   * Written straight to the stage's style from a listener outside Angular's
+   * zone, one update per animation frame. Bound in the template, every
+   * pointer movement over the hero ran change detection for the whole page.
+   */
+  ngAfterViewInit(): void {
+    const art = this.art?.nativeElement;
+    const stage = this.stage?.nativeElement;
+    if (!art || !stage || !this.canTilt) {
       return;
     }
-    const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = (event.clientX - box.left) / box.width - 0.5;
-    const y = (event.clientY - box.top) / box.height - 0.5;
-    this.transform.set(`rotateY(${(x * 8).toFixed(2)}deg) rotateX(${(-y * 6).toFixed(2)}deg)`);
-  }
-
-  rest(): void {
-    this.transform.set('');
+    this.zone.runOutsideAngular(() => {
+      art.addEventListener('pointermove', (event: PointerEvent) => {
+        if (this.frame) {
+          return;
+        }
+        this.frame = requestAnimationFrame(() => {
+          this.frame = 0;
+          const box = art.getBoundingClientRect();
+          const x = (event.clientX - box.left) / box.width - 0.5;
+          const y = (event.clientY - box.top) / box.height - 0.5;
+          stage.style.transform = `rotateY(${(x * 8).toFixed(2)}deg) rotateX(${(-y * 6).toFixed(2)}deg)`;
+        });
+      }, { passive: true });
+      art.addEventListener('pointerleave', () => {
+        stage.style.transform = '';
+      }, { passive: true });
+    });
   }
 
   private cheapestPerMillion(detail: ProductDetail | null | undefined): string | null {

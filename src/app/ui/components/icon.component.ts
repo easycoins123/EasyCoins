@@ -163,9 +163,11 @@ const ART: Record<string, IconArt> = {
     fill: 'M3 13.4h2.6a1.2 1.2 0 0 1 1.2 1.2v4.2a1.2 1.2 0 0 1-1.2 1.2H3Zm15.4 0H21v6.6h-2.6a1.2 1.2 0 0 1-1.2-1.2v-4.2a1.2 1.2 0 0 1 1.2-1.2Z',
     stroke: 'M3 13.4v-1.2a9 9 0 0 1 18 0v1.2M19 20v.6a2.4 2.4 0 0 1-2.4 2.4H13',
   },
+  /* Coins arriving: a coin dropping into the account's tray. Delivery and
+     tracking alias to it; nothing here is carried by a truck. */
   truck: {
-    fill: 'M2 6.6a1 1 0 0 1 1-1h9.6a1 1 0 0 1 1 1v9.8H2Zm12.6 3.2h3.1a1 1 0 0 1 .82.43l2.3 3.3a1 1 0 0 1 .18.57v2.3h-6.4Z',
-    stroke: 'M6.6 19.6h.01M17.4 19.6h.01',
+    fill: 'M12 2.4a3.7 3.7 0 1 1 0 7.4 3.7 3.7 0 0 1 0-7.4ZM3 12.6h4.4a1 1 0 0 1 .9.55l.55 1.1a1 1 0 0 0 .9.55h4.5a1 1 0 0 0 .9-.55l.55-1.1a1 1 0 0 1 .9-.55H21v6.4a2.4 2.4 0 0 1-2.4 2.4H5.4A2.4 2.4 0 0 1 3 19Z',
+    knockout: 'M12 4.5a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2Z',
   },
   bolt: { fill: 'M13.6 1.8 4.4 14.2h5.8l-1.8 8 9.2-12.4h-5.8Z' },
   clock: {
@@ -239,7 +241,8 @@ const ART: Record<string, IconArt> = {
   /* The market: two transfers crossing. */
   market: { stroke: 'M3.6 8.2h13.2M13.4 4.8l3.4 3.4-3.4 3.4M20.4 15.8H7.2M10.6 12.4l-3.4 3.4 3.4 3.4' },
   /* A package: a box with the band the coins ship in. */
-  package: { stroke: 'M3.6 8.2 12 4l8.4 4.2v8.6L12 21l-8.4-4.2ZM3.6 8.2 12 12.4l8.4-4.2M12 12.4V21M7.8 6.1l8.4 4.2' },
+  /* A package is coins: the pair of coins, side by side. */
+  package: { fill: `${coin(9, 13.5, 6.4)}${coin(15.5, 9.5, 5.6)}` },
   /* A rating star. */
   star: { fill: 'M12 2.4l2.9 6.1 6.7.8-4.9 4.6 1.3 6.6L12 17.2l-6 3.3 1.3-6.6L2.4 9.3l6.7-.8Z' },
 };

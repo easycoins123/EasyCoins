@@ -112,6 +112,16 @@ export interface CartIssue {
  * The same code prices the cart preview, the checkout session and eventually the
  * order, which is what stops the three from disagreeing.
  */
+/**
+ * True when the line's variant carries launch bonus coins, set by the catalog
+ * seed as `metadata.launchBonus`. The single fact behind "one benefit per order".
+ */
+function carriesLaunchBonus(line: PricedLine): boolean {
+  const metadata = (line.offer as { variant?: { metadata?: unknown } }).variant?.metadata;
+  const bonus = metadata && typeof metadata === 'object' ? (metadata as Record<string, unknown>)['launchBonus'] : undefined;
+  return typeof bonus === 'number' && bonus > 0;
+}
+
 @Injectable()
 export class PricingService {
   constructor(private readonly prisma: PrismaService) {}
@@ -233,7 +243,9 @@ export class PricingService {
   ): Promise<{ currency: string; subtotalMinor: number; discountMinor: number; totalMinor: number }> {
     const currency = lines[0]?.currency ?? 'ILS';
     const subtotalMinor = lines.reduce((sum, line) => sum + line.totalPriceMinor, 0);
-    const discountMinor = await this.discountFor(subtotalMinor, couponCode);
+    // One benefit per order. A line that already carries the launch bonus takes
+    // no code, whatever the code is; the storefront only repeats this answer.
+    const discountMinor = lines.some(carriesLaunchBonus) ? 0 : await this.discountFor(subtotalMinor, couponCode);
 
     return {
       currency,
@@ -252,7 +264,15 @@ export class PricingService {
   ): Promise<PricedCart> {
     const totals = await this.totalise(lines, couponCode);
 
-    if (couponCode && totals.discountMinor === 0 && lines.length > 0) {
+    if (couponCode && lines.length > 0 && lines.some(carriesLaunchBonus)) {
+      issues.push({
+        code: 'COUPON_NOT_COMBINABLE',
+        message: {
+          he: 'בונוס ההשקה כבר בהזמנה. הטבה אחת להזמנה.',
+          en: 'The launch bonus is already on this order. One benefit per order.',
+        },
+      });
+    } else if (couponCode && totals.discountMinor === 0 && lines.length > 0) {
       issues.push({
         code: 'COUPON_NOT_APPLICABLE',
         message: {

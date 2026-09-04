@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 
-import { CartFacade } from '../../state';
+import { CartFacade } from '../../state/cart.facade';
 
 /**
  * Checkout is meaningless without a cart, so an empty one is sent back to the

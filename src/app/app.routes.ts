@@ -4,7 +4,7 @@ import { brandTitle } from './core/brand';
 
 import { authRequiredGuard } from './pages/account/auth-required.guard';
 import { cartNotEmptyGuard } from './pages/checkout/cart-not-empty.guard';
-import { LEGAL_PAGES, LEGAL_PAGES_PENDING } from './pages/legal/legal.content';
+import { LEGAL_ROUTES } from './pages/legal/legal.manifest';
 
 /**
  * Commerce routing map.
@@ -22,6 +22,10 @@ export const APP_ROUTES: Routes = [
   {
     path: 'store',
     title: brandTitle('החנות'),
+    // `preload: true` marks the buying path: these chunks are fetched once the
+    // browser is idle, so the first click after landing does not wait for a
+    // download. Everything else loads when it is navigated to.
+    data: { preload: true },
     loadComponent: () => import('./pages/store/store.page').then((m) => m.StorePage),
   },
   // /products is the canonical catalog path in the API; in the UI it is the store.
@@ -37,6 +41,7 @@ export const APP_ROUTES: Routes = [
   },
   {
     path: 'products/:productSlug',
+    data: { preload: true },
     loadComponent: () => import('./pages/product/product-detail.page').then((m) => m.ProductDetailPage),
   },
   {
@@ -47,6 +52,7 @@ export const APP_ROUTES: Routes = [
   {
     path: 'cart',
     title: brandTitle('העגלה שלי'),
+    data: { preload: true },
     loadComponent: () => import('./pages/cart/cart.page').then((m) => m.CartPage),
   },
   {
@@ -118,7 +124,8 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import('./pages/support/support.page').then((m) => m.SupportPage),
   },
   // Static policy pages share one component and differ only by content record.
-  ...[...LEGAL_PAGES, ...LEGAL_PAGES_PENDING].map((page) => ({
+  // Only slug and title are needed here; the texts live in the lazy chunk.
+  ...LEGAL_ROUTES.map((page) => ({
     path: page.slug,
     title: brandTitle(page.title),
     loadComponent: () => import('./pages/legal/legal.page').then((m) => m.LegalPage),

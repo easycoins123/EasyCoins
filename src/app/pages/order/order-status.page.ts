@@ -9,7 +9,7 @@ import { LocalizePipe } from '../../core/i18n';
 import {
   AppError, AppErrorKind, Fulfillment, Order, OrderStatus, isTerminalOrderStatus, toAppError,
 } from '../../domain';
-import { CatalogFacade, OrderFacade } from '../../state';
+import { CampaignsFacade, CatalogFacade, OrderFacade } from '../../state';
 import {
   DeliveryPayloadComponent, ErrorStateComponent, FulfillmentBadgeComponent, MoneyPipe,
   OrderStatusTimelineComponent, PlatformBadgeComponent, RegionBadgeComponent, IconComponent,
@@ -66,6 +66,26 @@ const POLL_INTERVAL_MS = 2500;
               <span class="tt-faint">אישור נשלח לכתובת {{ vm.order.contactEmail }}. זה הכרטיס שלכם, ומספר ההזמנה מודפס עליו.</span>
             </span>
           </div>
+
+          <!-- The opening squad: shown only while the launch bonus is live, and
+               only on a fresh success. Nothing here is a balance or a count. -->
+          <section class="squad" *ngIf="celebrate && (launchActive$ | async)">
+            <span class="squad__glyph" aria-hidden="true"><tt-icon name="crown" [size]="22"></tt-icon></span>
+            <div class="squad__text">
+              <p class="squad__eyebrow">מועדון הראשונים</p>
+              <h2>נכנסתם להרכב הפותח של EasyCoins</h2>
+              <p>
+                הזמנתם בתקופת ההשקה.
+                <ng-container *ngIf="hasBonus(vm.order); else noBonusNote">בונוס ההשקה רשום על ההזמנה ומגיע יחד עם הקוינס, בלי שתצטרכו לעשות דבר.</ng-container>
+                <ng-template #noBonusNote>הסטטוס מתעדכן בדף הזה, והתמיכה בעברית זמינה במייל.</ng-template>
+              </p>
+              <ul class="squad__next">
+                <li><tt-icon name="delivery" [size]="14"></tt-icon> הסטטוס מתעדכן כאן, מהתשלום ועד האספקה</li>
+                <li><tt-icon name="headset" [size]="14"></tt-icon> שאלה על ההזמנה? <a routerLink="/support">התמיכה</a> עונה במייל</li>
+                <li><tt-icon name="bolt" [size]="14"></tt-icon> הדרופ הראשון בהכנה. <a routerLink="/deals">דף המבצעים</a> יתעדכן ראשון</li>
+              </ul>
+            </div>
+          </section>
 
           <header class="tt-head tt-head--tight">
             <span class="tt-eyebrow">הזמנה {{ vm.order.reference }}</span>
@@ -131,6 +151,16 @@ const POLL_INTERVAL_MS = 2500;
     .banner { margin-block-end: var(--tt-space-5); align-items: center; }
     .banner span span { display: block; }
     .banner__glyph { display: grid; place-items: center; flex: none; inline-size: 40px; block-size: 40px; border-radius: 50%; background: var(--tt-success); color: #062814; }
+    .squad { display: flex; gap: var(--tt-space-4); align-items: flex-start; margin-block-end: var(--tt-space-6); padding: var(--tt-space-5); border: 1px solid var(--tt-gold-600); border-radius: var(--tt-radius-lg); background: linear-gradient(135deg, rgba(212, 180, 106, 0.16), transparent 55%), linear-gradient(180deg, #17161A, var(--tt-surface) 70%); }
+    .squad__glyph { display: grid; place-items: center; flex: none; inline-size: 52px; block-size: 52px; border-radius: 50%; background: var(--tt-gold-metal); color: var(--tt-text-on-gold); }
+    .squad__text { display: flex; flex-direction: column; gap: var(--tt-space-2); min-inline-size: 0; }
+    .squad__eyebrow { margin: 0; font-size: var(--tt-caption); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tt-gold-400); }
+    .squad h2 { margin: 0; font-size: var(--tt-text-2xl); line-height: 1.15; }
+    .squad p { margin: 0; color: var(--tt-text-muted); line-height: var(--tt-leading); }
+    .squad__next { margin: var(--tt-space-1) 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: var(--tt-text-sm); font-weight: 600; }
+    .squad__next li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .squad__next tt-icon { color: var(--tt-energy); }
+    @media (max-width: 600px) { .squad { flex-direction: column; padding: var(--tt-space-4); } }
     .summary__main { display: flex; flex-direction: column; gap: var(--tt-space-3); padding: var(--tt-space-5); }
     .summary__stub { font-size: var(--tt-caption); font-weight: 700; color: var(--tt-text-muted); }
     .layout { display: grid; gap: var(--tt-space-5); align-items: start; }
@@ -150,8 +180,16 @@ export class OrderStatusPage {
   private readonly catalog = inject(CatalogFacade);
   private readonly analytics = inject(AnalyticsService);
 
+  private readonly campaigns = inject(CampaignsFacade);
+
   readonly error = signal<AppError | undefined>(undefined);
   readonly celebrate = this.route.snapshot.data['celebrate'] === true;
+  readonly launchActive$ = this.campaigns.launchBonusActive$;
+
+  /** The order's own lines say whether a bonus was promised; the snapshot, not today's catalog. */
+  hasBonus(order: Order): boolean {
+    return order.items.some((item) => /בונוס/.test(item.displayVariantName.he ?? '') || /bonus/i.test(item.displayVariantName.en ?? ''));
+  }
 
   /**
    * Polls while the order is still moving.

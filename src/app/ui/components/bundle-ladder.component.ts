@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
+import { isCurated } from '../../core/commerce';
 import { formatQuantity, OfferValue, rankByValue } from '../../core/value';
 import { LocalizePipe } from '../../core/i18n';
 import { Offer, ProductDetail, ProductVariant } from '../../domain';
@@ -248,6 +249,8 @@ export class BundleLadderComponent {
 
     this.rows = rankByValue(comparable, variants)
       .filter((row) => row.perUnitMinor !== undefined)
+      // The rail shows the curated sizes; the full ladder lives in the store.
+      .filter((row) => isCurated(row.variant.quantityValue ?? 0))
       .sort((a, b) => (a.variant.quantityValue ?? 0) - (b.variant.quantityValue ?? 0));
   }
 

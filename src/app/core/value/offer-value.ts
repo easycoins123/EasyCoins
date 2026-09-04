@@ -129,17 +129,22 @@ export function savedAmount(price: Price): Money | undefined {
  * Not `Intl.NumberFormat` with `notation: 'compact'`, which renders Hebrew
  * locale compact forms that do not match how these bundles are named.
  */
+/** Up to two decimals, trailing zeros dropped: 1.5, 1.25, 0.75. */
+function trimDecimals(value: number): string {
+  return value.toFixed(2).replace(/0$/, '');
+}
+
 export function formatQuantity(value: number | undefined): string {
   if (!value || value <= 0) {
     return '';
   }
   if (value >= 1_000_000) {
     const millions = value / 1_000_000;
-    return `${Number.isInteger(millions) ? millions : millions.toFixed(1)}M`;
+    return `${Number.isInteger(millions) ? millions : trimDecimals(millions)}M`;
   }
   if (value >= 1_000) {
     const thousands = value / 1_000;
-    return `${Number.isInteger(thousands) ? thousands : thousands.toFixed(1)}K`;
+    return `${Number.isInteger(thousands) ? thousands : trimDecimals(thousands)}K`;
   }
   return value.toLocaleString('he-IL');
 }

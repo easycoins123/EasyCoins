@@ -6,7 +6,7 @@ import {
   isPaymentSettled, isTerminalOrderStatus,
 } from '../../domain';
 import { CheckoutApiService, OrderApiService, PaymentApiService } from '../api';
-import { provideDataLayer } from '../providers';
+import { provideMockDataLayer } from './providers';
 import { OFFERS } from './catalog.seed';
 
 const GIFT_50 = 'offer__prod-ps-gift-card__50__plat-ps5__reg-il';
@@ -45,7 +45,7 @@ describe('order and payment lifecycle', () => {
   let paymentApi: PaymentApiService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideDataLayer()] });
+    TestBed.configureTestingModule({ providers: [provideMockDataLayer()] });
     checkoutApi = TestBed.inject(CheckoutApiService);
     orderApi = TestBed.inject(OrderApiService);
     paymentApi = TestBed.inject(PaymentApiService);

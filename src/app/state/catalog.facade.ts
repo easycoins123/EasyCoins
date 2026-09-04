@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, combineLatest, of } from 'rxjs';
+import { Observable, combineLatest, of, throwError } from 'rxjs';
 import { catchError, map, shareReplay, switchMap } from 'rxjs/operators';
 
 import {
@@ -20,11 +20,28 @@ export interface CatalogLookups {
   readonly fulfillment: ReadonlyMap<FulfillmentMethod, FulfillmentDescriptor>;
 }
 
+/**
+ * How long a catalog read is reused before it is fetched again.
+ *
+ * A minute is long enough that landing on the home page, opening the store,
+ * looking at the cart and opening the drawer costs one request for the coin
+ * product instead of four, and short enough that a price change reaches a
+ * customer who keeps browsing. Nothing a customer pays is read from here: the
+ * cart is re-priced by the server before checkout.
+ */
+const CATALOG_TTL_MS = 60_000;
+
+interface Memo {
+  readonly at: number;
+  readonly stream: Observable<unknown>;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CatalogFacade {
   private readonly catalogApi = inject(CatalogApiService);
   private readonly productApi = inject(ProductApiService);
   private readonly fulfillmentApi = inject(FulfillmentApiService);
+  private readonly memo = new Map<string, Memo>();
 
   /**
    * Reference data is small, stable and needed by nearly every screen, so it is
@@ -49,32 +66,56 @@ export class CatalogFacade {
   readonly games$ = this.lookups$.pipe(map((lookups) => lookups.games));
 
   search(query: CatalogQuery): Observable<Page<Product>> {
-    return this.catalogApi.searchProducts({
-      ...query,
-      page: query.page ?? { page: 1, pageSize: DEFAULT_PAGE_SIZE },
-    });
+    const request: CatalogQuery = { ...query, page: query.page ?? { page: 1, pageSize: DEFAULT_PAGE_SIZE } };
+    return this.remember(`search:${JSON.stringify(request)}`, () => this.catalogApi.searchProducts(request));
   }
 
   featured(limit = 6): Observable<readonly Product[]> {
-    return this.catalogApi.getFeaturedProducts(limit);
+    return this.remember(`featured:${limit}`, () => this.catalogApi.getFeaturedProducts(limit));
   }
 
   gameBySlug(slug: Slug): Observable<Game> {
-    return this.catalogApi.getGameBySlug(slug);
+    return this.remember(`game:${slug}`, () => this.catalogApi.getGameBySlug(slug));
   }
 
   productsForGame(slug: Slug): Observable<readonly Product[]> {
-    return this.catalogApi.getGameBySlug(slug).pipe(
+    return this.remember(`game-products:${slug}`, () => this.gameBySlug(slug).pipe(
       switchMap((game) => this.catalogApi.getProductsByGame(game.id)),
-    );
+    ));
   }
 
   productBySlug(slug: Slug): Observable<ProductDetail> {
-    return this.productApi.getProductBySlug(slug);
+    return this.remember(`product:${slug}`, () => this.productApi.getProductBySlug(slug));
   }
 
   relatedProducts(slug: Slug, limit = 4): Observable<readonly Product[]> {
-    return this.productApi.getRelatedProducts(slug, limit).pipe(catchError(() => of([] as readonly Product[])));
+    return this.remember(`related:${slug}:${limit}`, () => this.productApi.getRelatedProducts(slug, limit)
+      .pipe(catchError(() => of([] as readonly Product[]))));
+  }
+
+  /**
+   * Reuses a read for a short while.
+   *
+   * Every page that needs the coin product used to fetch it again: the home
+   * page, the store, the cart, the drawer. The stream is shared and replayed
+   * for `CATALOG_TTL_MS`; a failed read is forgotten at once so the next
+   * caller tries the server again rather than replaying an error.
+   */
+  private remember<T>(key: string, factory: () => Observable<T>): Observable<T> {
+    const now = Date.now();
+    const hit = this.memo.get(key);
+    if (hit && now - hit.at < CATALOG_TTL_MS) {
+      return hit.stream as Observable<T>;
+    }
+    const stream = factory().pipe(
+      catchError((error: unknown) => {
+        this.memo.delete(key);
+        return throwError(() => error);
+      }),
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+    this.memo.set(key, { at: now, stream });
+    return stream;
   }
 
   offerById(offerId: string): Observable<Offer> {

@@ -135,6 +135,12 @@ interface VariantSeed {
   quantityUnit?: Localized;
   priceMajor: number;
   compareAtMajor?: number;
+  /**
+   * Extra coins delivered with this bundle while the launch campaign runs.
+   * Stored in the variant's metadata and spelled out in its name, so every
+   * order line carries the promise the customer saw. Adjust here, re-seed.
+   */
+  bonusQuantity?: number;
   /** Absent means the default in-stock pool. */
   inventory?: { status: InventoryStatus; available: number | null; maxPerOrder?: number };
 }
@@ -179,12 +185,21 @@ const PRODUCTS: ProductSeed[] = [
       'Delivery is coordinated with you. We will never ask for a password, a verification code or backup codes.',
     ),
     variants: [
-      { key: '100k', name: t('100K מטבעות', '100K coins'), quantityValue: 100000, quantityUnit: t('מטבעות', 'coins'), priceMajor: 49 },
-      { key: '250k', name: t('250K מטבעות', '250K coins'), quantityValue: 250000, quantityUnit: t('מטבעות', 'coins'), priceMajor: 119, compareAtMajor: 135 },
-      { key: '500k', name: t('500K מטבעות', '500K coins'), quantityValue: 500000, quantityUnit: t('מטבעות', 'coins'), priceMajor: 219, compareAtMajor: 249 },
-      { key: '1m', name: t('1M מטבעות', '1M coins'), quantityValue: 1000000, quantityUnit: t('מטבעות', 'coins'), priceMajor: 399 },
-      // Manual services have no unit stock: availability is operator capacity.
-      { key: '2m', name: t('2M מטבעות', '2M coins'), quantityValue: 2000000, quantityUnit: t('מטבעות', 'coins'), priceMajor: 749, inventory: { status: InventoryStatus.LOW_STOCK, available: 4, maxPerOrder: 4 } },
+      // The launch ladder: eleven sizes from 100K to 5M, each with a launch
+      // bonus in coins (not a struck-through price). Larger bundles cost less
+      // per coin at every step; the bonus grows with the bundle. No artificial
+      // scarcity: every size is in the default in-stock pool.
+      { key: '100k', name: t('100K מטבעות + 10K בונוס השקה', '100K coins + 10K launch bonus'), quantityValue: 100000, quantityUnit: t('מטבעות', 'coins'), priceMajor: 15, bonusQuantity: 10000 },
+      { key: '200k', name: t('200K מטבעות + 20K בונוס השקה', '200K coins + 20K launch bonus'), quantityValue: 200000, quantityUnit: t('מטבעות', 'coins'), priceMajor: 27, bonusQuantity: 20000 },
+      { key: '250k', name: t('250K מטבעות + 25K בונוס השקה', '250K coins + 25K launch bonus'), quantityValue: 250000, quantityUnit: t('מטבעות', 'coins'), priceMajor: 31, bonusQuantity: 25000 },
+      { key: '300k', name: t('300K מטבעות + 30K בונוס השקה', '300K coins + 30K launch bonus'), quantityValue: 300000, quantityUnit: t('מטבעות', 'coins'), priceMajor: 35, bonusQuantity: 30000 },
+      { key: '500k', name: t('500K מטבעות + 50K בונוס השקה', '500K coins + 50K launch bonus'), quantityValue: 500000, quantityUnit: t('מטבעות', 'coins'), priceMajor: 39, bonusQuantity: 50000 },
+      { key: '750k', name: t('750K מטבעות + 75K בונוס השקה', '750K coins + 75K launch bonus'), quantityValue: 750000, quantityUnit: t('מטבעות', 'coins'), priceMajor: 58, bonusQuantity: 75000 },
+      { key: '1m', name: t('1M מטבעות + 100K בונוס השקה', '1M coins + 100K launch bonus'), quantityValue: 1000000, quantityUnit: t('מטבעות', 'coins'), priceMajor: 75, bonusQuantity: 100000 },
+      { key: '1500k', name: t('1.5M מטבעות + 150K בונוס השקה', '1.5M coins + 150K launch bonus'), quantityValue: 1500000, quantityUnit: t('מטבעות', 'coins'), priceMajor: 109, bonusQuantity: 150000 },
+      { key: '2m', name: t('2M מטבעות + 200K בונוס השקה', '2M coins + 200K launch bonus'), quantityValue: 2000000, quantityUnit: t('מטבעות', 'coins'), priceMajor: 143, bonusQuantity: 200000 },
+      { key: '3m', name: t('3M מטבעות + 300K בונוס השקה', '3M coins + 300K launch bonus'), quantityValue: 3000000, quantityUnit: t('מטבעות', 'coins'), priceMajor: 209, bonusQuantity: 300000 },
+      { key: '5m', name: t('5M מטבעות + 500K בונוס השקה', '5M coins + 500K launch bonus'), quantityValue: 5000000, quantityUnit: t('מטבעות', 'coins'), priceMajor: 335, bonusQuantity: 500000 },
     ],
   },
   {
@@ -367,7 +382,9 @@ const FAQ = [
 ];
 
 const PROMOTIONS = [
-  { id: 'promo-launch', slug: 'launch-week', kind: PromotionKind.PERCENT_OFF, title: t('שבוע השקה, 10% הנחה', 'Launch week, 10% off'), description: t('קוד LAUNCH10 מעניק 10% הנחה על כל הזמנה מעל 100 ₪.', 'Code LAUNCH10 gives 10% off any order above 100 ILS.'), percentOff: 10, amountOffMinor: null, currency: 'ILS', productIds: [] as string[], startsAt: '2026-01-01T00:00:00.000Z' },
+  // Off while the launch bonus runs: one benefit per order. Flip `active` to
+  // reopen the code once the bonus ends.
+  { id: 'promo-launch', slug: 'launch-week', kind: PromotionKind.PERCENT_OFF, title: t('שבוע השקה, 10% הנחה', 'Launch week, 10% off'), description: t('קוד LAUNCH10 מעניק 10% הנחה על כל הזמנה מעל 100 ₪.', 'Code LAUNCH10 gives 10% off any order above 100 ILS.'), percentOff: 10, amountOffMinor: null, currency: 'ILS', productIds: [] as string[], startsAt: '2026-01-01T00:00:00.000Z', active: false },
   { id: 'promo-ps-plus', slug: 'ps-plus-annual', kind: PromotionKind.AMOUNT_OFF, title: t('PlayStation Plus שנתי במחיר מיוחד', 'PlayStation Plus annual deal'), description: t('מנוי ל-12 חודשים ב-329 ₪ במקום 399 ₪.', 'A 12-month membership for 329 ILS instead of 399 ILS.'), percentOff: null, amountOffMinor: 7000, currency: 'ILS', productIds: ['prod-ps-plus'], startsAt: '2026-01-01T00:00:00.000Z' },
 ];
 
@@ -423,7 +440,7 @@ async function main(): Promise<void> {
         sku: `${product.slug}-${variant.key}`.toUpperCase(),
         quantityValue: variant.quantityValue ?? null,
         quantityUnit: variant.quantityUnit ?? null,
-        metadata: {},
+        metadata: variant.bonusQuantity ? { launchBonus: variant.bonusQuantity } : {},
         sortOrder: index,
         active: true,
       };
@@ -506,7 +523,7 @@ async function main(): Promise<void> {
       gameIds: [],
       regionIds: [],
       bannerImageUrl: null,
-      active: true,
+      active: promotion.active ?? true,
     };
     await prisma.promotion.upsert({ where: { id: row.id }, create: row, update: row });
   }
@@ -519,7 +536,7 @@ async function main(): Promise<void> {
     maxRedemptions: null,
     maxPerCustomer: 1,
     expiresAt: null,
-    active: true,
+    active: false, // reopens with promo-launch
   };
   await prisma.coupon.upsert({
     where: { id: coupon.id },

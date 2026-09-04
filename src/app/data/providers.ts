@@ -14,35 +14,37 @@ import {
   HttpFulfillmentApiService, HttpOrderApiService, HttpPaymentApiService, HttpProductApiService,
   HttpPromotionApiService, HttpReviewApiService, HttpSupportApiService,
 } from './http';
-import {
-  MockCartApiService, MockCatalogApiService, MockCheckoutApiService, MockCustomerApiService,
-  MockFulfillmentApiService, MockOrderApiService, MockPaymentApiService, MockProductApiService,
-  MockPromotionApiService, MockReviewApiService, MockSupportApiService,
-} from './mock';
 
 /**
  * The single place where an API abstraction is bound to an implementation.
  *
  * Two complete implementations satisfy the same eleven abstractions:
  *
- * - **mock** — the in-memory backend. Local development and the current public
- *   demo build run on this, so the app is fully usable with no server.
+ * - **mock** — the in-memory backend. Local development and the QA harnesses
+ *   run on this, so the app is fully usable with no server.
  * - **http** — the REST client for the contract in `docs/API-CONTRACT.md`.
  *
  * `environment.apiMode` chooses between them and nothing else in the application
  * knows which is active. No component, facade, page or domain type references a
- * `Mock*` or `Http*` class; this file is the only importer of either.
+ * `Mock*` or `Http*` class.
+ *
+ * The mock implementation, with its seed catalog, is loaded through a dynamic
+ * import only when mock mode is on: a production build runs in HTTP mode and
+ * must not download an in-memory backend it will never use.
  *
  * Deliberately *not* here: any business rule. Pricing, validation, requirement
  * resolution and state transitions live behind the boundary, so the two
  * implementations cannot drift into disagreeing about behaviour.
  */
-export function provideDataLayer(): Provider[] {
-  return environment.apiMode === 'http' ? httpProviders() : mockProviders();
+export function resolveDataLayer(): Promise<Provider[]> {
+  if (environment.apiMode === 'http') {
+    return Promise.resolve(provideHttpDataLayer());
+  }
+  return import('./mock/providers').then((module) => module.provideMockDataLayer());
 }
 
 /** Pairs each abstraction with an implementation so the two lists cannot diverge. */
-function bind(
+export function bind(
   implementations: {
     catalog: Type<CatalogApiService>;
     product: Type<ProductApiService>;
@@ -72,23 +74,7 @@ function bind(
   ];
 }
 
-function mockProviders(): Provider[] {
-  return bind({
-    catalog: MockCatalogApiService,
-    product: MockProductApiService,
-    cart: MockCartApiService,
-    checkout: MockCheckoutApiService,
-    payment: MockPaymentApiService,
-    order: MockOrderApiService,
-    fulfillment: MockFulfillmentApiService,
-    customer: MockCustomerApiService,
-    promotion: MockPromotionApiService,
-    review: MockReviewApiService,
-    support: MockSupportApiService,
-  });
-}
-
-function httpProviders(): Provider[] {
+export function provideHttpDataLayer(): Provider[] {
   return [
     ...bind({
       catalog: HttpCatalogApiService,

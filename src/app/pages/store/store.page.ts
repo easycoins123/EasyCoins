@@ -8,7 +8,8 @@ import {
 
 import { AnalyticsService } from '../../core/analytics';
 import { STOREFRONT } from '../../core/brand';
-import { coinProductsFrom } from '../../core/value';
+import { isCurated, roleLabel } from '../../core/commerce';
+import { coinProductsFrom, formatQuantity, withBestValue } from '../../core/value';
 import {
   AppError, CatalogQuery, CatalogSort, CoinProduct, DEFAULT_PAGE_SIZE, Offer, Page, Platform, Product,
   ProductDetail, ProductType, toAppError,
@@ -19,13 +20,16 @@ import {
   FilterChange, FilterGroup, IconComponent, ProductCardComponent, RevealDirective,
   SkeletonGridComponent, StadiumComponent,
 } from '../../ui';
+import { CoinLadderComponent } from '../../ui/components/commerce/coin-ladder.component';
 
 interface StoreViewModel {
   readonly page: Page<Product>;
   readonly lookups: CatalogLookups;
   readonly coins: ProductDetail | null;
-  /** The coin bundles, one card each, priced for the chosen platform. */
+  /** The whole coin ladder, priced for the chosen platform. */
   readonly products: readonly CoinProduct[];
+  /** The leading bundles, one card each. */
+  readonly curated: readonly CoinProduct[];
   readonly others: readonly Product[];
 }
 
@@ -47,7 +51,7 @@ interface StoreViewModel {
   imports: [
     CommonModule,
     ProductCardComponent, EasyCoinsCardComponent, SkeletonGridComponent, EmptyStateComponent,
-    ErrorStateComponent, FilterBarComponent, IconComponent, RevealDirective, StadiumComponent,
+    ErrorStateComponent, FilterBarComponent, IconComponent, RevealDirective, StadiumComponent, CoinLadderComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -59,7 +63,7 @@ interface StoreViewModel {
       <header class="tt-head tt-head--tight">
         <span class="tt-eyebrow">{{ gameName }} · Ultimate Team</span>
         <h1>חנות הקוינס</h1>
-        <p class="tt-head__lede">חמש חבילות במחיר סופי. הפלטפורמה ואזור החנות מוצגים לפני התשלום, ולכל הזמנה יש דף מעקב.</p>
+        <p class="tt-head__lede">כל הסולם, מ־100K עד 5M, במחיר סופי ועם בונוס ההשקה. הפלטפורמה ואזור החנות מוצגים לפני התשלום, ולכל הזמנה יש דף מעקב.</p>
       </header>
 
       <tt-filter-bar class="filters"
@@ -95,18 +99,28 @@ interface StoreViewModel {
           </tt-empty-state>
 
           <h2 class="tt-visually-hidden">תוצאות</h2>
-          <div class="tt-grid shelf" *ngIf="!isEmpty(vm)">
-            <tt-easycoins-card *ngFor="let product of vm.products; let i = index; trackBy: trackByOffer"
+          <div class="tt-grid shelf" *ngIf="vm.curated.length > 0">
+            <tt-easycoins-card *ngFor="let product of vm.curated; let i = index; trackBy: trackByOffer"
                                [ttReveal]="i"
                                [product]="product"
                                [featured]="product.badge === 'best-value'"
-                               [chip]="chipFor(product, vm.products)"
-                               [flagship]="i === vm.products.length - 1 && vm.products.length % 2 === 1 && vm.others.length === 0"
+                               [chip]="chipFor(product)"
+                               [flagship]="i === vm.curated.length - 1 && vm.curated.length % 2 === 1"
                                [busy]="adding()"
                                (buy)="buyOffer($event)">
             </tt-easycoins-card>
+          </div>
+
+          <!-- The whole ladder, comparable in ten seconds. -->
+          <section class="ladder" *ngIf="vm.products.length > 0" ttReveal>
+            <h2 class="ladder__title">כל הגדלים <span class="tt-muted">· {{ vm.products.length }} חבילות, מ־{{ smallest(vm.products) }} עד {{ largest(vm.products) }}</span></h2>
+            <tt-coin-ladder [products]="vm.products" [busy]="adding()" (buy)="buyOffer($event)"></tt-coin-ladder>
+          </section>
+
+          <div class="tt-grid others" *ngIf="vm.others.length > 0">
+            <h2 class="others__title">עוד בחנות</h2>
             <tt-product-card *ngFor="let product of vm.others; let i = index; trackBy: trackById"
-                             [ttReveal]="vm.products.length + i"
+                             [ttReveal]="i"
                              [product]="product"
                              [lookups]="vm.lookups">
             </tt-product-card>
@@ -123,6 +137,13 @@ interface StoreViewModel {
     </div>
   `,
   styles: [`
+    .ladder { margin-block-start: var(--tt-space-7); }
+    /* On a phone the fifth card spans the row as the flagship instead of sitting alone. */
+    @media (max-width: 700px) { .shelf > :last-child:nth-child(odd) { grid-column: 1 / -1; } }
+    .ladder__title, .others__title { margin: 0 0 var(--tt-space-4); font-size: var(--tt-text-xl); }
+    .ladder__title .tt-muted { font-size: var(--tt-text-sm); font-weight: 600; }
+    .others { margin-block-start: var(--tt-space-7); }
+    .others__title { grid-column: 1 / -1; margin-block-end: 0; }
     .store-page { position: relative; isolation: isolate; }
     .store__world {
       position: absolute; inset-inline: 0; inset-block-start: 0; block-size: min(520px, 70vh); z-index: -1;
@@ -241,14 +262,14 @@ export class StorePage {
     const inPage = coins !== null && page.items.some((product) => product.id === coins.product.id);
     const others = page.items.filter((product) => product.id !== coins?.product.id);
     if (!coins || !inPage) {
-      return { page, lookups, coins: null, products: [], others };
+      return { page, lookups, coins: null, products: [], curated: [], others };
     }
     const ranked = coinProductsFrom(coins, lookups.platforms, {
       game: STOREFRONT.focusGameEdition,
       platformId: query.platformIds?.[0],
     });
     const products = query.sort === 'price-desc' ? [...ranked].reverse() : ranked;
-    return { page, lookups, coins, products, others };
+    return { page, lookups, coins, products, curated: withBestValue(products.filter((product) => isCurated(product.amount))), others };
   }
 
   buyOffer(offer: Offer): void {
@@ -353,18 +374,16 @@ export class StorePage {
   }
 
   /** A fact the shelf can back: the smallest bundle is the cheapest, the largest the biggest. */
-  chipFor(product: CoinProduct, shelf: readonly CoinProduct[]): string | undefined {
-    if (product.badge === 'best-value') {
-      return 'הכי משתלם';
-    }
-    const amounts = shelf.map((entry) => entry.amount);
-    if (product.amount === Math.min(...amounts)) {
-      return 'הכי זול';
-    }
-    if (product.amount === Math.max(...amounts)) {
-      return 'הכי גדולה';
-    }
-    return undefined;
+  chipFor(product: CoinProduct): string | undefined {
+    return roleLabel(product.role);
+  }
+
+  smallest(shelf: readonly CoinProduct[]): string {
+    return formatQuantity(shelf[0]?.amount);
+  }
+
+  largest(shelf: readonly CoinProduct[]): string {
+    return formatQuantity(shelf[shelf.length - 1]?.amount);
   }
 
   private patch(partial: Partial<CatalogQuery>): void {

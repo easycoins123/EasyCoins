@@ -8,6 +8,7 @@ import { BehaviorSubject, Observable, of } from 'rxjs';
 import { catchError, filter, map, shareReplay, startWith, switchMap, take } from 'rxjs/operators';
 
 import { STOREFRONT } from '../../core/brand';
+import { isCurated } from '../../core/commerce';
 import { formatQuantity, rankByValue } from '../../core/value';
 import { ProductDetail } from '../../domain';
 import { CatalogFacade } from '../../state/catalog.facade';
@@ -89,8 +90,8 @@ interface QuickTier {
         <section class="who" [ngSwitch]="auth.status()">
           <div *ngSwitchCase="'checking'" class="who__pending" aria-hidden="true"><span></span><span></span></div>
           <div *ngSwitchCase="'anonymous'" class="who__out">
-            <a class="tt-btn tt-btn--primary" routerLink="/account" (click)="close.emit()">כניסה</a>
-            <a class="tt-btn tt-btn--ghost" routerLink="/account" [queryParams]="{ mode: 'register' }" (click)="close.emit()">הרשמה</a>
+            <a class="tt-btn tt-btn--ghost" routerLink="/account" (click)="close.emit()">כניסה</a>
+            <a class="tt-btn tt-btn--quiet" routerLink="/account" [queryParams]="{ mode: 'register' }" (click)="close.emit()">הרשמה</a>
           </div>
           <a *ngSwitchCase="'authenticated'" class="who__in" routerLink="/account" (click)="close.emit()">
             <span class="avatar" aria-hidden="true">{{ auth.initials() }}</span>
@@ -447,6 +448,7 @@ export class MobileNavComponent implements OnChanges {
     const rows = rankByValue(comparable, detail.product.variants)
       .filter((row) => row.perUnitMinor !== undefined)
       .sort((a, b) => (a.variant.quantityValue ?? 0) - (b.variant.quantityValue ?? 0))
+      .filter((row) => isCurated(row.variant.quantityValue ?? 0))
       .slice(0, 5)
       .map((row): QuickTier => ({
         slug: detail.product.slug,

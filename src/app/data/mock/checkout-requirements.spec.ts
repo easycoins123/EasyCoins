@@ -325,6 +325,6 @@ describe('offer pricing invariants', () => {
 
   it('matches fromMajor for a known price point', () => {
     const coin100k = OFFERS.find((offer) => offer.variantId === 'prod-fc-coins__100k')!;
-    expect(coin100k.price.current).toEqual(fromMajor(49));
+    expect(coin100k.price.current).toEqual(fromMajor(15)); // the launch ladder price
   });
 });

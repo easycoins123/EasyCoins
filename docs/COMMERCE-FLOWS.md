@@ -348,3 +348,7 @@ Verified by 157 unit tests and 124 browser checks:
 6. Always displays region and delivery method before purchase.
 7. Always has a loading, empty and error state for every async surface.
 8. Fails toward *not selling* and *not claiming success* on unknown values.
+
+## 8. Promotion stacking
+
+One benefit per order, decided by the server. A coin bundle carries its launch bonus in the variant (`metadata.launchBonus`, spelled out in the variant name so every order line records the promise). `PricingService` refuses any coupon code on a cart that holds a bonus line and answers `COUPON_NOT_COMBINABLE`; the storefront only repeats that answer. The `LAUNCH10` promotion and coupon rows are inactive for the bonus period (`prisma/seed.ts`), so the code is refused as inactive even before the rule runs. Future first-purchase and referral rewards are server-issued single-use codes, valid only on orders without bonus lines. The mock data layer mirrors the rule and keeps a development-only `QA10` code on products without a bonus so the coupon path stays testable.

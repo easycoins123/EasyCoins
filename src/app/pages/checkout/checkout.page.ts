@@ -1,12 +1,18 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
 import { AnalyticsService } from '../../core/analytics';
+import { STOREFRONT } from '../../core/brand';
+import { launchBonusOf } from '../../core/commerce';
+import { formatQuantity } from '../../core/value';
 import { LocalizePipe } from '../../core/i18n';
 import {
-  CheckoutFieldKey, CheckoutFieldValues, CheckoutRequirement, PaymentProviderId, PaymentStatus,
+  CheckoutFieldKey, CheckoutFieldValues, CheckoutRequirement, PaymentProviderId, PaymentStatus, ProductVariant,
 } from '../../domain';
 import { CartFacade, CatalogFacade, CheckoutFacade } from '../../state';
 import {
@@ -45,9 +51,29 @@ import {
           <section class="tt-card tt-card--pad" *ngIf="!checkout.orderId()">
             <h2>פרטים לאספקה</h2>
 
-            <p class="tt-alert" *ngIf="checkout.busy() && checkout.requirements().length === 0">
-              טוענים את פרטי ההזמנה…
-            </p>
+            <!-- The session is opened by the server, which can take a few seconds
+                 on a cold start. The form's shape is shown at once, and after a
+                 moment the wait is explained rather than left silent. -->
+            <div class="waiting" *ngIf="checkout.busy() && checkout.requirements().length === 0" role="status" aria-live="polite">
+              <div class="waiting__plate">
+                <span class="waiting__glyph" aria-hidden="true">
+                  <span class="waiting__ring"></span>
+                  <tt-icon name="shield" [size]="22"></tt-icon>
+                </span>
+                <span class="waiting__text">
+                  <strong>מכינים את התשלום המאובטח שלך…</strong>
+                  <span>הפרטים נטענים מהשרת. ההזמנה נוצרת רק אחרי אישור הפרטים, ולא בוצע חיוב.</span>
+                </span>
+              </div>
+              <p class="tt-alert waiting__slow" *ngIf="slow()">
+                השרת מתעורר, זה יכול לקחת עוד כמה שניות. עדיין לא נוצרה הזמנה ולא בוצע חיוב.
+              </p>
+              <div class="waiting__form" aria-hidden="true">
+                <span class="tt-skeleton waiting__label"></span><span class="tt-skeleton waiting__input"></span>
+                <span class="tt-skeleton waiting__label"></span><span class="tt-skeleton waiting__input"></span>
+                <span class="tt-skeleton waiting__label"></span><span class="tt-skeleton waiting__input"></span>
+              </div>
+            </div>
 
             <form class="fields" (submit)="submit($event)">
               <ng-container *ngFor="let requirement of checkout.requirements()">
@@ -236,6 +262,9 @@ import {
               <span class="tt-numeric">{{ item.totalPrice | money }}</span>
             </li>
           </ul>
+          <div class="row row--coins" *ngIf="totalCoins() as coins">
+            <span>סה״כ קוינס שתקבלו</span><span class="tt-numeric coins">{{ coins }}</span>
+          </div>
           <div class="row total">
             <span>לתשלום</span>
             <span class="tt-price tt-numeric">{{ cart.totals().total | money }}</span>
@@ -284,7 +313,7 @@ import {
     .progress li { display: inline-flex; align-items: center; gap: 6px; padding: 0.3rem 0.7rem 0.3rem 0.4rem; border: 1px solid var(--tt-border); border-radius: var(--tt-radius-pill); }
     .progress li span { display: grid; place-items: center; inline-size: 20px; block-size: 20px; border-radius: 50%; background: var(--tt-surface-3); font-family: var(--tt-font-display); font-size: var(--tt-text-sm); color: var(--tt-text); }
     .progress li.on { color: var(--tt-text); border-color: var(--tt-border-brand); background: var(--tt-brand-tint); }
-    .progress li.on span { background: var(--tt-brand-500); color: #fff; }
+    .progress li.on span { background: var(--tt-brand-500); color: var(--tt-text-on-brand); }
     .progress li.done { color: var(--tt-success); border-color: rgba(67, 209, 138, 0.4); }
     .progress li.done span { background: var(--tt-success); color: #062814; }
     .pay__sum { font-weight: 800; font-variant-numeric: tabular-nums; }
@@ -345,12 +374,27 @@ import {
     .line { display: flex; flex-direction: column; gap: 3px; min-inline-size: 0; }
     .line__name { font-weight: 600; }
     .line__meta { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; font-size: var(--tt-text-xs); color: var(--tt-text-muted); }
+    .row--coins { display: flex; justify-content: space-between; gap: var(--tt-space-3); padding: var(--tt-space-2) var(--tt-space-3); margin-block-end: var(--tt-space-2); border: 1px solid var(--tt-gold-600); border-radius: var(--tt-radius-md); background: var(--tt-gold-tint); font-weight: 700; font-size: var(--tt-text-sm); }
+    .row--coins .coins { color: var(--tt-gold-400); font-size: var(--tt-text-lg); font-weight: 900; }
     .row.total { display: flex; justify-content: space-between; font-weight: 700; padding-block-start: var(--tt-space-2); border-block-start: 1px solid var(--tt-border); margin-block-end: var(--tt-space-3); }
     .tt-check .tt-hint { display: block; }
     .tt-check-field { display: flex; flex-direction: column; gap: var(--tt-space-2); }
+    .waiting { display: flex; flex-direction: column; gap: var(--tt-space-3); margin-block-end: var(--tt-space-4); }
+    .waiting .tt-alert { margin: 0; }
+    .waiting__plate { display: flex; align-items: center; gap: var(--tt-space-3); padding: var(--tt-space-3) var(--tt-space-4); border: 1px solid var(--tt-gold-600); border-radius: var(--tt-radius-md);
+      background: linear-gradient(90deg, var(--tt-gold-tint), transparent 60%), var(--tt-surface-2); }
+    .waiting__glyph { position: relative; display: grid; place-items: center; inline-size: 48px; block-size: 48px; flex: none; border-radius: 50%; color: var(--tt-gold-400); background: var(--tt-surface-3); }
+    .waiting__ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--tt-gold-500); border-inline-start-color: transparent; animation: tt-spin 1.1s linear infinite; }
+    .waiting__text { display: flex; flex-direction: column; gap: 2px; }
+    .waiting__text strong { font-size: var(--tt-text-md); }
+    .waiting__text span { color: var(--tt-text-muted); font-size: var(--tt-text-sm); line-height: var(--tt-leading-snug); }
+    @media (prefers-reduced-motion: reduce) { .waiting__ring { animation: none; border-inline-start-color: var(--tt-gold-500); } }
+    .waiting__form { display: flex; flex-direction: column; gap: var(--tt-space-2); }
+    .waiting__label { inline-size: 32%; block-size: 14px; }
+    .waiting__input { inline-size: 100%; block-size: 44px; margin-block-end: var(--tt-space-2); }
   `],
 })
-export class CheckoutPage {
+export class CheckoutPage implements OnDestroy {
   readonly checkout = inject(CheckoutFacade);
   readonly cart = inject(CartFacade);
   private readonly catalog = inject(CatalogFacade);
@@ -364,13 +408,55 @@ export class CheckoutPage {
   /** Answers live in component memory for the length of the flow and nowhere else. */
   private readonly values = signal<CheckoutFieldValues>({});
 
+  /** The coin product's variants by id, so the ticket can total the coins. */
+  private readonly variants = toSignal(
+    this.catalog.productBySlug(STOREFRONT.focusProductSlug).pipe(
+      map((detail) => new Map(detail.product.variants.map((variant) => [variant.id, variant]))),
+      catchError(() => of(new Map<string, ProductVariant>())),
+    ),
+    { initialValue: new Map<string, ProductVariant>() },
+  );
+
+  readonly totalCoins = computed<string | undefined>(() => {
+    let sum = 0;
+    let any = false;
+    for (const item of this.cart.items()) {
+      const variant = this.variants().get(item.variantId);
+      if (variant?.quantityValue) {
+        any = true;
+        sum += (variant.quantityValue + launchBonusOf(variant)) * item.quantity;
+      }
+    }
+    return any ? formatQuantity(sum) : undefined;
+  });
+
+  /** True once opening the session has taken longer than a customer expects. */
+  readonly slow = signal(false);
+  private slowTimer?: ReturnType<typeof setTimeout>;
+
   constructor() {
     this.analytics.pageView('/checkout', 'Checkout');
     // No reset here. start() resumes an unfinished session for this tab and
     // opens a new one otherwise; resetting first threw the session away, so a
     // refresh after submitting details created a second one, and against a real
     // backend that means a second order.
-    this.checkout.start().subscribe();
+    this.slowTimer = setTimeout(() => this.slow.set(true), 4000);
+    this.checkout.start().subscribe({
+      complete: () => this.settle(),
+      error: () => this.settle(),
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.settle();
+  }
+
+  private settle(): void {
+    if (this.slowTimer) {
+      clearTimeout(this.slowTimer);
+      this.slowTimer = undefined;
+    }
+    this.slow.set(false);
   }
 
   text(key: CheckoutFieldKey): string {
