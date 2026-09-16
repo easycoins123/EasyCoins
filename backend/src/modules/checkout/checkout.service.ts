@@ -87,7 +87,7 @@ export class CheckoutService {
 
     // One transaction: a session without its items would be a checkout for
     // nothing, and a partial write here becomes a wrong total later.
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.runInTransaction(async (tx) => {
       await tx.checkoutSession.create({
         data: {
           id: sessionId,

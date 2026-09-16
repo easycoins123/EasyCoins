@@ -134,7 +134,7 @@ export class OrderCreationService {
   ): Promise<string> {
     const orderId = generateId('ord');
 
-    await this.prisma.$transaction(async (tx) => {
+    await this.prisma.runInTransaction(async (tx) => {
       // Re-read inside the transaction. What was validated a moment ago outside
       // it is not what this transaction sees, and the order must be built from
       // the latter.

@@ -1,5 +1,5 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 import { AppLogger } from '../common/logging/app-logger.service';
 import { APP_CONFIG } from '../config/config.module';
@@ -42,5 +42,23 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
    */
   async ping(): Promise<void> {
     await this.$queryRaw`SELECT 1`;
+  }
+
+  /**
+   * Interactive transactions with headroom for a database that is not local.
+   *
+   * Prisma's defaults (2s to acquire a connection, 5s to run) assume the
+   * database sits next to the app. Here it is a hosted pooler with real network
+   * latency, and a multi-statement transaction (order creation, payment
+   * settlement) pays that latency on every statement. The defaults expire
+   * mid-transaction, and Prisma then fails the next query with "Transaction not
+   * found ... refers to an old closed transaction". These limits give the round
+   * trips room; the function's own maxDuration is the true ceiling.
+   *
+   * Every interactive transaction goes through here so the timeout is set in one
+   * place rather than remembered at six call sites.
+   */
+  runInTransaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return this.$transaction(fn, { maxWait: 15_000, timeout: 30_000 });
   }
 }

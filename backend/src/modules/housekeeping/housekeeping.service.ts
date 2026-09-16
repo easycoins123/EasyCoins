@@ -111,7 +111,7 @@ export class HousekeepingService implements OnModuleInit, OnApplicationShutdown 
 
     // Then any hold whose own deadline passed, including those belonging to
     // checkouts that never became an order at all.
-    const reservationsReleased = await this.prisma.$transaction((tx) =>
+    const reservationsReleased = await this.prisma.runInTransaction((tx) =>
       this.inventory.releaseExpired(tx, now),
     );
 

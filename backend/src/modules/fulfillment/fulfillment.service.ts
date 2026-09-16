@@ -343,7 +343,7 @@ export class FulfillmentService {
     payload: Prisma.InputJsonValue,
     operator: Operator,
   ): Promise<Fulfillment> {
-    const updated = await this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.runInTransaction(async (tx) => {
       const fulfillment = await tx.fulfillment.findUnique({
         where: { id: fulfillmentId },
         include: { order: { select: { status: true } } },

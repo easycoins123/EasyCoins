@@ -69,7 +69,7 @@ export class PaymentStateService {
     providerStatus: ProviderPaymentStatus,
     options: { failureCode?: string; requestId?: string } = {},
   ): Promise<SettlementOutcome> {
-    const outcome = await this.prisma.$transaction(async (tx) => {
+    const outcome = await this.prisma.runInTransaction(async (tx) => {
       const intent = await tx.paymentIntent.findUniqueOrThrow({ where: { id: intentId } });
 
       if (!LIVE_PAYMENT_STATES.includes(intent.status)) {
@@ -341,7 +341,7 @@ export class PaymentStateService {
     let ordersCancelled = 0;
 
     for (const intent of claimed) {
-      await this.prisma.$transaction(async (tx) => {
+      await this.prisma.runInTransaction(async (tx) => {
         const stillLive = await tx.paymentIntent.count({
           where: { orderId: intent.order_id, status: { in: LIVE_PAYMENT_STATES } },
         });
