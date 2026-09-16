@@ -63,6 +63,33 @@ export interface Delivery {
   readonly payload: DeliveryPayload;
 }
 
+/** One transfer-market listing the customer is asked to create. Public data only. */
+export interface TradeListing {
+  readonly sequence: number;
+  /** The exact Buy-It-Now price to enter. */
+  readonly binPrice: number;
+  /** Coins the customer receives from this listing, after the market tax. */
+  readonly netCoins: number;
+}
+
+/**
+ * What the customer must do for a coin order to be delivered.
+ *
+ * The "Buy the Player" method: the customer lists a named card at an exact price
+ * and our account buys it, so the coins move without anyone signing into their
+ * account. This is shown *before* delivery, unlike `Delivery`, because the
+ * customer performs the listing. It carries a card name and a price, never a
+ * credential.
+ */
+export interface CoinTradeInstruction {
+  readonly kind: 'TRADE';
+  readonly playerName: string;
+  readonly requestedCoins: number;
+  readonly deliveredCoins: number;
+  readonly trades: readonly TradeListing[];
+  readonly note?: string;
+}
+
 export interface Fulfillment {
   readonly id: FulfillmentId;
   readonly orderId: OrderId;
@@ -71,6 +98,8 @@ export interface Fulfillment {
   readonly status: FulfillmentStatus;
   readonly updatedAt: IsoDateTime;
   readonly estimatedReadyAt?: IsoDateTime;
+  /** The customer's next step, present while the order waits on them. */
+  readonly instruction?: CoinTradeInstruction;
   readonly delivery?: Delivery;
   /** Safe, customer-readable reason. Never a stack trace or provider payload. */
   readonly failureReason?: LocalizedText;

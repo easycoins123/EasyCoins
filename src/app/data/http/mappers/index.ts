@@ -2,7 +2,7 @@ import {
   AuthState, Cart, CartIssue, CartItem, CartTotals, CartValidationResult, CatalogFacets,
   CheckoutFieldControl, CheckoutFieldKey, CheckoutFieldValues, CheckoutRequirement,
   CheckoutSession, CheckoutStep, CheckoutSubmitResult, CouponApplication, Coupon, Customer,
-  Delivery, DeliveryPayload, FaqEntry, Fulfillment, FulfillmentDescriptor, FulfillmentMethod,
+  CoinTradeInstruction, Delivery, DeliveryPayload, FaqEntry, Fulfillment, FulfillmentDescriptor, FulfillmentMethod,
   FulfillmentStatus, Game, ImageAsset, ImageRole, Inventory, InventoryStatus, LocaleCode,
   LocalizedText, Money, Offer, Order, OrderItem, OrderStatus, OrderStatusSnapshot, Page,
   PaymentAction, PaymentIntent, PaymentProviderDescriptor, PaymentProviderId, PaymentResult,
@@ -452,6 +452,33 @@ function toDelivery(dto: Dto.DeliveryDto | null | undefined): Delivery | undefin
   };
 }
 
+/**
+ * The customer's next-step instruction, or nothing.
+ *
+ * Only a well-formed TRADE instruction with at least one listing becomes a
+ * domain value. Anything else, an unknown kind or an empty payload, maps to
+ * undefined so the UI shows its normal status rather than a broken panel.
+ */
+function toInstruction(
+  dto: Dto.CustomerInstructionDto | null | undefined,
+): CoinTradeInstruction | undefined {
+  if (!dto || dto.kind !== 'TRADE' || !dto.trades?.length) {
+    return undefined;
+  }
+  return {
+    kind: 'TRADE',
+    playerName: dto.playerName ?? '',
+    requestedCoins: dto.requestedCoins ?? 0,
+    deliveredCoins: dto.deliveredCoins ?? 0,
+    trades: dto.trades.map((trade) => ({
+      sequence: trade.sequence,
+      binPrice: trade.binPrice,
+      netCoins: trade.netCoins,
+    })),
+    note: dto.note ?? undefined,
+  };
+}
+
 export function toFulfillment(dto: Dto.FulfillmentDto): Fulfillment {
   return {
     id: dto.id,
@@ -461,6 +488,7 @@ export function toFulfillment(dto: Dto.FulfillmentDto): Fulfillment {
     status: toEnum(FulfillmentStatus, dto.status, FulfillmentStatus.Pending),
     updatedAt: dto.updatedAt,
     estimatedReadyAt: dto.estimatedReadyAt ?? undefined,
+    instruction: toInstruction(dto.instruction),
     delivery: toDelivery(dto.delivery),
     failureReason: toOptionalLocalized(dto.failureReason),
   };

@@ -257,6 +257,33 @@ describe('mappers: payment and orders', () => {
     expect(fulfillment.delivery?.payload.kind).toBe('NONE');
   });
 
+  it('maps a coin trade instruction with its listings', () => {
+    const fulfillment = Map.toFulfillment(fulfillmentDto({
+      instruction: {
+        kind: 'TRADE',
+        playerName: 'Bronze Common Goalkeeper',
+        requestedCoins: 250_000,
+        deliveredCoins: 250_800,
+        trades: [{ sequence: 1, binPrice: 264_000, netCoins: 250_800 }],
+      },
+    }));
+    expect(fulfillment.instruction).toEqual({
+      kind: 'TRADE',
+      playerName: 'Bronze Common Goalkeeper',
+      requestedCoins: 250_000,
+      deliveredCoins: 250_800,
+      trades: [{ sequence: 1, binPrice: 264_000, netCoins: 250_800 }],
+      note: undefined,
+    });
+  });
+
+  it('drops an instruction with no listings rather than rendering a broken panel', () => {
+    const fulfillment = Map.toFulfillment(fulfillmentDto({
+      instruction: { kind: 'TRADE', playerName: 'x', trades: [] },
+    }));
+    expect(fulfillment.instruction).toBeUndefined();
+  });
+
   it('leaves an absent delivery ETA absent rather than inventing one', () => {
     const descriptor = Map.toFulfillmentDescriptor({
       method: 'AUTOMATED_API', label: localized('אוטומטי'), description: localized('תיאור'),

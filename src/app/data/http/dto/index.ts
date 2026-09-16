@@ -293,6 +293,21 @@ export interface DeliveryDto {
   } | null;
 }
 
+export interface TradeListingDto {
+  readonly sequence: number;
+  readonly binPrice: number;
+  readonly netCoins: number;
+}
+
+export interface CustomerInstructionDto {
+  readonly kind?: string;
+  readonly playerName?: string;
+  readonly requestedCoins?: number;
+  readonly deliveredCoins?: number;
+  readonly trades?: readonly TradeListingDto[] | null;
+  readonly note?: string | null;
+}
+
 export interface FulfillmentDto {
   readonly id: string;
   readonly orderId: string;
@@ -301,6 +316,7 @@ export interface FulfillmentDto {
   readonly status: string;
   readonly updatedAt: string;
   readonly estimatedReadyAt?: string | null;
+  readonly instruction?: CustomerInstructionDto | null;
   readonly delivery?: DeliveryDto | null;
   readonly failureReason?: LocalizedTextDto | null;
 }

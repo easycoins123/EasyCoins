@@ -7,13 +7,16 @@ import { catchError, map, shareReplay, switchMap, takeWhile } from 'rxjs/operato
 import { AnalyticsEvent, AnalyticsService } from '../../core/analytics';
 import { LocalizePipe } from '../../core/i18n';
 import {
-  AppError, AppErrorKind, Fulfillment, Order, OrderStatus, isTerminalOrderStatus, toAppError,
+  AppError, AppErrorKind, Fulfillment, Order, OrderStatus, isTerminalFulfillment,
+  isTerminalOrderStatus, toAppError,
 } from '../../domain';
 import { CampaignsFacade, CatalogFacade, OrderFacade } from '../../state';
 import {
-  DeliveryPayloadComponent, ErrorStateComponent, FulfillmentBadgeComponent, MoneyPipe,
-  OrderStatusTimelineComponent, PlatformBadgeComponent, RegionBadgeComponent, IconComponent,
+  DeliveryInstructionComponent, DeliveryPayloadComponent, ErrorStateComponent,
+  FulfillmentBadgeComponent, MoneyPipe, OrderStatusTimelineComponent, PlatformBadgeComponent,
+  RegionBadgeComponent, IconComponent,
 } from '../../ui';
+import { CoinTradeInstruction } from '../../domain';
 
 /** How often a still-moving order re-checks its status. */
 const POLL_INTERVAL_MS = 2500;
@@ -28,8 +31,9 @@ const POLL_INTERVAL_MS = 2500;
   standalone: true,
   imports: [
     CommonModule, RouterLink, LocalizePipe, MoneyPipe,
-    OrderStatusTimelineComponent, DeliveryPayloadComponent, FulfillmentBadgeComponent,
-    PlatformBadgeComponent, RegionBadgeComponent, ErrorStateComponent, IconComponent],
+    OrderStatusTimelineComponent, DeliveryPayloadComponent, DeliveryInstructionComponent,
+    FulfillmentBadgeComponent, PlatformBadgeComponent, RegionBadgeComponent, ErrorStateComponent,
+    IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-container tt-section">
@@ -111,7 +115,12 @@ const POLL_INTERVAL_MS = 2500;
                     <tt-fulfillment-badge [descriptor]="vm.lookups.fulfillment.get(item.fulfillmentMethod)">
                     </tt-fulfillment-badge>
                   </div>
-                  <tt-delivery-payload [fulfillment]="fulfillmentFor(vm.order, item.id)"></tt-delivery-payload>
+                  <tt-delivery-instruction
+                    *ngIf="instructionFor(vm.order, item.id) as instruction; else payload"
+                    [instruction]="instruction"></tt-delivery-instruction>
+                  <ng-template #payload>
+                    <tt-delivery-payload [fulfillment]="fulfillmentFor(vm.order, item.id)"></tt-delivery-payload>
+                  </ng-template>
                 </li>
               </ul>
             </section>
@@ -243,6 +252,21 @@ export class OrderStatusPage {
 
   fulfillmentFor(order: Order, orderItemId: string): Fulfillment | undefined {
     return order.fulfillments.find((fulfillment) => fulfillment.orderItemId === orderItemId);
+  }
+
+  /**
+   * The next-step instruction for a line, shown in place of the generic status
+   * while the order waits on the customer. Suppressed once the line reaches a
+   * terminal status (the backend still returns the instruction on a delivered
+   * order, but at that point the delivery panel should take over), and absent
+   * for a method that needs no customer action.
+   */
+  instructionFor(order: Order, orderItemId: string): CoinTradeInstruction | undefined {
+    const fulfillment = this.fulfillmentFor(order, orderItemId);
+    if (!fulfillment || isTerminalFulfillment(fulfillment.status)) {
+      return undefined;
+    }
+    return fulfillment.instruction;
   }
 
   /**

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 
 import { LocalizePipe } from '../../core/i18n';
 import {
-  FaqEntry, Fulfillment, FulfillmentStatus, ORDER_STATUS_FLOW, OrderStatus, Review,
+  CoinTradeInstruction, FaqEntry, Fulfillment, FulfillmentStatus, ORDER_STATUS_FLOW, OrderStatus, Review,
 } from '../../domain';
 import { IconComponent, IconName } from './icon.component';
 import { StarRatingComponent } from './star-rating.component';
@@ -249,4 +249,80 @@ export class DeliveryPayloadComponent {
         return 'סופק.';
     }
   }
+}
+
+/**
+ * The customer's next step for a coin order: which card to list, at what price.
+ *
+ * This is the whole point of the "no password" method. The customer performs
+ * the listing themselves, so they have to be told exactly what to do, and the
+ * price has to be exact or our account cannot find the listing to buy it.
+ */
+@Component({
+  selector: 'tt-delivery-instruction',
+  standalone: true,
+  imports: [CommonModule, IconComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div class="ins" *ngIf="instruction as ins">
+      <p class="ins__eyebrow"><tt-icon name="bolt" [size]="14"></tt-icon> הצעד הבא שלכם</p>
+      <h3>מעלים קלף למכירה, ואנחנו קונים אותו</h3>
+      <p class="ins__lede">
+        כדי לקבל את הקוינס בלי למסור פרטי חשבון, מעלים במרקט קלף שאנחנו קונים מכם.
+        הקוינס עוברים אליכם דרך המכירה.
+      </p>
+
+      <ol class="steps">
+        <li>
+          <span class="steps__n">1</span>
+          <div>קנו במרקט את השחקן <strong>{{ ins.playerName }}</strong> (עולה כמה מאות קוינס בלבד).</div>
+        </li>
+        <li>
+          <span class="steps__n">2</span>
+          <div>
+            העלו אותו למכירה
+            <ng-container *ngIf="ins.trades.length === 1; else many">
+              במחיר <strong>Buy Now מדויק</strong>:
+              <span class="price">{{ ins.trades[0].binPrice | number }}</span>
+            </ng-container>
+            <ng-template #many>
+              ב־{{ ins.trades.length }} מכירות נפרדות, כל אחת במחיר המדויק:
+              <ul class="prices">
+                <li *ngFor="let t of ins.trades">
+                  מכירה {{ t.sequence }}: <span class="price">{{ t.binPrice | number }}</span>
+                </li>
+              </ul>
+            </ng-template>
+          </div>
+        </li>
+        <li>
+          <span class="steps__n">3</span>
+          <div>החשבון שלנו קונה את הקלף, והקוינס אצלכם. הסטטוס כאן יתעדכן ל"סופק".</div>
+        </li>
+      </ol>
+
+      <p class="ins__total">סה״כ תקבלו: <strong>{{ ins.deliveredCoins | number }}</strong> קוינס</p>
+      <p class="ins__note" *ngIf="ins.note">{{ ins.note }}</p>
+      <p class="ins__safe"><tt-icon name="check" [size]="14"></tt-icon> לא נבקש סיסמה, קוד אימות או קודי גיבוי. אתם מבצעים הכל מהחשבון שלכם.</p>
+    </div>
+  `,
+  styles: [`
+    .ins { border: 1px solid var(--tt-gold-600); border-radius: var(--tt-radius-lg); padding: var(--tt-space-5); background: linear-gradient(135deg, rgba(212, 180, 106, 0.14), transparent 55%), var(--tt-surface); }
+    .ins__eyebrow { margin: 0 0 var(--tt-space-2); display: flex; align-items: center; gap: 6px; font-size: var(--tt-caption); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tt-gold-400); }
+    .ins h3 { margin: 0 0 var(--tt-space-2); font-size: var(--tt-text-lg); }
+    .ins__lede { margin: 0 0 var(--tt-space-4); color: var(--tt-text-muted); line-height: var(--tt-leading); }
+    .steps { list-style: none; margin: 0 0 var(--tt-space-4); padding: 0; display: flex; flex-direction: column; gap: var(--tt-space-3); }
+    .steps li { display: flex; gap: var(--tt-space-3); align-items: flex-start; }
+    .steps__n { flex: none; inline-size: 26px; block-size: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: var(--tt-text-sm); background: var(--tt-gold-metal); color: var(--tt-text-on-gold); }
+    .steps div { line-height: var(--tt-leading); padding-block-start: 2px; }
+    .price { display: inline-block; direction: ltr; font-weight: 800; font-size: var(--tt-text-md); background: var(--tt-surface-3); padding: 2px var(--tt-space-2); border-radius: var(--tt-radius-sm); letter-spacing: 0.04em; }
+    .prices { list-style: none; margin: var(--tt-space-2) 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+    .ins__total { margin: 0 0 var(--tt-space-2); font-size: var(--tt-text-md); }
+    .ins__note { margin: 0 0 var(--tt-space-2); color: var(--tt-text-muted); font-size: var(--tt-text-sm); }
+    .ins__safe { margin: 0; display: flex; align-items: center; gap: 6px; font-size: var(--tt-text-sm); color: var(--tt-text-muted); }
+    .ins__safe tt-icon { color: var(--tt-success); }
+  `],
+})
+export class DeliveryInstructionComponent {
+  @Input() instruction?: CoinTradeInstruction;
 }
