@@ -166,6 +166,21 @@ export class FaqAccordionComponent {
     li.done .dot { background: var(--tt-success); border-color: var(--tt-success); }
     li.current { color: var(--tt-text); font-weight: 600; }
     li.current .dot { border-color: var(--tt-brand-500); box-shadow: 0 0 0 4px var(--tt-brand-tint); }
+
+    /* Desktop: lay the steps across the width instead of down the page, so a
+       wide screen shows a compact progress bar rather than a tall column. */
+    @media (min-width: 700px) {
+      .timeline { flex-direction: row; gap: var(--tt-space-2); }
+      li { flex: 1; flex-direction: column; align-items: center; text-align: center; gap: var(--tt-space-2); }
+      li:not(:last-child)::after {
+        inset-block-start: 7px;
+        inset-inline-start: calc(50% + 14px);
+        inset-inline-end: auto;
+        inline-size: calc(100% - 28px);
+        block-size: 2px;
+      }
+      .label { font-size: var(--tt-text-sm); line-height: 1.3; }
+    }
   `],
 })
 export class OrderStatusTimelineComponent {
