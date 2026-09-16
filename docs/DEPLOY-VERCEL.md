@@ -20,15 +20,23 @@ The repository is already prepared for it:
    password manager, not in the repo.
 2. Confirm the database is UTF-8. Supabase is UTF-8 by default, which matters:
    the catalog is Hebrew and a WIN1252 cluster rejects it.
-3. From **Project Settings → Database**, copy two connection strings:
-   - **Transaction pooler** (host `...pooler.supabase.com`, port **6543**). This
-     is the runtime `DATABASE_URL`. Append `?pgbouncer=true&connection_limit=1`.
-   - **Direct connection** (port **5432**). This is `DIRECT_URL`, used only by
-     migrations.
+3. From **Project Settings → Database**, copy the pooler connection string:
+   - **Session pooler** (host `...pooler.supabase.com`, port **5432**, user
+     `postgres.<project-ref>`). This is both `DATABASE_URL` (runtime) and
+     `DIRECT_URL` (migrations). Append `?connection_limit=1` to `DATABASE_URL`.
 
-The pooler is not optional on serverless: every cold start opens its own
-connection, and the direct connection pool is exhausted within minutes of real
-traffic. The pooler shares a small set of connections across all of them.
+Use the **session** pooler, not the transaction pooler (port 6543). Order
+creation, payment settlement and inventory holds run inside Prisma interactive
+transactions, and the transaction pooler (pgBouncer transaction mode) does not
+hold one connection across the statements of an interactive transaction on
+serverless. It fails at runtime with "Transaction not found ... refers to an old
+closed transaction", even though single-query reads work. The session pooler
+gives each connection a stable Postgres session, so the transactions behave like
+a direct connection. `connection_limit=1` keeps each warm function instance to a
+single session so the pool is not exhausted.
+
+The direct host (`db.<ref>.supabase.co:5432`) is not reachable from Vercel
+(IPv6 only), which is why both URLs use the pooler host.
 
 ## 2. Backend project (the API)
 
@@ -41,8 +49,8 @@ Environment variables (Project Settings → Environment Variables), Production:
 | Variable | Value |
 |---|---|
 | `NODE_ENV` | `production` |
-| `DATABASE_URL` | the Supabase **pooler** URL (port 6543, with `?pgbouncer=true&connection_limit=1`) |
-| `DIRECT_URL` | the Supabase **direct** URL (port 5432) |
+| `DATABASE_URL` | the Supabase **session pooler** URL (port 5432, user `postgres.<ref>`, with `?connection_limit=1`) |
+| `DIRECT_URL` | the same **session pooler** URL (port 5432), no query string |
 | `SESSION_SECRET` | `openssl rand -hex 32` |
 | `PAYMENT_WEBHOOK_SECRET` | a different `openssl rand -hex 32` |
 | `CRON_SECRET` | a third `openssl rand -hex 32` |
