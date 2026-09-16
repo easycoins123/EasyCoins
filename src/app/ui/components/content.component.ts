@@ -265,59 +265,98 @@ export class DeliveryPayloadComponent {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="ins" *ngIf="instruction as ins">
-      <p class="ins__eyebrow"><tt-icon name="bolt" [size]="14"></tt-icon> הצעד הבא שלכם</p>
-      <h3>מעלים קלף למכירה, ואנחנו קונים אותו</h3>
-      <p class="ins__lede">
-        כדי לקבל את הקוינס בלי למסור פרטי חשבון, מעלים במרקט קלף שאנחנו קונים מכם.
-        הקוינס עוברים אליכם דרך המכירה.
-      </p>
+      <!-- Header: how much is being delivered, and where things stand. -->
+      <div class="ins__head">
+        <div>
+          <p class="ins__eyebrow"><tt-icon name="bolt" [size]="14"></tt-icon> אספקת הקוינס שלכם</p>
+          <h3>{{ ins.deliveredCoins | number }} קוינס<span *ngIf="platform"> · {{ platform }}</span></h3>
+        </div>
+        <span class="ins__phase" [class.working]="isBuying">{{ phaseLabel }}</span>
+      </div>
 
-      <ol class="steps">
-        <li>
-          <span class="steps__n">1</span>
-          <div>קנו במרקט את השחקן <strong>{{ ins.playerName }}</strong> (עולה כמה מאות קוינס בלבד).</div>
-        </li>
-        <li>
-          <span class="steps__n">2</span>
-          <div>
-            העלו אותו למכירה
-            <ng-container *ngIf="ins.trades.length === 1; else many">
-              במחיר <strong>Buy Now מדויק</strong>:
-              <span class="price">{{ ins.trades[0].binPrice | number }}</span>
-            </ng-container>
-            <ng-template #many>
-              ב־{{ ins.trades.length }} מכירות נפרדות, כל אחת במחיר המדויק:
-              <ul class="prices">
-                <li *ngFor="let t of ins.trades">
-                  מכירה {{ t.sequence }}: <span class="price">{{ t.binPrice | number }}</span>
-                </li>
-              </ul>
-            </ng-template>
+      <div class="bar" [attr.aria-label]="'התקדמות אספקה'">
+        <span class="bar__fill" [style.inline-size.%]="percent"></span>
+      </div>
+      <p class="bar__meta">{{ deliveredSoFar | number }} / {{ ins.deliveredCoins | number }} ({{ percent }}%)</p>
+
+      <!-- The three steps, side by side on desktop, stacked on phone. -->
+      <ol class="grid">
+        <li class="step" [class.active]="!isBuying">
+          <div class="step__top"><span class="step__n">1</span><h4>קונים שחקן</h4></div>
+          <p class="step__lede">קנו במרקט קלף מהסוג הבא (עולה כמה מאות קוינס):</p>
+          <div class="card">
+            <div class="card__art" aria-hidden="true"><tt-icon name="coin" [size]="26"></tt-icon></div>
+            <div class="card__meta">
+              <strong>{{ ins.playerName }}</strong>
+              <span class="card__price">מחיר: עד <b>{{ vehicleBudget | number }}</b></span>
+            </div>
           </div>
         </li>
-        <li>
-          <span class="steps__n">3</span>
-          <div>החשבון שלנו קונה את הקלף, והקוינס אצלכם. הסטטוס כאן יתעדכן ל"סופק".</div>
+
+        <li class="step" [class.active]="!isBuying">
+          <div class="step__top"><span class="step__n">2</span><h4>מעלים למכירה</h4></div>
+          <p class="step__lede">העלו אותו במרקט עם המחירים המדויקים:</p>
+          <div class="params" *ngFor="let t of ins.trades">
+            <span *ngIf="ins.trades.length > 1" class="params__seq">מכירה {{ t.sequence }}</span>
+            <div class="param"><span>מחיר פתיחה</span><b class="num">{{ startPrice(t.binPrice) | number }}</b></div>
+            <div class="param param--key"><span>Buy Now (מדויק)</span><b class="num">{{ t.binPrice | number }}</b></div>
+            <div class="param"><span>משך המכירה</span><b>שעה אחת</b></div>
+          </div>
+        </li>
+
+        <li class="step" [class.active]="isBuying">
+          <div class="step__top"><span class="step__n">3</span><h4>אנחנו קונים</h4></div>
+          <p class="step__lede" *ngIf="!isBuying">אחרי שהעליתם, נציג שלנו קונה את הקלף מהמרקט והקוינס אצלכם.</p>
+          <div class="buying" *ngIf="isBuying">
+            <span class="spinner" aria-hidden="true"></span>
+            <p>הקלף נקנה כרגע. הסטטוס יתעדכן ל"סופק" בעוד רגע.</p>
+          </div>
         </li>
       </ol>
 
-      <p class="ins__total">סה״כ תקבלו: <strong>{{ ins.deliveredCoins | number }}</strong> קוינס</p>
+      <p class="warn" *ngIf="!isBuying">
+        <tt-icon name="bolt" [size]="14"></tt-icon>
+        חשוב: המחיר המדויק הוא מה שמזהה את המכירה שלכם. העלו בדיוק במחיר ה-Buy Now שלמעלה, אחרת לא נוכל למצוא ולקנות את הקלף.
+      </p>
       <p class="ins__note" *ngIf="ins.note">{{ ins.note }}</p>
       <p class="ins__safe"><tt-icon name="check" [size]="14"></tt-icon> לא נבקש סיסמה, קוד אימות או קודי גיבוי. אתם מבצעים הכל מהחשבון שלכם.</p>
     </div>
   `,
   styles: [`
     .ins { border: 1px solid var(--tt-gold-600); border-radius: var(--tt-radius-lg); padding: var(--tt-space-5); background: linear-gradient(135deg, rgba(212, 180, 106, 0.14), transparent 55%), var(--tt-surface); }
-    .ins__eyebrow { margin: 0 0 var(--tt-space-2); display: flex; align-items: center; gap: 6px; font-size: var(--tt-caption); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tt-gold-400); }
-    .ins h3 { margin: 0 0 var(--tt-space-2); font-size: var(--tt-text-lg); }
-    .ins__lede { margin: 0 0 var(--tt-space-4); color: var(--tt-text-muted); line-height: var(--tt-leading); }
-    .steps { list-style: none; margin: 0 0 var(--tt-space-4); padding: 0; display: flex; flex-direction: column; gap: var(--tt-space-3); }
-    .steps li { display: flex; gap: var(--tt-space-3); align-items: flex-start; }
-    .steps__n { flex: none; inline-size: 26px; block-size: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: var(--tt-text-sm); background: var(--tt-gold-metal); color: var(--tt-text-on-gold); }
-    .steps div { line-height: var(--tt-leading); padding-block-start: 2px; }
-    .price { display: inline-block; direction: ltr; font-weight: 800; font-size: var(--tt-text-md); background: var(--tt-surface-3); padding: 2px var(--tt-space-2); border-radius: var(--tt-radius-sm); letter-spacing: 0.04em; }
-    .prices { list-style: none; margin: var(--tt-space-2) 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-    .ins__total { margin: 0 0 var(--tt-space-2); font-size: var(--tt-text-md); }
+    .ins__head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--tt-space-3); }
+    .ins__eyebrow { margin: 0 0 var(--tt-space-1); display: flex; align-items: center; gap: 6px; font-size: var(--tt-caption); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tt-gold-400); }
+    .ins h3 { margin: 0; font-size: var(--tt-text-xl); color: var(--tt-text); }
+    .ins__phase { flex: none; font-size: var(--tt-text-sm); font-weight: 700; color: var(--tt-text-muted); border: 1px solid var(--tt-border); border-radius: 999px; padding: 2px var(--tt-space-3); }
+    .ins__phase.working { color: var(--tt-text-on-gold); background: var(--tt-gold-metal); border-color: transparent; }
+    .bar { margin: var(--tt-space-3) 0 6px; block-size: 8px; border-radius: 999px; background: var(--tt-surface-3); overflow: hidden; }
+    .bar__fill { display: block; block-size: 100%; background: var(--tt-gold-metal); transition: inline-size .4s ease; }
+    .bar__meta { margin: 0 0 var(--tt-space-4); font-size: var(--tt-caption); color: var(--tt-text-muted); direction: ltr; text-align: start; }
+    .grid { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--tt-space-3); }
+    @media (min-width: 760px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+    .step { border: 1px solid var(--tt-border); border-radius: var(--tt-radius-md, 10px); padding: var(--tt-space-4); background: var(--tt-surface); }
+    .step.active { border-color: var(--tt-gold-600); box-shadow: inset 0 0 0 1px var(--tt-gold-600); }
+    .step__top { display: flex; align-items: center; gap: var(--tt-space-2); margin-block-end: var(--tt-space-2); }
+    .step__n { flex: none; inline-size: 24px; block-size: 24px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: var(--tt-text-sm); background: var(--tt-gold-metal); color: var(--tt-text-on-gold); }
+    .step h4 { margin: 0; font-size: var(--tt-text-md); color: var(--tt-text); }
+    .step__lede { margin: 0 0 var(--tt-space-3); font-size: var(--tt-text-sm); color: var(--tt-text-muted); line-height: var(--tt-leading); }
+    .card { display: flex; gap: var(--tt-space-3); align-items: center; padding: var(--tt-space-2); border: 1px solid var(--tt-border); border-radius: var(--tt-radius-sm); background: var(--tt-surface-3); }
+    .card__art { flex: none; inline-size: 46px; block-size: 60px; border-radius: 6px; display: grid; place-items: center; background: linear-gradient(160deg, var(--tt-gold-600), #7a5c1f); color: var(--tt-text-on-gold); }
+    .card__meta { display: flex; flex-direction: column; gap: 2px; min-inline-size: 0; }
+    .card__price { font-size: var(--tt-text-sm); color: var(--tt-text-muted); }
+    .params { display: flex; flex-direction: column; gap: 6px; padding-block: 6px; border-block-start: 1px dashed var(--tt-border); }
+    .params:first-of-type { border-block-start: 0; }
+    .params__seq { font-size: var(--tt-caption); font-weight: 800; color: var(--tt-gold-400); }
+    .param { display: flex; justify-content: space-between; align-items: center; gap: var(--tt-space-2); font-size: var(--tt-text-sm); color: var(--tt-text-muted); }
+    .param .num { direction: ltr; letter-spacing: 0.03em; }
+    .param--key { color: var(--tt-text); }
+    .param--key b { color: var(--tt-gold-400); font-size: var(--tt-text-md); }
+    .buying { display: flex; align-items: center; gap: var(--tt-space-2); font-size: var(--tt-text-sm); color: var(--tt-text); }
+    .buying p { margin: 0; }
+    .spinner { flex: none; inline-size: 18px; block-size: 18px; border-radius: 50%; border: 2px solid var(--tt-border); border-block-start-color: var(--tt-gold-400); animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .warn { margin: var(--tt-space-4) 0 var(--tt-space-2); display: flex; gap: 8px; align-items: flex-start; padding: var(--tt-space-3); border: 1px solid var(--tt-gold-600); border-radius: var(--tt-radius-sm); background: rgba(212, 180, 106, 0.08); font-size: var(--tt-text-sm); line-height: var(--tt-leading); }
+    .warn tt-icon { color: var(--tt-gold-400); flex: none; margin-block-start: 2px; }
     .ins__note { margin: 0 0 var(--tt-space-2); color: var(--tt-text-muted); font-size: var(--tt-text-sm); }
     .ins__safe { margin: 0; display: flex; align-items: center; gap: 6px; font-size: var(--tt-text-sm); color: var(--tt-text-muted); }
     .ins__safe tt-icon { color: var(--tt-success); }
@@ -325,4 +364,43 @@ export class DeliveryPayloadComponent {
 })
 export class DeliveryInstructionComponent {
   @Input() instruction?: CoinTradeInstruction;
+  /** The line's fulfillment status, so the stepper can reflect where things stand. */
+  @Input() status?: FulfillmentStatus;
+  /** Platform name for the header, resolved by the page. Optional. */
+  @Input() platform?: string;
+
+  /** True once an operator is buying the listed card: step 3 is in progress. */
+  get isBuying(): boolean {
+    return this.status === FulfillmentStatus.Processing || this.status === FulfillmentStatus.Ready;
+  }
+
+  get phaseLabel(): string {
+    return this.isBuying ? 'רכישה בתהליך' : 'ממתין לפעולה שלכם';
+  }
+
+  /** Coins credited so far. The panel is hidden once delivered, so this stays 0. */
+  get deliveredSoFar(): number {
+    return 0;
+  }
+
+  get percent(): number {
+    return this.isBuying ? 66 : 0;
+  }
+
+  /**
+   * A rough ceiling for the cheap "vehicle" card the customer buys to list.
+   * It only has to be a common card, so a few hundred coins is plenty; this
+   * gives them a concrete "up to" number rather than a vague instruction.
+   */
+  get vehicleBudget(): number {
+    return 1000;
+  }
+
+  /**
+   * A start price safely below the exact Buy Now, so the listing is valid. Only
+   * the Buy Now must be exact; the start price just has to be lower.
+   */
+  startPrice(binPrice: number): number {
+    return Math.max(200, Math.floor((binPrice * 0.9) / 1000) * 1000);
+  }
 }

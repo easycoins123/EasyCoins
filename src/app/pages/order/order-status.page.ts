@@ -10,7 +10,7 @@ import {
   AppError, AppErrorKind, Fulfillment, Order, OrderStatus, isTerminalFulfillment,
   isTerminalOrderStatus, toAppError,
 } from '../../domain';
-import { CampaignsFacade, CatalogFacade, OrderFacade } from '../../state';
+import { CampaignsFacade, CatalogFacade, CatalogLookups, OrderFacade } from '../../state';
 import {
   DeliveryInstructionComponent, DeliveryPayloadComponent, ErrorStateComponent,
   FulfillmentBadgeComponent, MoneyPipe, OrderStatusTimelineComponent, PlatformBadgeComponent,
@@ -117,7 +117,9 @@ const POLL_INTERVAL_MS = 2500;
                   </div>
                   <tt-delivery-instruction
                     *ngIf="instructionFor(vm.order, item.id) as instruction; else payload"
-                    [instruction]="instruction"></tt-delivery-instruction>
+                    [instruction]="instruction"
+                    [status]="fulfillmentFor(vm.order, item.id)?.status"
+                    [platform]="platformName(vm.lookups, item.platformId)"></tt-delivery-instruction>
                   <ng-template #payload>
                     <tt-delivery-payload [fulfillment]="fulfillmentFor(vm.order, item.id)"></tt-delivery-payload>
                   </ng-template>
@@ -267,6 +269,12 @@ export class OrderStatusPage {
       return undefined;
     }
     return fulfillment.instruction;
+  }
+
+  /** The platform's short name for the instruction header, or empty if unknown. */
+  platformName(lookups: CatalogLookups, platformId: string): string {
+    const platform = lookups.platforms.get(platformId);
+    return platform?.shortName.he ?? platform?.name.he ?? '';
   }
 
   /**
