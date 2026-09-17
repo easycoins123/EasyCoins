@@ -123,6 +123,13 @@ export class HttpOrderApiService extends OrderApiService {
     return this.api.get<Dto.PageDto<Dto.OrderDto>>('/account/orders')
       .pipe(map((dto) => Map.toPage(dto, Map.toOrder).items));
   }
+
+  markListed(orderId: OrderId): Observable<Order> {
+    // No idempotency key: the endpoint is idempotent on the server, so a retry
+    // is safe on its own.
+    return this.api.post<Dto.OrderDto>(`/orders/${encodeURIComponent(orderId)}/mark-listed`, {})
+      .pipe(map(Map.toOrder));
+  }
 }
 
 @Injectable()

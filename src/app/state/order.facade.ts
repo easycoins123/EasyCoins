@@ -23,4 +23,12 @@ export class OrderFacade {
   orders(): Observable<readonly Order[]> {
     return this.api.listOrders();
   }
+
+  /**
+   * The customer confirming they listed their card. Returns the refreshed order
+   * so the caller re-renders progress from the response, not from a guess.
+   */
+  markListed(orderId: OrderId): Observable<Order> {
+    return this.api.markListed(orderId);
+  }
 }

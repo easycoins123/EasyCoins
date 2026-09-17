@@ -40,6 +40,42 @@ import { MoneyPipe } from '../ui/money.pipe';
         </div>
       </section>
 
+      <!--
+        The buy panel. Once an instruction exists this is the operator's whole
+        job: find the card at the exact price and buy it. It shouts when the
+        customer has said they listed it (READY), and waits quietly before that.
+      -->
+      <section class="card buy" *ngIf="j.customerInstruction as ins"
+               [class.buy--ready]="j.status === 'READY'">
+        <div class="buy-status" *ngIf="j.status === 'READY'">
+          ✅ הלקוח סימן שהעלה את הקלף. חפש ורכוש עכשיו, ואז סמן כסופק.
+        </div>
+        <div class="buy-status waiting" *ngIf="j.status === 'WAITING_FOR_CUSTOMER'">
+          ⏳ ממתין שהלקוח יעלה את הקלף למרקט. הפרטים למטה כבר נשלחו אליו.
+        </div>
+
+        <h2>לרכישה מהמרקט</h2>
+        <p class="player">{{ ins.playerName }}</p>
+        <p class="muted small">
+          חפש את הקלף במחיר ה-BIN המדויק וקנה אותו. סה"כ יסופק ללקוח:
+          <strong>{{ ins.deliveredCoins | number }}</strong> קוינס.
+        </p>
+        <div class="scroll-x">
+          <table>
+            <thead>
+              <tr><th>#</th><th>מחיר קנייה (BIN מדויק)</th><th>הלקוח מקבל</th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let trade of ins.trades">
+                <td>{{ trade.sequence }}</td>
+                <td><code class="bin">{{ trade.binPrice | number }}</code></td>
+                <td>{{ trade.netCoins | number }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section class="grid">
         <div class="card">
           <h2>מה נקנה</h2>
@@ -213,6 +249,17 @@ import { MoneyPipe } from '../ui/money.pipe';
         background: var(--surface-2);
       }
       .small { font-size: 0.82rem; }
+      .buy--ready { border-color: var(--ok, #2e7d32); box-shadow: 0 0 0 1px var(--ok, #2e7d32) inset; }
+      .buy-status {
+        font-weight: 700;
+        padding: 0.6rem 0.8rem;
+        border-radius: var(--radius);
+        background: rgba(46, 125, 50, 0.14);
+        margin-bottom: 0.8rem;
+      }
+      .buy-status.waiting { background: var(--surface-2); font-weight: 600; }
+      .buy .player { font-size: 1.4rem; font-weight: 800; margin: 0.2rem 0; }
+      .buy .bin { font-size: 1.05rem; font-weight: 700; }
       .issued { margin-top: 0.8rem; }
       .fail-reason { margin-top: 1.2rem; }
       dl { margin: 0; }

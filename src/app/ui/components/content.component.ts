@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { LocalizePipe } from '../../core/i18n';
@@ -321,10 +321,16 @@ export class DeliveryPayloadComponent {
 
         <li class="step" [class.active]="isBuying">
           <div class="step__top"><span class="step__n">3</span><h4>אנחנו קונים</h4></div>
-          <p class="step__lede" *ngIf="!isBuying">אחרי שהעליתם, נציג שלנו קונה את הקלף מהמרקט והקוינס אצלכם.</p>
+          <ng-container *ngIf="!isBuying">
+            <p class="step__lede">העליתם את הקלף במחיר המדויק? לחצו כאן והמערכת תמצא את המכירה שלכם. נציג שלנו קונה אותה והקוינס אצלכם.</p>
+            <button type="button" class="cta" [disabled]="submitting" (click)="listed.emit()">
+              <span class="spinner spinner--btn" *ngIf="submitting" aria-hidden="true"></span>
+              {{ submitting ? 'מחפשים את השחקן…' : 'כבר העליתי את הקלף · חפשו אותו' }}
+            </button>
+          </ng-container>
           <div class="buying" *ngIf="isBuying">
             <span class="spinner" aria-hidden="true"></span>
-            <p>הקלף נקנה כרגע. הסטטוס יתעדכן ל"סופק" בעוד רגע.</p>
+            <p>מצאנו את הבקשה שלכם. נציג שלנו רוכש את הקלף כעת, והסטטוס יתעדכן ל"סופק" בקרוב.</p>
           </div>
         </li>
       </ol>
@@ -366,9 +372,13 @@ export class DeliveryPayloadComponent {
     .param .num { direction: ltr; letter-spacing: 0.03em; }
     .param--key { color: var(--tt-text); }
     .param--key b { color: var(--tt-gold-400); font-size: var(--tt-text-md); }
+    .cta { inline-size: 100%; margin-block-start: var(--tt-space-1); display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: var(--tt-space-3) var(--tt-space-4); border: 0; border-radius: var(--tt-radius-sm); background: var(--tt-gold-metal); color: var(--tt-text-on-gold); font-weight: 800; font-size: var(--tt-text-sm); cursor: pointer; transition: filter .15s ease; }
+    .cta:hover:not(:disabled) { filter: brightness(1.06); }
+    .cta:disabled { opacity: 0.7; cursor: default; }
     .buying { display: flex; align-items: center; gap: var(--tt-space-2); font-size: var(--tt-text-sm); color: var(--tt-text); }
     .buying p { margin: 0; }
     .spinner { flex: none; inline-size: 18px; block-size: 18px; border-radius: 50%; border: 2px solid var(--tt-border); border-block-start-color: var(--tt-gold-400); animation: spin 0.8s linear infinite; }
+    .spinner--btn { inline-size: 15px; block-size: 15px; border-color: rgba(0,0,0,0.25); border-block-start-color: var(--tt-text-on-gold); }
     @keyframes spin { to { transform: rotate(360deg); } }
     .warn { margin: var(--tt-space-4) 0 var(--tt-space-2); display: flex; gap: 8px; align-items: flex-start; padding: var(--tt-space-3); border: 1px solid var(--tt-gold-600); border-radius: var(--tt-radius-sm); background: rgba(212, 180, 106, 0.08); font-size: var(--tt-text-sm); line-height: var(--tt-leading); }
     .warn tt-icon { color: var(--tt-gold-400); flex: none; margin-block-start: 2px; }
@@ -383,6 +393,10 @@ export class DeliveryInstructionComponent {
   @Input() status?: FulfillmentStatus;
   /** Platform name for the header, resolved by the page. Optional. */
   @Input() platform?: string;
+  /** True while the "I listed it" request is in flight, so the button locks. */
+  @Input() submitting = false;
+  /** Fires when the customer confirms they listed the card. */
+  @Output() listed = new EventEmitter<void>();
 
   /** True once an operator is buying the listed card: step 3 is in progress. */
   get isBuying(): boolean {

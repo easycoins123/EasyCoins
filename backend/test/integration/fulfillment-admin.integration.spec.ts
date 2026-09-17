@@ -406,6 +406,65 @@ describe('fulfillment and the operator API', () => {
     });
   });
 
+  describe('the customer hand-off', () => {
+    /** Drives a paid order to a waiting trade instruction the customer can confirm. */
+    async function waitingTradeOrder() {
+      const order = await paidOrder();
+      await asOperator('post', `/admin/fulfillments/${order.fulfillmentId}/claim`).send({}).expect(200);
+      await asOperator('post', `/admin/fulfillments/${order.fulfillmentId}/trade-instruction`)
+        .send({ playerName: 'Bronze Common Keeper', coins: 500_000 })
+        .expect(200);
+      return order;
+    }
+
+    it('moves a waiting trade job to READY when the customer says they listed it', async () => {
+      const { orderId, fulfillmentId, cookie } = await waitingTradeOrder();
+
+      await post(`/orders/${orderId}/mark-listed`, {}, cookie).expect(200);
+
+      const stored = await prisma.fulfillment.findUniqueOrThrow({ where: { id: fulfillmentId } });
+      expect(stored.status).toBe('READY');
+    });
+
+    it('records the hand-off as the customer, with no operator name attached', async () => {
+      const { orderId, fulfillmentId, cookie } = await waitingTradeOrder();
+
+      await post(`/orders/${orderId}/mark-listed`, {}, cookie).expect(200);
+
+      const event = await prisma.fulfillmentEvent.findFirstOrThrow({
+        where: { fulfillmentId, type: 'CUSTOMER_LISTED' },
+      });
+      expect(event.actorType).toBe('CUSTOMER');
+      expect(event.actorId).toBeNull();
+    });
+
+    it('is idempotent: a second confirmation adds no second event', async () => {
+      const { orderId, fulfillmentId, cookie } = await waitingTradeOrder();
+
+      await post(`/orders/${orderId}/mark-listed`, {}, cookie).expect(200);
+      await post(`/orders/${orderId}/mark-listed`, {}, cookie).expect(200);
+
+      const stored = await prisma.fulfillment.findUniqueOrThrow({ where: { id: fulfillmentId } });
+      expect(stored.status).toBe('READY');
+
+      const events = await prisma.fulfillmentEvent.count({
+        where: { fulfillmentId, type: 'CUSTOMER_LISTED' },
+      });
+      expect(events).toBe(1);
+    });
+
+    it('will not let a stranger advance an order they do not own', async () => {
+      const { orderId, fulfillmentId } = await waitingTradeOrder();
+
+      // No cookie: an anonymous caller is a different session and must see a
+      // not-found, never someone else's order.
+      await post(`/orders/${orderId}/mark-listed`, {}).expect(404);
+
+      const stored = await prisma.fulfillment.findUniqueOrThrow({ where: { id: fulfillmentId } });
+      expect(stored.status).toBe('WAITING_FOR_CUSTOMER');
+    });
+  });
+
   describe('the dashboard', () => {
     it('counts open work', async () => {
       await paidOrder();

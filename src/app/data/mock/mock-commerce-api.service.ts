@@ -421,6 +421,34 @@ export class MockOrderApiService extends OrderApiService {
     const orders = [...this.backend.orders.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     return this.backend.respond(orders);
   }
+
+  markListed(orderId: OrderId): Observable<Order> {
+    const order = this.backend.orders.get(orderId);
+    if (!order) {
+      return this.backend.respondOrNotFound<Order>(order, `Order "${orderId}"`);
+    }
+
+    // Mirrors the server: a job waiting on the customer becomes one waiting on
+    // us. Anything else is left as it is, so pressing the button twice is safe.
+    const fulfillments = order.fulfillments.map((fulfillment) =>
+      fulfillment.status === FulfillmentStatus.WaitingForCustomer
+        ? { ...fulfillment, status: FulfillmentStatus.Ready, updatedAt: this.backend.now() }
+        : fulfillment,
+    );
+
+    const updated: Order = {
+      ...order,
+      fulfillments,
+      items: order.items.map((item, index) => ({
+        ...item,
+        fulfillmentStatus: fulfillments[index]?.status ?? item.fulfillmentStatus,
+      })),
+      updatedAt: this.backend.now(),
+    };
+
+    this.backend.orders.set(orderId, updated);
+    return this.backend.respond(updated);
+  }
 }
 
 // ---------------------------------------------------------------------------

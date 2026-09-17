@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { EMPTY, combineLatest, timer } from 'rxjs';
+import { EMPTY, Subject, combineLatest, merge, timer } from 'rxjs';
 import { catchError, map, shareReplay, switchMap, takeWhile } from 'rxjs/operators';
 
 import { AnalyticsEvent, AnalyticsService } from '../../core/analytics';
@@ -119,6 +119,8 @@ const POLL_INTERVAL_MS = 2500;
                     *ngIf="instructionFor(vm.order, item.id) as instruction; else payload"
                     [instruction]="instruction"
                     [status]="fulfillmentFor(vm.order, item.id)?.status"
+                    [submitting]="submitting()"
+                    (listed)="onListed(vm.order)"
                     [platform]="platformName(vm.lookups, item.platformId)"></tt-delivery-instruction>
                   <ng-template #payload>
                     <tt-delivery-payload [fulfillment]="fulfillmentFor(vm.order, item.id)"></tt-delivery-payload>
@@ -197,6 +199,12 @@ export class OrderStatusPage {
   readonly celebrate = this.route.snapshot.data['celebrate'] === true;
   readonly launchActive$ = this.campaigns.launchBonusActive$;
 
+  /** True while a "I listed it" request is in flight, so the button locks. */
+  readonly submitting = signal(false);
+
+  /** Fires an out-of-band refetch, so a customer action shows at once, not on the next poll tick. */
+  private readonly refresh$ = new Subject<void>();
+
   /** The order's own lines say whether a bonus was promised; the snapshot, not today's catalog. */
   hasBonus(order: Order): boolean {
     return order.items.some((item) => /בונוס/.test(item.displayVariantName.he ?? '') || /bonus/i.test(item.displayVariantName.en ?? ''));
@@ -211,7 +219,7 @@ export class OrderStatusPage {
    */
   readonly vm$ = this.route.paramMap.pipe(
     map((params) => params.get('orderId') ?? ''),
-    switchMap((orderId) => timer(0, POLL_INTERVAL_MS).pipe(
+    switchMap((orderId) => merge(timer(0, POLL_INTERVAL_MS), this.refresh$).pipe(
       switchMap(() => combineLatest([this.orders.order(orderId), this.catalog.lookups$])),
       takeWhile(([order]) => !isTerminalOrderStatus(order.status), true),
     )),
@@ -269,6 +277,31 @@ export class OrderStatusPage {
       return undefined;
     }
     return fulfillment.instruction;
+  }
+
+  /**
+   * The customer confirming they listed their card.
+   *
+   * The request is idempotent server-side, so a double-press is safe; the button
+   * is locked while it is in flight only to keep the UI honest. On success an
+   * immediate refetch flips the stepper to "we are buying" without waiting for
+   * the next poll tick. On failure the lock lifts so they can try again; the
+   * poll keeps the page live either way, so no error banner is forced.
+   */
+  onListed(order: Order): void {
+    if (this.submitting()) {
+      return;
+    }
+    this.submitting.set(true);
+    this.orders.markListed(order.id).subscribe({
+      next: () => {
+        this.refresh$.next();
+        this.submitting.set(false);
+      },
+      error: () => {
+        this.submitting.set(false);
+      },
+    });
   }
 
   /** The platform's short name for the instruction header, or empty if unknown. */

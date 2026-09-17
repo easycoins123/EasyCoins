@@ -450,6 +450,61 @@ export class FulfillmentService {
     return updated;
   }
 
+  /**
+   * The customer's own hand-off: "I listed the card, come buy it."
+   *
+   * Every waiting trade job on the order moves `WAITING_FOR_CUSTOMER -> READY`,
+   * which is the signal the operator queue is watching for: a job that was on
+   * the customer is now on us. No operator is required and none is attributed,
+   * so the event is written as `CUSTOMER`, not a person.
+   *
+   * Idempotent by construction. A double-tap, a retry, or a job an operator
+   * already advanced all leave nothing to move, and the method returns how many
+   * it actually moved rather than throwing. Returning zero is a legitimate
+   * outcome, not an error: it means there was nothing waiting on the customer.
+   */
+  async markListedByCustomer(orderId: string): Promise<number> {
+    const waiting = await this.prisma.fulfillment.findMany({
+      where: { orderId, status: 'WAITING_FOR_CUSTOMER' },
+      select: { id: true, orderItemId: true, customerInstruction: true },
+    });
+
+    let moved = 0;
+
+    for (const job of waiting) {
+      // Only a trade job has a customer step to confirm. A waiting job with no
+      // trade instruction is waiting on something else, and the customer saying
+      // "I listed it" says nothing about that.
+      if (!isTradeInstruction(job.customerInstruction)) {
+        continue;
+      }
+
+      const claimed = await this.prisma.fulfillment.updateMany({
+        where: { id: job.id, status: 'WAITING_FOR_CUSTOMER' },
+        data: { status: 'READY' },
+      });
+
+      if (claimed.count !== 1) {
+        continue; // A retry or an operator moved it first. Nothing wrong.
+      }
+
+      await this.prisma.orderItem.update({
+        where: { id: job.orderItemId },
+        data: { fulfillmentStatus: 'READY' },
+      });
+
+      await this.recordCustomerEvent(job.id, 'CUSTOMER_LISTED', 'WAITING_FOR_CUSTOMER', 'READY');
+      moved += 1;
+    }
+
+    if (moved > 0) {
+      await this.rollUpOrderStatus(orderId);
+      this.logger.info('customer marked their card listed', { orderId, moved });
+    }
+
+    return moved;
+  }
+
   /** Returns a failed job to the queue so it can be attempted again. */
   async retry(fulfillmentId: string, operator: Operator): Promise<Fulfillment> {
     const fulfillment = await this.prisma.fulfillment.findUnique({ where: { id: fulfillmentId } });
@@ -554,6 +609,43 @@ export class FulfillmentService {
     });
   }
 
+  /**
+   * Writes a transition the customer triggered, attributed to `CUSTOMER`.
+   *
+   * Separate from `record` because that one names an operator, and a customer
+   * action has none. Writing it as an operator would put a name in the audit
+   * trail that was never there.
+   */
+  private async recordCustomerEvent(
+    fulfillmentId: string,
+    type: string,
+    before: FulfillmentStatus | null,
+    after: FulfillmentStatus | null,
+  ): Promise<void> {
+    await this.prisma.fulfillmentEvent.create({
+      data: {
+        id: generateId('fev'),
+        fulfillmentId,
+        type,
+        statusBefore: before,
+        statusAfter: after,
+        actorType: 'CUSTOMER',
+        actorId: null,
+      },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        eventType: `fulfillment.${type.toLowerCase()}`,
+        entityType: 'fulfillment',
+        entityId: fulfillmentId,
+        actorType: 'CUSTOMER',
+        actorId: null,
+        afterState: after ? { status: after } : undefined,
+      },
+    });
+  }
+
   private assertTransition(from: FulfillmentStatus, to: FulfillmentStatus): void {
     if (from === to) {
       return; // Repeating an action you already took is not an error.
@@ -578,4 +670,14 @@ export class FulfillmentService {
       throw conflictError(`claimed by ${fulfillment.operatorId}`, 'ALREADY_CLAIMED');
     }
   }
+}
+
+/** True when a stored `customerInstruction` is a transfer-market trade. */
+function isTradeInstruction(instruction: Prisma.JsonValue | null): boolean {
+  return (
+    typeof instruction === 'object' &&
+    instruction !== null &&
+    !Array.isArray(instruction) &&
+    (instruction as { kind?: unknown }).kind === 'TRADE'
+  );
 }

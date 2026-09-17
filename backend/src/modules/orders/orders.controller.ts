@@ -14,6 +14,7 @@ import type { Request, Response } from 'express';
 
 import { PrismaService } from '../../database/prisma.service';
 import { SessionService } from '../customers/session.service';
+import { FulfillmentService } from '../fulfillment/fulfillment.service';
 import { OrderAccessService } from './order-access.service';
 import { ORDER_INCLUDE, OrderCreationService } from './order-creation.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -37,6 +38,7 @@ export class OrdersController {
     private readonly sessions: SessionService,
     private readonly access: OrderAccessService,
     private readonly creation: OrderCreationService,
+    private readonly fulfillment: FulfillmentService,
   ) {}
 
   /**
@@ -99,6 +101,34 @@ export class OrdersController {
     });
 
     return toOrderStatusResponse(order as OrderWithRelations);
+  }
+
+  /**
+   * The customer's hand-off: "I listed the card, come buy it."
+   *
+   * Moves every trade job on the order that was waiting on the customer to
+   * `READY`, which is what the operator queue watches for. Ownership is checked
+   * the same way a read is, so a customer can only advance their own order, and
+   * the whole order is returned so the page re-renders its progress from one
+   * response.
+   *
+   * Idempotent: pressing it twice, or after an operator already moved on, is a
+   * 200 with nothing left to move, never an error.
+   */
+  @Post('orders/:orderId/mark-listed')
+  @HttpCode(200)
+  async markOrderListed(@Param('orderId') orderId: string, @Req() request: Request) {
+    const session = await this.sessions.resolve(request);
+    await this.access.requireReadable(orderId, session);
+
+    await this.fulfillment.markListedByCustomer(orderId);
+
+    const order = await this.prisma.order.findUniqueOrThrow({
+      where: { id: orderId },
+      include: ORDER_INCLUDE,
+    });
+
+    return toOrderResponse(order as OrderWithRelations);
   }
 
   /**
