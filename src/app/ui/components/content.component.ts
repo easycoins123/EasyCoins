@@ -216,14 +216,25 @@ export class OrderStatusTimelineComponent {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-panel" *ngIf="fulfillment">
-      <ng-container [ngSwitch]="fulfillment.delivery?.payload?.kind">
-        <div *ngSwitchCase="'CODE'" class="code">
-          <span class="tt-faint">הקוד שלכם</span>
-          <code>{{ code }}</code>
-          <span class="tt-hint">קוד הדגמה בסביבת פיתוח. אינו ניתן למימוש.</span>
+      <!-- Delivered: the payoff moment. A green tick that draws itself in,
+           instead of the flat "delivered" line it used to end on. -->
+      <div class="done" *ngIf="isDelivered; else pending">
+        <span class="done__check" aria-hidden="true">
+          <svg viewBox="0 0 52 52"><path d="M14 27 l8 8 l16 -18" /></svg>
+        </span>
+        <div class="done__text">
+          <h3>{{ code ? 'ההזמנה סופקה' : 'הקוינס אצלכם!' }}</h3>
+          <p *ngIf="!code">הקוינס נכנסו לחשבון שלכם. תיהנו מהמשחק.</p>
+          <div class="code" *ngIf="code">
+            <span class="tt-faint">הקוד שלכם</span>
+            <code>{{ code }}</code>
+            <span class="tt-hint">קוד הדגמה בסביבת פיתוח. אינו ניתן למימוש.</span>
+          </div>
         </div>
-        <p *ngSwitchDefault class="tt-muted">{{ statusLabel }}</p>
-      </ng-container>
+      </div>
+      <ng-template #pending>
+        <p class="tt-muted">{{ statusLabel }}</p>
+      </ng-template>
       <p class="tt-error" *ngIf="fulfillment.failureReason">{{ fulfillment.failureReason | t }}</p>
     </div>
   `,
@@ -238,10 +249,34 @@ export class OrderStatusTimelineComponent {
       direction: ltr;
       text-align: center;
     }
+    .done { display: flex; align-items: center; gap: var(--tt-space-3); }
+    .done__text { min-inline-size: 0; }
+    .done__text h3 { margin: 0 0 2px; font-size: var(--tt-text-lg); color: var(--tt-text); }
+    .done__text p { margin: 0; color: var(--tt-text-muted); font-size: var(--tt-text-sm); }
+    .done__check {
+      flex: none; inline-size: 48px; block-size: 48px; border-radius: 50%;
+      display: grid; place-items: center; background: var(--tt-success, #22c55e);
+      transform: scale(0); animation: pop .35s cubic-bezier(.2, .9, .3, 1.4) forwards;
+    }
+    .done__check svg { inline-size: 30px; block-size: 30px; }
+    .done__check path {
+      fill: none; stroke: #fff; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round;
+      stroke-dasharray: 48; stroke-dashoffset: 48; animation: draw .4s .28s ease forwards;
+    }
+    @keyframes pop { to { transform: scale(1); } }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .done__check { animation: none; transform: scale(1); }
+      .done__check path { animation: none; stroke-dashoffset: 0; }
+    }
   `],
 })
 export class DeliveryPayloadComponent {
   @Input() fulfillment?: Fulfillment;
+
+  get isDelivered(): boolean {
+    return this.fulfillment?.status === FulfillmentStatus.Delivered;
+  }
 
   get code(): string {
     const payload = this.fulfillment?.delivery?.payload;
