@@ -101,7 +101,7 @@ import { IconComponent } from './icon.component';
 
     .col { display: flex; flex-direction: column; gap: var(--tt-space-1); }
     .col h2 { margin: 0 0 var(--tt-space-2); font-family: var(--tt-font-display); font-size: var(--tt-text-lg); letter-spacing: 0.03em; }
-    .col a { display: flex; align-items: center; min-block-size: 32px; color: var(--tt-text-muted); font-size: var(--tt-text-sm); }
+    .col a { display: flex; align-items: center; min-block-size: 40px; color: var(--tt-text-muted); font-size: var(--tt-text-sm); }
     .col a:hover { color: var(--tt-text); text-decoration: none; }
 
     .assure {
@@ -132,7 +132,7 @@ import { IconComponent } from './icon.component';
       .statement { font-size: var(--tt-text-xl); }
       .col { gap: 0; }
       .col h2 { margin-block-end: var(--tt-space-1); font-size: var(--tt-text-md); }
-      .col a { min-block-size: 32px; }
+      .col a { min-block-size: 44px; }
       .assure { margin-block-start: var(--tt-space-4); padding-block: var(--tt-space-3); gap: var(--tt-space-2) var(--tt-space-4); font-size: var(--tt-caption); }
       .notice { margin-block-start: var(--tt-space-3); }
       .bottom { margin-block-start: var(--tt-space-3); }

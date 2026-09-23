@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { combineLatest, concat, map, of } from 'rxjs';
@@ -10,7 +11,7 @@ import { isCurated, roleLabel } from '../../core/commerce';
 import { CoinPlan, coinProductsFrom, formatQuantity, withBestValue } from '../../core/value';
 import { LocalizePipe } from '../../core/i18n';
 import { CoinProduct, LocalizedText, Offer, Platform } from '../../domain';
-import { CampaignsFacade, CartFacade, CatalogFacade } from '../../state';
+import { CampaignsFacade, CartFacade, CatalogFacade, PlatformPreferenceService } from '../../state';
 // Imported by file rather than through the barrel: the barrel re-exports every
 // component in the library, and a chunk that imports it carries the store's
 // filters, search box and product cards to the first screen of the home page.
@@ -25,6 +26,7 @@ import { SkeletonGridComponent } from '../../ui/components/state.component';
 import { StadiumComponent } from '../../ui/components/world/stadium.component';
 import { LaunchStripComponent } from '../../ui/components/commerce/launch-strip.component';
 import { RewardsComponent } from '../../ui/components/commerce/rewards.component';
+import { PlatformPickerComponent } from '../../ui/components/commerce/platform-picker.component';
 import { ValueCalloutsComponent } from '../../ui/components/commerce/value-callouts.component';
 import { LiveDirective } from '../../ui/live.directive';
 import { RevealDirective } from '../../ui/reveal.directive';
@@ -47,14 +49,18 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
     CommonModule, RouterLink, LocalizePipe,
     HeroComponent, IconComponent, AmountSelectorComponent, EasyCoinsCardComponent, CoinArtComponent,
     ProcessArtComponent, ReviewsSectionComponent, SkeletonGridComponent, LiveDirective, RevealDirective, StadiumComponent,
-    LaunchStripComponent, ValueCalloutsComponent, RewardsComponent,
+    LaunchStripComponent, ValueCalloutsComponent, RewardsComponent, PlatformPickerComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- The hero is not gated on the data: the first screen and its largest
          image paint as soon as the chunk runs, and the numbers fill in. -->
     <ng-container *ngIf="{ vm: vm$ | async } as state">
-    <tt-hero [ladder]="state.vm?.ladder ?? null" [platforms]="state.vm?.platforms ?? []" [pending]="!state.vm"></tt-hero>
+    <tt-hero [ladder]="state.vm?.ladder ?? null"
+             [platforms]="state.vm?.platforms ?? []"
+             [selectedPlatform]="state.vm?.platform?.id ?? ''"
+             (platformChange)="choosePlatform($event)"
+             [pending]="!state.vm"></tt-hero>
 
     <ng-container *ngIf="state.vm as vm; else loading">
 
@@ -66,7 +72,19 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
         <div class="tt-container">
           <div class="chapter" ttReveal>
             <h2><span class="chapter__rule"></span>בחרו את החבילה שלכם<span class="chapter__rule"></span></h2>
-            <p class="tt-muted">מחיר סופי לכל חבילה, בונוס ההשקה כלול. הפלטפורמה ואזור החנות נבחרים לפני התשלום.</p>
+            <p class="tt-muted">מחיר סופי לכל חבילה, בונוס ההשקה כלול.<ng-container *ngIf="vm.samePrice"> אותו מחיר בכל הפלטפורמות.</ng-container></p>
+          </div>
+
+          <!-- The platform the shelf is priced for. The same choice as the hero's,
+               repeated here because a customer who scrolled past the hero should
+               not have to scroll back to change it. -->
+          <div class="shelf-platform" *ngIf="vm.platforms.length > 1" ttReveal>
+            <tt-platform-picker [platforms]="vm.platforms"
+                                [selected]="vm.platform?.id ?? ''"
+                                label="החבילות מוצגות עבור"
+                                [compact]="true"
+                                (selectedChange)="choosePlatform($event)">
+            </tt-platform-picker>
           </div>
 
           <div class="shelf" *ngIf="vm.curated.length > 0; else noShelf">
@@ -94,7 +112,7 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
               <tt-icon class="custom__sign" name="chevron" [size]="14"></tt-icon>
             </summary>
             <div class="custom__body">
-              <tt-amount-selector [detail]="ladder" [busy]="adding()" (confirm)="addPlan($event)"></tt-amount-selector>
+              <tt-amount-selector [detail]="vm.plannable ?? ladder" [busy]="adding()" (confirm)="addPlan($event)"></tt-amount-selector>
             </div>
           </details>
         </div>
@@ -230,16 +248,15 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
     .chapter h2 { display: inline-flex; align-items: center; gap: var(--tt-space-3); }
     .chapter--start { align-items: flex-start; text-align: start; margin-block-end: var(--tt-space-5); }
     .chapter--start h2 { display: block; }
-    .chapter--start p { margin: 0; max-inline-size: 60ch }
+    .chapter--start p { max-inline-size: 60ch }
     .rail-band--late { margin-block-start: 0; padding-block: var(--tt-space-5); border-block: 1px solid var(--tt-border); background: var(--tt-bg-elevated); }
     .chapter__rule { display: inline-block; inline-size: 36px; block-size: 2px; background: linear-gradient(90deg, transparent, var(--tt-gold-500)); }
     .chapter__rule:last-child { background: linear-gradient(90deg, var(--tt-gold-500), transparent); }
     .chapter p { margin: 0; font-size: var(--tt-text-sm); }
-    .ghost-link { display: inline-flex; align-items: center; gap: 4px; color: var(--tt-gold-400); font-size: var(--tt-text-sm); font-weight: 700; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(212, 180, 106, 0.4); }
-    .ghost-link:hover { color: var(--tt-gold-300); }
+    .ghost-link { display: inline-flex; align-items: center; min-block-size: 40px; gap: 4px; color: var(--tt-gold-400); font-size: var(--tt-text-sm); font-weight: 700; text-decoration: underline; }
 
     /* --- Trust rail ---------------------------------------------------------- */
-    .rail-band { position: relative; margin-block-start: calc(var(--tt-space-6) * -1); padding-block: 0 var(--tt-space-2); z-index: 1; }
+    .rail-band { position: relative; z-index: 1; }
     .rail { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; margin: 0; padding: var(--tt-space-3) var(--tt-space-2); list-style: none;
       background: linear-gradient(180deg, #17161A, #121110); border: 1px solid var(--tt-border-strong); border-radius: var(--tt-radius-lg); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); }
     .rail__item { display: flex; align-items: center; gap: var(--tt-space-3); padding: var(--tt-space-2) var(--tt-space-3); border-inline-end: 1px solid var(--tt-border); }
@@ -255,6 +272,8 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
     .packages { background: radial-gradient(60% 40% at 50% 0%, rgba(212, 180, 106, 0.06), transparent 70%), var(--tt-bg); }
     .shelf { display: grid; gap: var(--tt-space-4); grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: stretch; }
     .packages__more { margin: var(--tt-space-5) 0 0; text-align: center; }
+    .shelf-platform { display: flex; justify-content: center; margin: calc(var(--tt-space-4) * -1) 0 var(--tt-space-5); }
+    .shelf-platform tt-platform-picker { flex: 1; max-inline-size: 640px; }
     .custom { margin-block-start: var(--tt-space-5); border-radius: var(--tt-radius-lg); }
     .custom > summary { display: flex; align-items: center; gap: var(--tt-space-2); min-block-size: 56px; padding-inline: var(--tt-space-4); cursor: pointer; list-style: none; color: var(--tt-text-muted); font-size: var(--tt-text-sm); }
     .custom > summary::-webkit-details-marker { display: none; }
@@ -340,6 +359,7 @@ export class HomePage {
   private readonly cart = inject(CartFacade);
   private readonly analytics = inject(AnalyticsService);
   private readonly campaignsFacade = inject(CampaignsFacade);
+  private readonly preference = inject(PlatformPreferenceService);
 
   readonly gameName = STOREFRONT.focusGameName;
   readonly campaigns$ = this.campaignsFacade.campaigns$;
@@ -350,21 +370,22 @@ export class HomePage {
     { icon: 'shield', title: 'תשלום מאובטח', note: 'דרך ספק סליקה' },
     { icon: 'headset', title: 'תמיכה בעברית', note: 'כותבים לנו ומקבלים תשובה במייל' },
     { icon: 'truck', title: 'מעקב הזמנה', note: 'דף סטטוס לכל הזמנה' },
-    { icon: 'gamepad', title: 'PS5 · PS4 · Xbox · PC', note: 'בוחרים פלטפורמה לפני התשלום' },
+    { icon: 'gamepad', title: 'PS5 · PS4 · Xbox · PC', note: 'בוחרים פלטפורמה, ההזמנה נרשמת עליה' },
   ];
 
   /** Football-native, and true. */
   readonly reasons: readonly Reason[] = [
     { icon: 'tag', title: 'מחיר FC ברור', note: 'המחיר לכל חבילה ולכל מיליון, לפני שמשלמים' },
     { icon: 'package', title: 'בחירת חבילה פשוטה', note: 'חמש חבילות, או כמות מדויקת שנרכיב מהן' },
-    { icon: 'gamepad', title: 'תמיכה בפלטפורמות', note: 'PS5, PS4, Xbox ו־PC, נבחרים לפני התשלום' },
-    { icon: 'market', title: 'סטטוס הזמנה', note: 'דף מעקב אישי מהתשלום ועד האספקה' },
+    { icon: 'gamepad', title: 'תמיכה בפלטפורמות', note: 'PS5, PS4, Xbox ו־PC. בוחרים פעם אחת, ההזמנה נרשמת על הפלטפורמה' },
+    { icon: 'truck', title: 'סטטוס הזמנה', note: 'דף מעקב אישי מהתשלום ועד האספקה' },
     { icon: 'headset', title: 'תמיכה אנושית בעברית', note: 'שאלה על הזמנה או מוצר, אנחנו עונים במייל' },
   ];
 
   readonly vm$ = combineLatest([
     this.catalog.lookups$,
     this.catalog.productBySlug(STOREFRONT.focusProductSlug).pipe(catchError(() => of(null))),
+    toObservable(this.preference.platformId),
   ]).pipe(
     map(([lookups, ladder]) => {
       const platforms: readonly Platform[] = ladder
@@ -372,18 +393,30 @@ export class HomePage {
           .map((id) => lookups.platforms.get(id))
           .filter((platform): platform is Platform => platform !== undefined)
         : [];
+      // Priced for the platform the customer chose; the first offered until they do.
+      const platform = this.preference.resolve(platforms);
       const products: readonly CoinProduct[] = ladder
-        ? coinProductsFrom(ladder, lookups.platforms, { game: STOREFRONT.focusGameEdition })
+        ? coinProductsFrom(ladder, lookups.platforms, { game: STOREFRONT.focusGameEdition, platformId: platform?.id })
         : [];
+      const samePrice = ladder ? samePriceOnEveryPlatform(ladder) : false;
+      // The custom-amount plan is built from the chosen platform's offers only,
+      // so a plan never mixes consoles or lands on one the customer did not pick.
+      const plannable = ladder && platform
+        ? { ...ladder, offers: ladder.offers.filter((offer) => offer.platformId === platform.id) }
+        : ladder;
       const method = ladder?.offers[0]?.fulfillmentMethod;
       const delivery: LocalizedText | undefined = method ? lookups.fulfillment.get(method)?.description : undefined;
       const curated = withBestValue(products.filter((product) => isCurated(product.amount)));
-      return { lookups, ladder, platforms, products, curated, delivery };
+      return { lookups, ladder, plannable, platforms, platform, products, curated, delivery, samePrice };
     }),
     shareReplay({ bufferSize: 1, refCount: true }),
   );
 
   readonly adding = signal(false);
+
+  choosePlatform(platform: Platform): void {
+    this.preference.set(platform.id);
+  }
 
   trackByOffer(_index: number, product: CoinProduct): string {
     return product.id;
@@ -426,4 +459,18 @@ export class HomePage {
   constructor() {
     this.analytics.pageView('/', 'Home');
   }
+}
+
+/**
+ * True when every bundle costs the same on every platform it is offered on,
+ * which is the only case the shelf may say so.
+ */
+export function samePriceOnEveryPlatform(detail: { readonly offers: readonly Offer[] }): boolean {
+  const byVariant = new Map<string, Set<number>>();
+  for (const offer of detail.offers) {
+    const prices = byVariant.get(offer.variantId) ?? new Set<number>();
+    prices.add(offer.price.current.amountMinor);
+    byVariant.set(offer.variantId, prices);
+  }
+  return byVariant.size > 0 && [...byVariant.values()].every((prices) => prices.size === 1);
 }

@@ -9,6 +9,7 @@ be running beforehand.
 |---|---|
 | `route-sweep.mjs` | Every route at 6 viewports: no blank screens, console errors, failed requests, broken images, horizontal overflow; RTL, alt text, labelled controls, one `h1` |
 | `flows.mjs` | The purchase flow end to end, cart behaviour, hostile `localStorage`, dynamic checkout requirements, region safety, every payment branch, duplicate-submit protection |
+| `interactions.mjs` | Every apparent control on the important routes is real: no dead or `#` links, every button named, every radio/checkbox carries its state and each radio group has one checked member, disabled controls say so, no pointer cursor on static content, 40px targets on a phone, and pointer and keyboard activation agree |
 | `a11y.mjs` | Keyboard reachability, focus visibility, skip link, heading structure, contrast, reduced motion, touch targets, RTL rendering |
 | `perf.mjs` | Bundle sizes, FCP/LCP/CLS per route, duplicate requests, lazy-chunk behaviour |
 | `security-scan.mjs` | Static credential/secret scan plus runtime checks of browser storage, cookies, third-party requests and analytics payloads |

@@ -156,11 +156,20 @@ const memberNames = stripComments(enumBodyRaw)
 const forbiddenKeys = /PASSWORD|OTP|TWO_FACTOR|2FA|RECOVERY|BACKUP_CODE|CVV|CARD/i;
 check('CheckoutFieldKey contains no credential member', !forbiddenKeys.test(memberNames), memberNames.slice(0, 60));
 
-// localStorage usage must be confined to the cart.
+// localStorage usage is confined to two services, each holding nothing
+// sensitive: the cart (offer ids and quantities) and the chosen platform (one
+// catalog id, validated on every read). No page, facade or component may touch
+// storage directly.
+const STORAGE_WRITERS = ['cart-storage.service', 'platform-preference.service'];
 const storageUsers = sources.filter(({ text }) => /localStorage\./.test(text));
-const allowed = storageUsers.every(({ file }) => file.includes('cart-storage.service'));
-check('localStorage is written from exactly one place', allowed,
+const allowed = storageUsers.every(({ file }) => STORAGE_WRITERS.some((name) => file.includes(name)));
+check('localStorage is written only by the cart and platform services', allowed,
   storageUsers.map((s) => s.file.split(/[\\/]/).pop()).join(', '));
+const preferenceSource = sources.find(({ file }) => file.includes('platform-preference.service') && !file.endsWith('.spec.ts'));
+check('the platform preference stores a validated catalog id and nothing else',
+  preferenceSource !== undefined
+    && /localStorage\.setItem\(STORAGE_KEY, platformId\)/.test(preferenceSource.text)
+    && /\^\[a-z0-9-\]\{1,40\}\$/.test(preferenceSource.text));
 
 // Console logging must go through the logger.
 const rawConsole = sources.filter(({ file, text }) => (
@@ -226,7 +235,7 @@ check('contact details are never written to sessionStorage',
 check('no cookies are set', storageAfterDetails.cookies === '', storageAfterDetails.cookies);
 
 await page.locator('input[name="instrument"][value="sim_success"]').check();
-await page.locator('section:has-text("אמצעי תשלום") button.tt-btn--primary').click();
+await page.locator('section:has-text("אמצעי תשלום") button.pay').click();
 await page.waitForURL('**/order/**', { timeout: 15000 });
 await page.waitForTimeout(1500);
 

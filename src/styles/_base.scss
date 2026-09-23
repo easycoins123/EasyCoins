@@ -934,6 +934,10 @@ body::after {
   .tt-travel::before { animation: none; }
 }
 
+/* Room for the cart dock, so it never covers the last thing on a page. */
+body.has-dock main { padding-block-end: 84px; }
+body.has-dock tt-toast-host .host { inset-block-end: 88px; }
+
 /* The state a buy button takes for a moment after it worked. */
 .tt-btn--done {
   background: var(--tt-success) !important;

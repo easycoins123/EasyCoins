@@ -71,7 +71,7 @@ interface StripTier {
     .tier__arrow { color: var(--tt-text-faint); align-self: center; flex: none; }
     .tier__total { color: var(--tt-text); font-size: var(--tt-text-md); }
     .tier__pct { color: var(--tt-gold-400); font-size: var(--tt-caption); }
-    .strip__cta { display: inline-flex; align-items: center; gap: 4px; margin-inline-start: auto; font-weight: 700; font-size: var(--tt-text-sm); color: var(--tt-gold-400); white-space: nowrap; }
+    .strip__cta { display: inline-flex; align-items: center; min-block-size: 40px; gap: 4px; margin-inline-start: auto; font-weight: 700; font-size: var(--tt-text-sm); color: var(--tt-gold-400); white-space: nowrap; }
     @media (max-width: 760px) {
       .strip { padding-block-start: var(--tt-space-3); }
       .strip__inner { gap: var(--tt-space-3); padding: var(--tt-space-3); }

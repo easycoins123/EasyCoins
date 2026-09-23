@@ -5,3 +5,4 @@ export * from './catalog.facade';
 export * from './checkout.facade';
 export * from './customer.facade';
 export * from './order.facade';
+export * from './platform-preference.service';

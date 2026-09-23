@@ -8,6 +8,7 @@ import { LocaleService } from './core/i18n';
 import { AppFooterComponent } from './ui/components/app-footer.component';
 import { AppHeaderComponent } from './ui/components/app-header.component';
 import { ToastHostComponent } from './ui/components/toast-host.component';
+import { CartDockComponent } from './ui/components/cart-dock.component';
 
 /**
  * Application shell. It owns nothing but layout: header, routed content, footer,
@@ -16,7 +17,7 @@ import { ToastHostComponent } from './ui/components/toast-host.component';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, AppHeaderComponent, AppFooterComponent, ToastHostComponent],
+  imports: [RouterOutlet, AppHeaderComponent, AppFooterComponent, ToastHostComponent, CartDockComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a class="tt-skip-link" href="#main">דילוג לתוכן הראשי</a>

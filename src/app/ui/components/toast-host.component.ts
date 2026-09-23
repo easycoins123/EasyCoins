@@ -56,7 +56,8 @@ import { IconComponent, IconName } from './icon.component';
     .toast--success { border-inline-start-color: var(--tt-success); }
     .toast--error { border-inline-start-color: var(--tt-danger); }
     .text { flex: 1; font-size: var(--tt-text-sm); }
-    .close { background: none; border: 0; color: var(--tt-text-muted); font-size: 1.2rem; cursor: pointer; }
+    .close { display: grid; place-items: center; inline-size: 40px; block-size: 40px; margin: -8px; margin-inline-end: -12px; border: 0; border-radius: var(--tt-radius-sm); background: none; color: var(--tt-text-muted); font-size: 1.3rem; cursor: pointer; }
+    .close:hover { color: var(--tt-text); background: rgba(255, 248, 235, 0.06); }
     @keyframes toast-in {
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }

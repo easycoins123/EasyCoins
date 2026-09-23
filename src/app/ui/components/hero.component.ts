@@ -1,5 +1,5 @@
 import {
-  AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, Input, NgZone, ViewChild, inject,
+  AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, NgZone, Output, ViewChild, inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -7,10 +7,11 @@ import { RouterLink } from '@angular/router';
 import { STOREFRONT } from '../../core/brand';
 import { LocalizePipe } from '../../core/i18n';
 import { formatQuantity, rankByValue } from '../../core/value';
-import { GAME_EDITIONS, Platform, PlatformFamily, ProductDetail } from '../../domain';
+import { GAME_EDITIONS, Platform, ProductDetail } from '../../domain';
 import { TIERS, Tier, tierForAmount } from './cards/tiers';
 import { HeroSceneComponent } from './hero-scene.component';
 import { IconComponent } from './icon.component';
+import { PlatformPickerComponent } from './commerce/platform-picker.component';
 import { LiveDirective } from '../live.directive';
 import { StadiumComponent } from './world/stadium.component';
 
@@ -36,7 +37,7 @@ interface PriceTag {
 @Component({
   selector: 'tt-hero',
   standalone: true,
-  imports: [CommonModule, RouterLink, LocalizePipe, HeroSceneComponent, IconComponent, StadiumComponent, LiveDirective],
+  imports: [CommonModule, RouterLink, LocalizePipe, HeroSceneComponent, IconComponent, StadiumComponent, LiveDirective, PlatformPickerComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="hero">
@@ -78,23 +79,27 @@ interface PriceTag {
           </div>
 
           <div class="cta seq seq--word" style="--seq-delay: 860ms">
-            <a class="tt-btn tt-btn--buy tt-btn--lg seq seq--glow" style="--seq-delay: 1350ms" routerLink="/store">
+            <a class="tt-btn tt-btn--buy tt-btn--lg seq seq--glow" style="--seq-delay: 1350ms" href="#bundles" (click)="goToShelf($event)">
               <tt-icon name="cart" [size]="18"></tt-icon> לבחירת חבילה
             </a>
             <a class="tt-btn tt-btn--ghost tt-btn--lg" routerLink="/delivery">איך זה עובד</a>
           </div>
 
+          <!-- Step one of buying coins, asked here and remembered everywhere. -->
           <div class="platforms seq seq--word" *ngIf="platforms.length > 0 || pending" style="--seq-delay: 960ms">
-            <span class="platforms__label">תואם לכל הפלטפורמות</span>
-            <ul class="pills">
-              <ng-container *ngIf="platforms.length === 0">
-                <li class="pill pill--pending tt-skeleton" *ngFor="let slot of placeholders" aria-hidden="true">PS5</li>
-              </ng-container>
-              <li class="pill" *ngFor="let platform of platforms">
-                <tt-icon [name]="platform.family === pc ? 'platform' : 'gamepad'" [size]="13"></tt-icon>
-                {{ platform.shortName | t }}
-              </li>
-            </ul>
+            <ng-container *ngIf="platforms.length === 0">
+              <span class="platforms__label">על מה משחקים?</span>
+              <ul class="pills" aria-hidden="true">
+                <li class="pill pill--pending tt-skeleton" *ngFor="let slot of placeholders">פלייסטיישן 5</li>
+              </ul>
+            </ng-container>
+            <tt-platform-picker *ngIf="platforms.length > 0"
+                                [platforms]="platforms"
+                                [selected]="selectedPlatform"
+                                label="על מה משחקים?"
+                                [help]="true"
+                                (selectedChange)="platformChange.emit($event)">
+            </tt-platform-picker>
           </div>
         </div>
 
@@ -186,8 +191,8 @@ interface PriceTag {
     .platforms { display: flex; flex-direction: column; gap: var(--tt-space-2); margin-block-start: var(--tt-space-5); }
     .platforms__label { font-size: var(--tt-caption); font-weight: 700; color: var(--tt-text-faint); }
     .pills { display: flex; flex-wrap: wrap; gap: var(--tt-space-2); margin: 0; padding: 0; list-style: none; }
-    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 0.35rem 0.75rem; border: 1px solid var(--tt-border-strong); border-radius: var(--tt-radius-md); background: rgba(255, 248, 235, 0.03); color: var(--tt-text); font-size: var(--tt-caption); font-weight: 800; letter-spacing: 0.04em; direction: ltr; }
-    .pill tt-icon { color: var(--tt-text-faint); }
+    .pill { display: inline-flex; align-items: center; min-block-size: 52px; min-inline-size: 128px; padding: 0.35rem 0.75rem; border: 1px solid var(--tt-border-strong); border-radius: var(--tt-radius-md); background: rgba(255, 248, 235, 0.03); color: var(--tt-text); font-size: var(--tt-caption); font-weight: 800; }
+    .platforms tt-platform-picker { inline-size: 100%; max-inline-size: 560px; }
 
     .art { position: relative; display: flex; justify-content: center; perspective: 1200px; }
     .art__stage {
@@ -243,13 +248,16 @@ interface PriceTag {
 export class HeroComponent implements AfterViewInit {
   readonly gameName = STOREFRONT.focusGameName;
   readonly editionLabel = String(GAME_EDITIONS[STOREFRONT.focusGameEdition].year);
-  readonly pc = PlatformFamily.Pc;
+
 
   /** Cheapest price per million in the catalog, in whole shekels. */
   best: string | null = null;
   tags: readonly PriceTag[] = [];
 
   @Input() platforms: readonly Platform[] = [];
+  /** The platform the shelf is priced for; the picker lights it. */
+  @Input() selectedPlatform = '';
+  @Output() readonly platformChange = new EventEmitter<Platform>();
 
   /**
    * True while the catalog has not answered yet.
@@ -308,6 +316,19 @@ export class HeroComponent implements AfterViewInit {
         stage.style.transform = '';
       }, { passive: true });
     });
+  }
+
+  /** Scrolls to the shelf on this page instead of leaving for the store. */
+  goToShelf(event: Event): void {
+    const shelf = typeof document !== 'undefined' ? document.getElementById('bundles') : null;
+    if (!shelf) {
+      return;
+    }
+    event.preventDefault();
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    shelf.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    shelf.setAttribute('tabindex', '-1');
+    shelf.focus({ preventScroll: true });
   }
 
   private cheapestPerMillion(detail: ProductDetail | null | undefined): string | null {

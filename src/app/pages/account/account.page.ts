@@ -293,7 +293,7 @@ function safeReturnPath(value: string | null): string | null {
     .secret .tt-input { inline-size: 100%; padding-inline-end: 4.2rem; }
     .secret__toggle {
       position: absolute; inset-inline-end: var(--tt-space-2); inset-block-start: 50%; transform: translateY(-50%);
-      min-block-size: 32px; padding-inline: var(--tt-space-2); border: 0; border-radius: var(--tt-radius-sm);
+      min-block-size: 40px; min-inline-size: 44px; padding-inline: var(--tt-space-2); border: 0; border-radius: var(--tt-radius-sm);
       background: transparent; color: var(--tt-text-muted); font: inherit; font-size: var(--tt-text-xs); font-weight: 600; cursor: pointer;
     }
     .secret__toggle:hover { color: var(--tt-text); background: var(--tt-surface-3); }
@@ -315,7 +315,7 @@ function safeReturnPath(value: string | null): string | null {
     @keyframes tt-spin { to { transform: rotate(360deg); } }
 
     .switch { display: flex; flex-direction: column; gap: var(--tt-space-2); align-items: flex-start; }
-    .link { background: none; border: 0; padding: 0; color: var(--tt-gold-400); font: inherit; font-size: var(--tt-text-sm); font-weight: 600; cursor: pointer; text-align: start; }
+    .link { display: inline-flex; align-items: center; min-block-size: 40px; background: none; border: 0; padding: 0; color: var(--tt-gold-400); font: inherit; font-size: var(--tt-text-sm); font-weight: 600; cursor: pointer; text-align: start; }
     .link:hover { text-decoration: underline; }
     .fine { margin: 0; text-align: center; font-size: var(--tt-caption); }
 

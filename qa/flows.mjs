@@ -67,7 +67,7 @@ await page.locator('a[href="/products/ea-fc-ultimate-team-coins"]').first().clic
 await page.waitForURL('**/products/ea-fc-ultimate-team-coins');
 await page.waitForTimeout(600);
 
-const variantChips = page.locator('.chooser').first().locator('.chip');
+const variantChips = page.locator('.chooser--variant').locator('.chip');
 const variantCount = await variantChips.count();
 check('product exposes variants', variantCount >= 5, `${variantCount} variants`);
 
@@ -77,15 +77,17 @@ await page.waitForTimeout(250);
 const priceAfterVariant = await page.locator('.tt-price').first().innerText();
 check('variant selection changes price', priceAfterVariant.includes('39'), `price=${priceAfterVariant}`); // 500K on the launch ladder
 
-const platformChips = page.locator('.chooser').nth(1).locator('.chip');
+const platformChips = page.locator('.chooser--platform').locator('[role="radio"]');
 const platformCount = await platformChips.count();
 check('product exposes platforms', platformCount >= 2, `${platformCount} platforms`);
 await platformChips.nth(1).click();
 await page.waitForTimeout(250);
 
-const regionChips = page.locator('.chooser').nth(2).locator('.chip');
-check('product exposes region choice', (await regionChips.count()) >= 1,
-  `${await regionChips.count()} regions`);
+// A coin bundle has one region, so it is stated rather than offered: no control.
+const regionChips = page.locator('.chooser--region').locator('.chip');
+check('a single-region product offers no region control', (await regionChips.count()) === 0,
+  `${await regionChips.count()} region controls`);
+check('the chosen platform is checked', (await page.locator('.chooser--platform [role="radio"][aria-checked="true"]').count()) === 1);
 
 const deliveryText = await page.locator('.delivery').first().innerText();
 check('delivery method is stated on the product', deliveryText.length > 20, deliveryText.slice(0, 50));
@@ -97,8 +99,9 @@ check('add to cart updates header badge', badgeCount === '1', `badge=${badgeCoun
 
 await go('/cart');
 check('cart shows the added line', (await page.locator('.line').count()) === 1);
-const cartRegion = await page.locator('.line tt-region-badge').first().innerText();
-check('cart line shows region', cartRegion.trim().length > 0, cartRegion.trim());
+// A region-free line carries no region badge: a lock is shown, freedom is not a warning.
+check('cart line shows no region badge for a region-free bundle', (await page.locator('.line tt-region-badge').count()) === 0);
+check('cart line shows the platform as a choice', (await page.locator('.line tt-platform-picker [role="radio"][aria-checked="true"]').count()) === 1);
 const cartFulfil = await page.locator('.line tt-fulfillment-badge').first().innerText();
 check('cart line shows delivery method', cartFulfil.trim().length > 0, cartFulfil.trim());
 
@@ -144,7 +147,7 @@ console.log('\n== Payment branches ==');
 const pickInstrument = async (token) => {
   await page.locator(`input[name="instrument"][value="${token}"]`).check();
 };
-const payButton = () => page.locator('section:has-text("אמצעי תשלום") button.tt-btn--primary');
+const payButton = () => page.locator('section:has-text("אמצעי תשלום") button.pay');
 
 await pickInstrument('sim_declined');
 await payButton().click();
@@ -200,8 +203,8 @@ check('exactly one order was created by the flow', orderRows === 1, `${orderRows
 await page.goto(orderUrl.replace('/success', ''), { waitUntil: 'networkidle' });
 await page.waitForTimeout(700);
 const missingHeading = await page.locator('h1').first().innerText();
-check('hard-reloading an order URL explains the dev-build limitation',
-  /אינה זמינה/.test(missingHeading), missingHeading);
+check('hard-reloading an order URL explains that the order is not visible here, with a way in',
+  /לא נמצאה/.test(missingHeading) && (await page.locator('a[href^="/account"]').count()) > 0, missingHeading);
 
 // ---------------------------------------------------------------------------
 group('cart behaviour');
@@ -278,7 +281,7 @@ check('server re-pricing overrides a tampered localStorage price',
 group('empty cart protection');
 await page.evaluate(() => localStorage.removeItem('top-token.cart.v2'));
 await go('/checkout');
-check('checkout with an empty cart redirects to the store', page.url().includes('/store'), page.url());
+check('checkout with an empty cart goes to the cart page, which explains itself', page.url().includes('/cart') && (await page.locator('tt-empty-state').count()) > 0, page.url());
 
 // ---------------------------------------------------------------------------
 group('region safety');
@@ -289,7 +292,7 @@ const regionAlert = await page.locator('.tt-alert').first().innerText();
 check('region-locked product shows its region prominently', /אזור/.test(regionAlert), regionAlert.slice(0, 60));
 check('region restriction is spelled out', /ניתן למימוש רק/.test(regionAlert));
 
-const regionButtons = page.locator('.chooser').nth(2).locator('.chip');
+const regionButtons = page.locator('.chooser--region').locator('.chip');
 const regionLabels = await regionButtons.allInnerTexts();
 check('both store regions are selectable', regionLabels.length === 2, regionLabels.join(' / '));
 

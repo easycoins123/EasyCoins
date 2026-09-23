@@ -86,6 +86,37 @@ export class CartFacade {
     );
   }
 
+  /**
+   * Swaps a line for the same bundle on another platform.
+   *
+   * A customer who picked the wrong console used to have to remove the line
+   * and find the bundle again. The replacement is priced by the server like
+   * any other line, keeps the quantity, and takes the old line's place in the
+   * list so the cart does not reorder under them.
+   */
+  replaceOffer(itemId: CartItemId, offerId: string): Observable<CartItem | null> {
+    const current = this.itemsSignal().find((item) => item.id === itemId);
+    if (!current || current.offerId === offerId) {
+      return of(null);
+    }
+    this.busySignal.set(true);
+    return this.api.createItem({ offerId, quantity: current.quantity }).pipe(
+      tap((item) => {
+        const replacement = { ...item, quantity: current.quantity, totalPrice: { ...item.unitPrice, amountMinor: item.unitPrice.amountMinor * current.quantity } };
+        this.commit(this.itemsSignal()
+          .filter((existing) => existing.id === itemId || existing.offerId !== offerId)
+          .map((existing) => (existing.id === itemId ? replacement : existing)));
+        this.busySignal.set(false);
+        this.notifications.success(localized('הפלטפורמה עודכנה.', 'Platform updated.'));
+      }),
+      catchError((error: unknown) => {
+        this.busySignal.set(false);
+        this.notifications.error(toAppError(error));
+        return of(null);
+      }),
+    );
+  }
+
   updateQuantity(itemId: CartItemId, quantity: number): void {
     if (quantity <= 0) {
       this.remove(itemId);

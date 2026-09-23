@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { combineLatest, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
@@ -10,7 +11,7 @@ import { CampaignView } from '../../core/commerce';
 import { LocalizePipe } from '../../core/i18n';
 import { coinProductsFrom, hasRealDiscount } from '../../core/value';
 import { CoinProduct, Product } from '../../domain';
-import { CampaignsFacade, CatalogFacade, CatalogLookups } from '../../state';
+import { CampaignsFacade, CatalogFacade, CatalogLookups, PlatformPreferenceService } from '../../state';
 import { CoinLadderComponent } from '../../ui/components/commerce/coin-ladder.component';
 import { LaunchStripComponent } from '../../ui/components/commerce/launch-strip.component';
 import { IconComponent } from '../../ui/components/icon.component';
@@ -86,7 +87,7 @@ interface OffersView {
                 <span class="coming__title"><strong>{{ campaign.title }}</strong><span class="status status--soon">{{ campaign.statusLabel }}</span></span>
                 <span class="coming__lede">{{ campaign.lede }}</span>
               </span>
-              <a class="coming__go" *ngIf="campaign.cta as cta" [routerLink]="cta.link" [attr.aria-label]="cta.label"><tt-icon name="chevron" [size]="16" dir="auto"></tt-icon></a>
+
             </li>
           </ul>
         </section>
@@ -139,15 +140,20 @@ export class DealsPage {
   private readonly catalog = inject(CatalogFacade);
   private readonly cart = inject(CartFacade);
   private readonly analytics = inject(AnalyticsService);
+  private readonly preference = inject(PlatformPreferenceService);
 
   readonly gameName = STOREFRONT.focusGameName;
   readonly adding = this.cart.busy;
 
+  /** The ladder, priced for the platform the customer chose everywhere else. */
   private readonly ladder$ = combineLatest([
     this.catalog.lookups$,
     this.catalog.productBySlug(STOREFRONT.focusProductSlug).pipe(catchError(() => of(null))),
+    toObservable(this.preference.platformId),
   ]).pipe(
-    map(([lookups, detail]) => (detail ? coinProductsFrom(detail, lookups.platforms, { game: STOREFRONT.focusGameEdition }) : [])),
+    map(([lookups, detail, platformId]) => (detail
+      ? coinProductsFrom(detail, lookups.platforms, { game: STOREFRONT.focusGameEdition, platformId: platformId ?? undefined })
+      : [])),
   );
 
   /** Products with a real struck-through price, for the game this storefront sells. */

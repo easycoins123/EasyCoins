@@ -33,8 +33,11 @@ import { IconComponent } from '../icon.component';
         <ul class="panel__points">
           <li *ngFor="let point of campaign.points"><tt-icon name="check" [size]="12"></tt-icon> {{ point }}</li>
         </ul>
-        <a class="tt-btn tt-btn--sm" [class.tt-btn--buy]="campaign.status === 'active'" [class.tt-btn--ghost]="campaign.status !== 'active'"
-           *ngIf="campaign.cta as cta" [routerLink]="cta.link">{{ cta.label }}</a>
+        <!-- A button only where there is somewhere to go. A campaign in
+             preparation has nothing behind its link yet, so it gets its status
+             and no dead action. -->
+        <a class="tt-btn tt-btn--sm tt-btn--buy"
+           *ngIf="campaign.status === 'active' && campaign.cta as cta" [routerLink]="cta.link">{{ cta.label }}</a>
       </article>
     </div>
   `,

@@ -36,3 +36,5 @@ export * from './components/commerce/launch-strip.component';
 export * from './components/commerce/value-callouts.component';
 export * from './components/commerce/coin-ladder.component';
 export * from './components/commerce/rewards.component';
+export * from './components/cart-dock.component';
+export * from './components/commerce/platform-picker.component';

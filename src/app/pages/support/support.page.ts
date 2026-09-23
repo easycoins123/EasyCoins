@@ -83,13 +83,14 @@ import { FaqAccordionComponent, IconComponent } from '../../ui';
       <section class="tt-section">
         <div class="tt-section__head">
           <h2>שאלות נפוצות</h2>
-          <a routerLink="/faq">לכל השאלות →</a>
+          <a class="more" routerLink="/faq">לכל השאלות <tt-icon name="chevron" [size]="14" dir="auto"></tt-icon></a>
         </div>
         <tt-faq-accordion [entries]="(faq$ | async) ?? []"></tt-faq-accordion>
       </section>
     </div>
   `,
   styles: [`
+    .more { display: inline-flex; align-items: center; gap: 4px; min-block-size: 40px; color: var(--tt-gold-400); font-weight: 700; font-size: var(--tt-text-sm); }
     .narrow { max-inline-size: 720px; }
     h1 { margin-block: var(--tt-space-1) var(--tt-space-2); }
     .tt-alert { margin-block: var(--tt-space-4); }

@@ -39,8 +39,8 @@ export class PlatformBadgeComponent {
           [class.tt-badge--warning]="!region.isRegionFree"
           [class.tt-badge--info]="region.isRegionFree"
           [attr.title]="region.restrictionNotice ? (region.restrictionNotice | t) : null">
-      <span aria-hidden="true">{{ region.flagEmoji }}</span>
-      {{ region.name | t }}
+      <ng-container *ngIf="region.isRegionFree; else locked">ללא נעילת אזור</ng-container>
+      <ng-template #locked>אזור חנות: {{ region.name | t }}</ng-template>
     </span>
   `,
 })

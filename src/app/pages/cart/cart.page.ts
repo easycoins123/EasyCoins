@@ -9,30 +9,33 @@ import { catchError, map, switchMap } from 'rxjs/operators';
 import { AnalyticsService } from '../../core/analytics';
 import { STOREFRONT } from '../../core/brand';
 import { launchBonusOf } from '../../core/commerce';
-import { formatQuantity } from '../../core/value';
+import { formatQuantity, itemsLabel } from '../../core/value';
 import { LocalizePipe } from '../../core/i18n';
-import { CartItem, ProductType, ProductVariant } from '../../domain';
-import { CartFacade, CatalogFacade } from '../../state';
+import { CartItem, Platform, ProductDetail, ProductType, ProductVariant } from '../../domain';
+import { CartFacade, CatalogFacade, CatalogLookups, PlatformPreferenceService } from '../../state';
 import {
   BundleLadderComponent, CoinArtComponent,
-  EmptyStateComponent, FulfillmentBadgeComponent, MoneyPipe, PlatformBadgeComponent,
+  EmptyStateComponent, FulfillmentBadgeComponent, IconComponent, MoneyPipe, PlatformBadgeComponent,
   QuantitySelectorComponent, RegionBadgeComponent,
 } from '../../ui';
+import { PlatformPickerComponent } from '../../ui/components/commerce/platform-picker.component';
 
 /**
  * The cart.
  *
- * Each line repeats the platform, region and delivery method, because the cart is
- * the last screen before checkout where a customer can catch a wrong-region
- * purchase. Totals come from the facade, never from arithmetic in the template.
+ * Each line says what it is, for which platform, how many coins arrive and
+ * what it costs, in words a parent can read. The platform can be changed on
+ * the line itself, because the wrong console is the one mistake a customer
+ * makes here that used to need removing the line and finding it again.
+ * Totals come from the facade, never from arithmetic in the template.
  */
 @Component({
   selector: 'tt-cart-page',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, RouterLink, LocalizePipe, MoneyPipe,
+    CommonModule, FormsModule, RouterLink, LocalizePipe, MoneyPipe, IconComponent,
     QuantitySelectorComponent, PlatformBadgeComponent, RegionBadgeComponent,
-    FulfillmentBadgeComponent, EmptyStateComponent, BundleLadderComponent, CoinArtComponent,
+    FulfillmentBadgeComponent, EmptyStateComponent, BundleLadderComponent, CoinArtComponent, PlatformPickerComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -41,12 +44,11 @@ import {
 
       <!-- An empty cart is the one screen where the customer has already
            decided to buy something and has nothing to look at. Showing the
-           tiers turns a dead end back into the shop, instead of leaving four
-           hundred pixels of black above the footer. -->
+           tiers turns a dead end back into the shop. -->
       <ng-container *ngIf="cart.isEmpty()">
         <tt-empty-state icon="cart" pose="walk"
                         title="העגלה ריקה"
-                        message="עדיין לא הוספתם כלום. אלה החבילות הזמינות."
+                        message="עדיין לא הוספתם כלום. בוחרים חבילה למטה או בחנות."
                         actionLabel="לכל החבילות"
                         (action)="goToStore()">
         </tt-empty-state>
@@ -71,7 +73,7 @@ import {
               </ng-template>
 
               <div class="details">
-                <strong>{{ item.displayName | t }}</strong>
+                <strong class="details__name">{{ item.displayName | t }}</strong>
                 <ng-container *ngIf="receipt(item) as value; else plainVariant">
                   <span class="receipt">
                     <span class="receipt__base tt-numeric">{{ value.base }}</span>
@@ -82,21 +84,40 @@ import {
                   </span>
                 </ng-container>
                 <ng-template #plainVariant><span class="tt-muted">{{ item.displayVariantName | t }}</span></ng-template>
-                <div class="tt-row">
-                  <tt-platform-badge [platform]="lookups.platforms.get(item.platformId)"></tt-platform-badge>
-                  <tt-region-badge [region]="lookups.regions.get(item.regionId)"></tt-region-badge>
+
+                <!-- The platform, as a fact and, for a coin line, as a choice. -->
+                <div class="platform">
+                  <ng-container *ngIf="platformOptions(item, lookups) as options; else platformFact">
+                    <tt-platform-picker [platforms]="options"
+                                        [selected]="item.platformId"
+                                        label="פלטפורמה"
+                                        [compact]="true"
+                                        (selectedChange)="switchPlatform(item, $event)">
+                    </tt-platform-picker>
+                  </ng-container>
+                  <ng-template #platformFact>
+                    <span class="tt-label">פלטפורמה</span>
+                    <tt-platform-badge [platform]="lookups.platforms.get(item.platformId)"></tt-platform-badge>
+                  </ng-template>
+                </div>
+
+                <div class="tt-row badges">
+                  <tt-region-badge *ngIf="lookups.regions.get(item.regionId)?.isRegionFree === false" [region]="lookups.regions.get(item.regionId)"></tt-region-badge>
                   <tt-fulfillment-badge [descriptor]="lookups.fulfillment.get(item.fulfillmentMethod)">
                   </tt-fulfillment-badge>
                 </div>
               </div>
 
               <div class="controls">
-                <tt-quantity-selector [value]="item.quantity"
-                                      (valueChange)="cart.updateQuantity(item.id, $event)">
-                </tt-quantity-selector>
-                <span class="line-total">{{ item.totalPrice | money }}</span>
-                <button type="button" class="tt-btn tt-btn--quiet tt-btn--sm" (click)="cart.remove(item.id)">
-                  הסרה
+                <span class="controls__qty">
+                  <span class="tt-label">כמות</span>
+                  <tt-quantity-selector [value]="item.quantity"
+                                        (valueChange)="cart.updateQuantity(item.id, $event)">
+                  </tt-quantity-selector>
+                </span>
+                <span class="line-total tt-numeric">{{ item.totalPrice | money }}</span>
+                <button type="button" class="remove" (click)="cart.remove(item.id)" [attr.aria-label]="'הסרת ' + (item.displayVariantName | t) + ' מהעגלה'">
+                  <tt-icon name="close" [size]="14"></tt-icon> הסרה
                 </button>
               </div>
             </li>
@@ -104,7 +125,7 @@ import {
 
           <aside class="summary tt-ticket tt-ticket--gold">
             <div class="tt-ticket__main summary__main">
-            <p class="tt-ticket__eyebrow"><span>כרטיס · ההזמנה שלך</span><span>{{ cart.items().length }} פריטים</span></p>
+            <p class="tt-ticket__eyebrow"><span>ההזמנה שלך</span><span>{{ countLabel() }}</span></p>
             <h2>סיכום</h2>
 
             <div class="row row--coins" *ngIf="totalCoins() as coins">
@@ -116,27 +137,29 @@ import {
             </div>
             <div class="row total"><span>לתשלום</span><span>{{ cart.totals().total | money }}</span></div>
 
-            <label class="tt-field coupon">
-              <span class="tt-label">קוד קופון</span>
-              <div class="tt-row">
-                <!-- Enter applies it. Typing a code and pressing return is the
-                     obvious thing to do, and it used to do nothing. -->
-                <input class="tt-input" [(ngModel)]="couponCode" name="coupon" placeholder="יש לכם קוד?"
-                       (keyup.enter)="couponCode && !cart.busy() && applyCoupon()" />
-                <button type="button" class="tt-btn tt-btn--ghost tt-btn--sm"
-                        [disabled]="!couponCode || cart.busy()" (click)="applyCoupon()">
-                  החלה
-                </button>
-              </div>
-            </label>
+            <details class="coupon-box">
+              <summary><tt-icon name="tag" [size]="14"></tt-icon> יש לכם קוד קופון?</summary>
+              <label class="tt-field coupon">
+                <span class="tt-label">קוד קופון</span>
+                <div class="tt-row">
+                  <input class="tt-input" [(ngModel)]="couponCode" name="coupon" placeholder="הקלידו את הקוד"
+                         autocomplete="off" autocapitalize="characters" enterkeyhint="done"
+                         (keyup.enter)="couponCode && !cart.busy() && applyCoupon()" />
+                  <button type="button" class="tt-btn tt-btn--ghost"
+                          [disabled]="!couponCode || cart.busy()" (click)="applyCoupon()">
+                    החלה
+                  </button>
+                </div>
+              </label>
+            </details>
 
             <button type="button" class="tt-btn tt-btn--buy tt-btn--lg tt-btn--block"
                     [disabled]="cart.busy()" (click)="goToCheckout()">
-              מעבר לתשלום
+              מעבר לתשלום <tt-icon name="chevron" [size]="15" dir="auto"></tt-icon>
             </button>
 
             <p class="tt-hint">
-              המחירים והזמינות נבדקים מחדש מול הקטלוג לפני התשלום.
+              בשלב הבא ממלאים פרטים לאספקה, ואז משלמים. המחיר נבדק שוב מול הקטלוג לפני התשלום.
             </p>
             <a class="tt-btn tt-btn--quiet tt-btn--block" routerLink="/store">המשך קנייה</a>
             </div>
@@ -157,49 +180,65 @@ import {
     .layout { display: grid; gap: var(--tt-space-5); align-items: start; }
     @media (min-width: 900px) { .layout { grid-template-columns: 1fr 320px; } }
     .lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--tt-space-3); }
-    .line { display: flex; gap: var(--tt-space-4); padding: var(--tt-space-4); align-items: center; flex-wrap: wrap; }
-    .line img { inline-size: 64px; block-size: 64px; object-fit: contain; }
-    .line .thumb { inline-size: 84px; flex: none; }
+    .line { display: grid; grid-template-columns: 84px minmax(0, 1fr); grid-template-areas: 'thumb details' 'controls controls'; gap: var(--tt-space-3) var(--tt-space-4); padding: var(--tt-space-4); align-items: start; }
+    @media (min-width: 720px) { .line { grid-template-columns: 84px minmax(0, 1fr) auto; grid-template-areas: 'thumb details controls'; align-items: center; } }
+    .line img { grid-area: thumb; inline-size: 64px; block-size: 64px; object-fit: contain; }
+    .line .thumb { grid-area: thumb; inline-size: 84px; }
+    .details { grid-area: details; display: flex; flex-direction: column; gap: var(--tt-space-2); min-inline-size: 0; }
+    .details__name { font-size: var(--tt-text-md); }
     .receipt { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; font-size: var(--tt-text-sm); }
     .receipt__base { color: var(--tt-text-muted); }
     .receipt__plus { color: var(--tt-gold-400); font-weight: 700; unicode-bidi: isolate; }
     .receipt__eq { color: var(--tt-text-faint); }
     .receipt__total { color: var(--tt-text); font-size: var(--tt-text-md); }
     .receipt__per { color: var(--tt-text-faint); }
+    .platform { display: flex; flex-direction: column; gap: var(--tt-space-1); }
+    .platform > .tt-label { font-size: var(--tt-caption); color: var(--tt-text-faint); }
+    .badges { gap: var(--tt-space-1); }
+    .controls { grid-area: controls; display: flex; align-items: center; flex-wrap: wrap; gap: var(--tt-space-3); padding-block-start: var(--tt-space-2); border-block-start: 1px solid var(--tt-border); }
+    @media (min-width: 720px) { .controls { flex-direction: column; align-items: flex-end; padding-block-start: 0; border-block-start: 0; } }
+    .controls__qty { display: flex; align-items: center; gap: var(--tt-space-2); }
+    .controls__qty .tt-label { font-size: var(--tt-caption); color: var(--tt-text-faint); }
+    .line-total { font-weight: 800; font-size: var(--tt-text-lg); margin-inline-start: auto; }
+    @media (min-width: 720px) { .line-total { margin-inline-start: 0; } }
+    .remove { display: inline-flex; align-items: center; gap: 4px; min-block-size: 44px; padding: 0 var(--tt-space-3); border: 1px solid var(--tt-border); border-radius: var(--tt-radius-md); background: transparent; color: var(--tt-text-muted); font: inherit; font-size: var(--tt-text-sm); font-weight: 600; cursor: pointer; }
+    .remove:hover { color: var(--tt-danger); border-color: var(--tt-danger); background: var(--tt-danger-tint); }
+    .remove:focus-visible { outline: 2px solid var(--tt-gold-400); outline-offset: 2px; }
     .row--coins { padding: var(--tt-space-2) var(--tt-space-3); margin-block-end: var(--tt-space-2); border: 1px solid var(--tt-gold-600); border-radius: var(--tt-radius-md); background: var(--tt-gold-tint); font-weight: 700; }
     .row--coins .coins { color: var(--tt-gold-400); font-size: var(--tt-text-lg); font-weight: 900; }
-    .details { display: flex; flex-direction: column; gap: var(--tt-space-1); flex: 1; min-inline-size: 180px; }
-    .controls { display: flex; align-items: center; gap: var(--tt-space-3); }
-    .line-total { font-weight: 700; min-inline-size: 84px; }
     .summary { position: sticky; inset-block-start: 88px; }
     .summary__main { display: flex; flex-direction: column; gap: var(--tt-space-3); padding: var(--tt-space-5); }
     .summary__stub { font-size: var(--tt-caption); font-weight: 700; color: var(--tt-text-muted); }
     .summary h2 { font-size: var(--tt-text-lg); margin: 0; }
     .row { display: flex; justify-content: space-between; font-size: var(--tt-text-sm); }
     .row.total { font-size: var(--tt-text-lg); font-weight: 700; padding-block-start: var(--tt-space-2); border-block-start: 1px solid var(--tt-border); }
-    .coupon { margin-block-start: var(--tt-space-2); }
+    .coupon-box > summary { display: flex; align-items: center; gap: 6px; min-block-size: 40px; cursor: pointer; list-style: none; color: var(--tt-text-muted); font-size: var(--tt-text-sm); font-weight: 600; }
+    .coupon-box > summary::-webkit-details-marker { display: none; }
+    .coupon-box[open] > summary { color: var(--tt-text); }
+    .coupon { margin-block-start: var(--tt-space-1); }
+    .coupon .tt-btn { min-block-size: 44px; }
   `],
 })
 export class CartPage {
   readonly cart = inject(CartFacade);
+
+  private readonly catalog = inject(CatalogFacade);
+  private readonly router = inject(Router);
+  private readonly analytics = inject(AnalyticsService);
+  private readonly preference = inject(PlatformPreferenceService);
+
+  readonly lookups$ = this.catalog.lookups$;
 
   /** A coin line shows the FUT coin; the catalog's own picture is a flat icon. */
   isCoins(item: CartItem): boolean {
     return /\/coins\.svg$/.test(item.imageUrl ?? '');
   }
 
-  private readonly catalog = inject(CatalogFacade);
-  private readonly router = inject(Router);
-  private readonly analytics = inject(AnalyticsService);
-
-  readonly lookups$ = this.catalog.lookups$;
-
   /**
    * The coin tiers, shown only when the cart is empty.
    *
    * Resolved from the catalog rather than pinned to a slug, so it disappears on
-   * its own if the shop stops selling game currency. A failure here is not an
-   * error state: the empty message above it is the page.
+   * its own if the shop stops selling game currency.
    */
   readonly ladder$ = this.catalog.productsForGame(STOREFRONT.focusGameSlug).pipe(
     map((products) => products.find((product) => product.type === ProductType.GameCurrency)),
@@ -208,14 +247,15 @@ export class CartPage {
       : of(null))),
   );
 
-  /** The coin product's variants by id, so a line can say what it delivers. */
-  private readonly variants = toSignal(
-    this.catalog.productBySlug(STOREFRONT.focusProductSlug).pipe(
-      map((detail) => new Map<string, ProductVariant>(detail.product.variants.map((variant) => [variant.id, variant]))),
-      catchError(() => of(new Map<string, ProductVariant>())),
-    ),
-    { initialValue: new Map<string, ProductVariant>() },
+  /** The coin product, so a line can say what it delivers and offer its other platforms. */
+  private readonly coins = toSignal(
+    this.catalog.productBySlug(STOREFRONT.focusProductSlug).pipe(catchError(() => of(null as ProductDetail | null))),
+    { initialValue: null as ProductDetail | null },
   );
+
+  private readonly variants = computed(() => new Map<string, ProductVariant>(
+    (this.coins()?.product.variants ?? []).map((variant) => [variant.id, variant]),
+  ));
 
   /** Coins across every coin line, bonus included; undefined when no line is coins. */
   readonly totalCoins = computed<string | undefined>(() => {
@@ -231,6 +271,8 @@ export class CartPage {
     return any ? formatQuantity(sum) : undefined;
   });
 
+  readonly countLabel = computed(() => itemsLabel(this.cart.items().length));
+
   couponCode = '';
 
   constructor() {
@@ -245,6 +287,37 @@ export class CartPage {
       return undefined;
     }
     return { base: formatQuantity(variant.quantityValue), bonus: formatQuantity(bonus), total: formatQuantity(variant.quantityValue + bonus) };
+  }
+
+  /**
+   * The platforms this line's bundle is also sold for, when there is more
+   * than one. Only the coin product is known here; any other line shows its
+   * platform as a fact.
+   */
+  platformOptions(item: CartItem, lookups: CatalogLookups): readonly Platform[] | null {
+    const detail = this.coins();
+    if (!detail || detail.product.id !== item.productId) {
+      return null;
+    }
+    const ids = [...new Set(detail.offers
+      .filter((offer) => offer.variantId === item.variantId && offer.regionId === item.regionId && offer.active)
+      .map((offer) => offer.platformId))];
+    const platforms = ids
+      .map((id) => lookups.platforms.get(id))
+      .filter((platform): platform is Platform => platform !== undefined)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+    return platforms.length > 1 ? platforms : null;
+  }
+
+  switchPlatform(item: CartItem, platform: Platform): void {
+    const detail = this.coins();
+    const offer = detail?.offers.find((candidate) => candidate.variantId === item.variantId
+      && candidate.regionId === item.regionId && candidate.platformId === platform.id && candidate.active);
+    if (!offer) {
+      return;
+    }
+    this.preference.set(platform.id);
+    this.cart.replaceOffer(item.id, offer.id).subscribe();
   }
 
   applyCoupon(): void {

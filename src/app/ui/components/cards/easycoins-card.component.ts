@@ -62,7 +62,7 @@ import { TIERS, Tier } from './tiers';
       </a>
 
       <p class="meta">
-        <span class="platform"><tt-icon [name]="platformIcon" [size]="14"></tt-icon>{{ product.platformLabel | t }}</span>
+        <span class="platform" [attr.aria-label]="'פלטפורמה: ' + (product.platformLabel | t)"><tt-icon [name]="platformIcon" [size]="14"></tt-icon>{{ product.platformLabel | t }}</span>
         <span class="edition">{{ edition }}</span>
         <span class="rate tt-numeric" *ngIf="perMillion as rate">{{ rate | money }} / מיליון<ng-container *ngIf="product.bonus > 0"> כולל בונוס</ng-container></span>
       </p>
@@ -81,6 +81,7 @@ import { TIERS, Tier } from './tiers';
               [class.tt-btn--done]="done()"
               [attr.aria-busy]="loading() ? 'true' : null"
               [disabled]="!product.inStock || (busyState() && !done())"
+              [attr.aria-label]="buyLabel"
               (click)="add()">
         <ng-container *ngIf="!product.inStock">אזל מהמלאי</ng-container>
         <ng-container *ngIf="product.inStock && !done()"><tt-icon name="cart" [size]="15"></tt-icon> הוספה לסל</ng-container>
@@ -167,8 +168,11 @@ import { TIERS, Tier } from './tiers';
     .card:hover .media__art { transform: translateY(-3px) scale(1.03); }
     .card--out .media__art { filter: grayscale(0.7) opacity(0.55); }
 
-    .meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 10px; margin: 0; font-size: var(--tt-caption); font-weight: 700; color: var(--tt-text-faint); }
-    .platform { display: inline-flex; align-items: center; gap: 4px; color: var(--tt-text-muted); }
+    .meta { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 8px; margin: 0; font-size: var(--tt-caption); font-weight: 700; color: var(--tt-text-faint); }
+    /* The platform is a fact the customer must be able to read, not a caption:
+       a chip in body-size type, lit so it is the first thing after the amount. */
+    .platform { display: inline-flex; align-items: center; gap: 5px; min-block-size: 26px; padding: 0 9px; border-radius: var(--tt-radius-pill); border: 1px solid var(--tt-border-strong); background: var(--tt-surface-3); color: var(--tt-text); font-size: var(--tt-text-xs); font-weight: 800; direction: ltr; }
+    .platform tt-icon { color: var(--tt-gold-400); }
     .rate { color: var(--tt-text-faint); }
 
     .price { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: var(--tt-space-2) 0 var(--tt-space-3); }
@@ -177,7 +181,7 @@ import { TIERS, Tier } from './tiers';
     .was { font-size: var(--tt-caption); color: var(--tt-text-faint); text-decoration: line-through; }
     .saving { font-size: var(--tt-caption); font-weight: 700; color: var(--tt-gold-400); }
 
-    .buy { inline-size: 100%; min-block-size: 42px; margin-block-start: auto; white-space: nowrap; font-weight: 800; }
+    .buy { inline-size: 100%; min-block-size: 44px; margin-block-start: auto; white-space: nowrap; font-weight: 800; }
     .tt-btn--ghost.buy { border-color: var(--tt-border-strong); background: rgba(255, 248, 235, 0.03); }
     .tt-btn--ghost.buy:hover:not(:disabled) { border-color: var(--tt-gold-500); color: var(--tt-gold-300); }
 
@@ -257,6 +261,16 @@ export class EasyCoinsCardComponent {
 
   get platformIcon(): IconName {
     return this.product.platform === 'pc' ? 'platform' : 'gamepad';
+  }
+
+  /** Says what the button does, with the platform, for a screen reader. */
+  get buyLabel(): string {
+    if (!this.product.inStock) {
+      return `${this.amountLabel} קוינס, אזל מהמלאי`;
+    }
+    return this.done()
+      ? `${this.amountLabel} קוינס נוספו לסל`
+      : `הוספה לסל: ${this.amountLabel} קוינס ל־${this.product.platformLabel.he}`;
   }
 
   get bonusLabel(): string {

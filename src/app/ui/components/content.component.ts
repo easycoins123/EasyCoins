@@ -69,6 +69,7 @@ export class ReviewCardComponent {
       align-items: center;
       justify-content: space-between;
       gap: var(--tt-space-3);
+      min-block-size: 44px;
       cursor: pointer;
       font-weight: 600;
       font-size: var(--tt-text-sm);

@@ -44,14 +44,15 @@ const POLL_INTERVAL_MS = 2500;
           different situation from a real failure and gets its own explanation.
         -->
         <div class="tt-card tt-card--pad missing" *ngIf="isMissing(appError); else realError">
-          <h1>ההזמנה אינה זמינה בדפדפן הזה</h1>
+          <h1>ההזמנה לא נמצאה</h1>
           <p class="tt-muted">
-            האתר נמצא בפיתוח וההזמנות נשמרות בזיכרון הדפדפן בלבד, ולכן רענון הדף או פתיחה בכרטיסייה
-            אחרת מאבדים אותן. בגרסה עם שרת, קישור ההזמנה יעבוד מכל מכשיר.
+            הזמנה נראית רק למי שביצע אותה: מאותו דפדפן אם הוזמנה בלי חשבון, או מהחשבון שאיתו הוזמנה.
+            אם הזמנתם עם חשבון, היכנסו אליו ופתחו את הקישור שוב. אם זה לא עוזר, כתבו לנו עם מספר ההזמנה מהמייל.
           </p>
           <div class="tt-row">
-            <a class="tt-btn tt-btn--primary" routerLink="/store">חזרה לחנות</a>
+            <a class="tt-btn tt-btn--primary" routerLink="/account" [queryParams]="{ returnTo: currentPath }">כניסה לחשבון</a>
             <a class="tt-btn tt-btn--ghost" routerLink="/support">פנייה לתמיכה</a>
+            <a class="tt-btn tt-btn--quiet" routerLink="/store">לחנות</a>
           </div>
         </div>
 
@@ -258,6 +259,11 @@ export class OrderStatusPage {
   /** True when the order simply is not in this browser session's mock backend. */
   isMissing(error: AppError): boolean {
     return error.kind === AppErrorKind.NotFound;
+  }
+
+  /** Where to come back to after signing in. */
+  get currentPath(): string {
+    return typeof location !== 'undefined' ? location.pathname : '/account/orders';
   }
 
   fulfillmentFor(order: Order, orderItemId: string): Fulfillment | undefined {

@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, QueryList, ViewChildren, signal,
+  ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, QueryList, ViewChildren, computed, signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -31,11 +31,26 @@ import { IconComponent } from '../icon.component';
         <p class="ask__q">כמה קוינס בא לך?</p>
         <div class="chips" role="group" aria-label="בחירת כמות">
           <button type="button" class="chip" *ngFor="let product of products"
+                  [attr.aria-pressed]="highlight() === product.amount"
                   [class.chip--on]="highlight() === product.amount"
                   (click)="focusRow(product.amount)">
             <span class="tt-numeric">{{ label(product.amount) }}</span>
           </button>
         </div>
+      </div>
+
+      <!-- The answer to the question above, in one line, with the action:
+           choosing a size must visibly change something without scrolling. -->
+      <div class="picked" *ngIf="picked() as product" role="status" aria-live="polite">
+        <span class="picked__what">
+          <strong class="tt-numeric">{{ label(product.amount) }}</strong>
+          <span class="tt-muted" *ngIf="product.bonus > 0">+{{ label(product.bonus) }} בונוס = <b class="tt-numeric">{{ label(product.totalCoins) }}</b> קוינס</span>
+          <span class="tt-muted">· {{ product.platformLabel | t }}</span>
+        </span>
+        <span class="picked__price tt-price">{{ product.offer.price.current | money }}</span>
+        <button type="button" class="tt-btn tt-btn--buy tt-btn--sm" [disabled]="!product.inStock || busy" (click)="buy.emit(product.offer)">
+          <tt-icon name="cart" [size]="14"></tt-icon> הוספה לסל
+        </button>
       </div>
 
       <div class="table" role="table" aria-label="סולם החבילות">
@@ -94,9 +109,15 @@ import { IconComponent } from '../icon.component';
     .ask { display: flex; align-items: center; gap: var(--tt-space-4); flex-wrap: wrap; margin-block-end: var(--tt-space-4); }
     .ask__q { margin: 0; font-family: var(--tt-font-display); font-weight: 900; font-size: var(--tt-text-xl); letter-spacing: -0.01em; }
     .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-    .chip { min-inline-size: 58px; padding: 7px 12px; border-radius: var(--tt-radius-pill); border: 1px solid var(--tt-border-strong); background: var(--tt-surface-2); color: var(--tt-text); font: inherit; font-weight: 800; font-size: var(--tt-text-sm); cursor: pointer; transition: border-color var(--tt-duration) var(--tt-ease), background-color var(--tt-duration) var(--tt-ease); }
+    .chip { min-inline-size: 58px; min-block-size: 44px; padding: 7px 12px; border-radius: var(--tt-radius-pill); border: 1px solid var(--tt-border-strong); background: var(--tt-surface-2); color: var(--tt-text); font: inherit; font-weight: 800; font-size: var(--tt-text-sm); cursor: pointer; transition: border-color var(--tt-duration) var(--tt-ease), background-color var(--tt-duration) var(--tt-ease); }
     .chip:hover { border-color: var(--tt-gold-600); }
-    .chip--on { border-color: var(--tt-gold-500); background: var(--tt-gold-tint); color: var(--tt-gold-400); }
+    .chip--on { border-color: var(--tt-gold-500); background: var(--tt-gold-tint); color: var(--tt-gold-400); box-shadow: inset 0 0 0 1px var(--tt-gold-500); }
+    .chip:focus-visible { outline: 2px solid var(--tt-gold-400); outline-offset: 2px; }
+    .picked { display: flex; align-items: center; flex-wrap: wrap; gap: var(--tt-space-3); margin-block-end: var(--tt-space-3); padding: var(--tt-space-3) var(--tt-space-4); border: 1px solid var(--tt-gold-600); border-radius: var(--tt-radius-md); background: var(--tt-gold-tint); }
+    .picked__what { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; flex: 1; min-inline-size: 0; font-size: var(--tt-text-sm); }
+    .picked__what strong { font-size: var(--tt-text-lg); }
+    .picked__price { font-size: 1.35rem; }
+    .picked .tt-btn { min-block-size: 40px; }
 
     .table { border: 1px solid var(--tt-border); border-radius: var(--tt-radius-lg); overflow: hidden; background: var(--tt-surface); }
     .thead, .row { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr 0.9fr auto; align-items: center; gap: var(--tt-space-3); padding: var(--tt-space-3) var(--tt-space-4); }
@@ -145,6 +166,9 @@ export class CoinLadderComponent {
   @ViewChildren('row') private readonly rows?: QueryList<ElementRef<HTMLElement>>;
 
   readonly highlight = signal<number | undefined>(undefined);
+
+  /** The bundle the chips point at, or nothing until one is chosen. */
+  readonly picked = computed(() => this.products.find((product) => product.amount === this.highlight()));
 
   label(value: number): string {
     return formatQuantity(value);

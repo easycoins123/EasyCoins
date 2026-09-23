@@ -8,19 +8,21 @@ import {
 
 import { AnalyticsService } from '../../core/analytics';
 import { STOREFRONT } from '../../core/brand';
+import { LocalizePipe } from '../../core/i18n';
 import { isCurated, roleLabel } from '../../core/commerce';
 import { coinProductsFrom, formatQuantity, withBestValue } from '../../core/value';
 import {
   AppError, CatalogQuery, CatalogSort, CoinProduct, DEFAULT_PAGE_SIZE, Offer, Page, Platform, Product,
   ProductDetail, ProductType, toAppError,
 } from '../../domain';
-import { CartFacade, CatalogFacade, CatalogLookups } from '../../state';
+import { CartFacade, CatalogFacade, CatalogLookups, PlatformPreferenceService } from '../../state';
 import {
   EasyCoinsCardComponent, EmptyStateComponent, ErrorStateComponent, FilterBarComponent,
   FilterChange, FilterGroup, IconComponent, ProductCardComponent, RevealDirective,
   SkeletonGridComponent, StadiumComponent,
 } from '../../ui';
 import { CoinLadderComponent } from '../../ui/components/commerce/coin-ladder.component';
+import { PlatformPickerComponent } from '../../ui/components/commerce/platform-picker.component';
 
 interface StoreViewModel {
   readonly page: Page<Product>;
@@ -31,6 +33,10 @@ interface StoreViewModel {
   /** The leading bundles, one card each. */
   readonly curated: readonly CoinProduct[];
   readonly others: readonly Product[];
+  /** The platforms the coin product is sold for, in catalog order. */
+  readonly platforms: readonly Platform[];
+  /** The platform the shelf and the ladder are priced for. */
+  readonly platform?: Platform;
 }
 
 /**
@@ -49,9 +55,10 @@ interface StoreViewModel {
   selector: 'tt-store-page',
   standalone: true,
   imports: [
-    CommonModule,
+    CommonModule, LocalizePipe,
     ProductCardComponent, EasyCoinsCardComponent, SkeletonGridComponent, EmptyStateComponent,
     ErrorStateComponent, FilterBarComponent, IconComponent, RevealDirective, StadiumComponent, CoinLadderComponent,
+    PlatformPickerComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -63,8 +70,19 @@ interface StoreViewModel {
       <header class="tt-head tt-head--tight">
         <span class="tt-eyebrow">{{ gameName }} · Ultimate Team</span>
         <h1>חנות הקוינס</h1>
-        <p class="tt-head__lede">כל הסולם, מ־100K עד 5M, במחיר סופי ועם בונוס ההשקה. הפלטפורמה ואזור החנות מוצגים לפני התשלום, ולכל הזמנה יש דף מעקב.</p>
+        <p class="tt-head__lede">כל הסולם, מ־100K עד 5M, במחיר סופי ועם בונוס ההשקה. בוחרים פלטפורמה, בוחרים כמות, ורואים את המחיר לפני התשלום.</p>
       </header>
+
+      <!-- Step one: the platform. Every price and every button below is for it. -->
+      <section class="platform tt-plate" *ngIf="platforms$ | async as platforms" aria-labelledby="store-platform-title">
+        <span class="tt-visually-hidden" id="store-platform-title">בחירת פלטפורמה</span>
+        <tt-platform-picker [platforms]="platforms"
+                            [selected]="platformId"
+                            label="על מה משחקים?"
+                            [help]="true"
+                            (selectedChange)="choosePlatform($event)">
+        </tt-platform-picker>
+      </section>
 
       <tt-filter-bar class="filters"
                      [groups]="filterGroups(lookups$ | async)"
@@ -98,7 +116,7 @@ interface StoreViewModel {
                           (action)="clear()">
           </tt-empty-state>
 
-          <h2 class="tt-visually-hidden">תוצאות</h2>
+          <h2 class="shelf__title" *ngIf="vm.curated.length > 0">החבילות המובילות <span class="tt-muted" *ngIf="vm.platform as platform">· ל־{{ platform.name | t }}</span></h2>
           <div class="tt-grid shelf" *ngIf="vm.curated.length > 0">
             <tt-easycoins-card *ngFor="let product of vm.curated; let i = index; trackBy: trackByOffer"
                                [ttReveal]="i"
@@ -137,6 +155,8 @@ interface StoreViewModel {
     </div>
   `,
   styles: [`
+    .platform { margin-block: var(--tt-space-4) var(--tt-space-5); padding: var(--tt-space-4); border-radius: var(--tt-radius-lg); }
+    .shelf__title { margin: 0 0 var(--tt-space-4); font-size: var(--tt-text-xl); }
     .ladder { margin-block-start: var(--tt-space-7); }
     /* On a phone the fifth card spans the row as the flagship instead of sitting alone. */
     @media (max-width: 700px) { .shelf > :last-child:nth-child(odd) { grid-column: 1 / -1; } }
@@ -186,6 +206,7 @@ export class StorePage {
   private readonly cart = inject(CartFacade);
   private readonly analytics = inject(AnalyticsService);
   private readonly route = inject(ActivatedRoute);
+  private readonly preference = inject(PlatformPreferenceService);
 
   readonly gameName = STOREFRONT.focusGameName;
 
@@ -202,12 +223,20 @@ export class StorePage {
   readonly lookups$ = this.catalog.lookups$;
   readonly search$ = this.querySubject.pipe(map((query) => query.search ?? ''));
 
+  /** The product types the catalog actually has for this game, so the filter offers nothing empty. */
+  readonly catalogTypes = signal<ReadonlySet<ProductType>>(new Set());
+
   private readonly coins$: Observable<ProductDetail | null> = this.catalog
     .productBySlug(STOREFRONT.focusProductSlug)
     .pipe(
       catchError(() => of(null)),
       shareReplay({ bufferSize: 1, refCount: true }),
     );
+
+  /** The platforms the coin product is offered for, for the picker above the shelf. */
+  readonly platforms$: Observable<readonly Platform[]> = combineLatest([this.lookups$, this.coins$]).pipe(
+    map(([lookups, coins]) => (coins ? offeredPlatforms(coins, lookups) : [])),
+  );
 
   readonly productTypes: readonly { value: ProductType; label: string }[] = [
     { value: ProductType.GameCurrency, label: 'מטבעות משחק' },
@@ -245,6 +274,15 @@ export class StorePage {
     this.catalog.gameBySlug(STOREFRONT.focusGameSlug).subscribe((game) => {
       this.patch({ gameIds: [game.id] });
     });
+    this.catalog.productsForGame(STOREFRONT.focusGameSlug).pipe(catchError(() => of([] as readonly Product[]))).subscribe((products) => {
+      this.catalogTypes.set(new Set(products.map((product) => product.type)));
+    });
+    // The remembered platform prices the shelf and filters the other products
+    // from the first paint, so a returning customer never sees the wrong console.
+    const remembered = this.preference.platformId();
+    if (remembered) {
+      this.patch({ platformIds: [remembered] });
+    }
     const search = params.get('search');
     if (search) {
       this.patch({ search });
@@ -253,6 +291,7 @@ export class StorePage {
     // customer on the shelf already priced for their console.
     const platform = params.get('platform');
     if (platform) {
+      this.preference.set(platform);
       this.patch({ platformIds: [platform] });
     }
     this.analytics.pageView('/store', 'Store');
@@ -261,15 +300,17 @@ export class StorePage {
   private shelf(page: Page<Product>, lookups: CatalogLookups, coins: ProductDetail | null, query: CatalogQuery): StoreViewModel {
     const inPage = coins !== null && page.items.some((product) => product.id === coins.product.id);
     const others = page.items.filter((product) => product.id !== coins?.product.id);
+    const platforms = coins ? offeredPlatforms(coins, lookups) : [];
+    const platform = this.preference.resolve(platforms);
     if (!coins || !inPage) {
-      return { page, lookups, coins: null, products: [], curated: [], others };
+      return { page, lookups, coins: null, products: [], curated: [], others, platforms, platform };
     }
     const ranked = coinProductsFrom(coins, lookups.platforms, {
       game: STOREFRONT.focusGameEdition,
-      platformId: query.platformIds?.[0],
+      platformId: platform?.id,
     });
     const products = query.sort === 'price-desc' ? [...ranked].reverse() : ranked;
-    return { page, lookups, coins, products, curated: withBestValue(products.filter((product) => isCurated(product.amount))), others };
+    return { page, lookups, coins, products, curated: withBestValue(products.filter((product) => isCurated(product.amount))), others, platforms, platform };
   }
 
   buyOffer(offer: Offer): void {
@@ -292,19 +333,30 @@ export class StorePage {
     return total === 1 ? 'פריט אחד' : `${total} פריטים`;
   }
 
+  /** The platform the shelf is priced for: the preference, validated against the catalog. */
   get platformId(): string { return this.querySubject.value.platformIds?.[0] ?? ''; }
+
+  choosePlatform(platform: Platform): void {
+    this.preference.set(platform.id);
+    // The other products are filtered to the same platform, so a customer on
+    // PS4 is not shown a code that only exists for PS5 and Xbox.
+    this.patch({ platformIds: [platform.id] });
+  }
   get type(): string { return this.querySubject.value.types?.[0] ?? ''; }
   get sort(): CatalogSort { return this.querySubject.value.sort ?? 'relevance'; }
 
+  /**
+   * The filters, built only from what the shop sells. A product type with no
+   * product behind it is a dead option that leads to an empty page, so the
+   * type list is derived from the catalog rather than from the enum. Platform
+   * is not a filter here: it is the store's first step, chosen above the shelf.
+   */
   filterGroups(lookups: CatalogLookups | null): readonly FilterGroup[] {
+    void lookups;
     return [
       {
-        key: 'platform', label: 'פלטפורמה', anyLabel: 'לא משנה', selected: this.platformId,
-        options: this.platforms(lookups).map((platform) => ({ value: platform.id, label: platform.name.he })),
-      },
-      {
-        key: 'type', label: 'סוג מוצר', anyLabel: 'לא משנה', selected: this.type,
-        options: this.productTypes.map((entry) => ({ value: entry.value, label: entry.label })),
+        key: 'type', label: 'סוג מוצר', anyLabel: 'הכול', selected: this.type,
+        options: availableTypes(this.productTypes, this.catalogTypes()),
       },
       {
         key: 'sort', label: 'מיון', anyLabel: 'מומלץ', selected: this.sort === 'relevance' ? '' : this.sort,
@@ -320,7 +372,6 @@ export class StorePage {
   get activeFilterCount(): number {
     const query = this.querySubject.value;
     return [
-      query.platformIds?.length,
       query.types?.length,
       query.sort && query.sort !== 'relevance' ? 1 : 0,
       query.search ? 1 : 0,
@@ -337,9 +388,6 @@ export class StorePage {
     }
   }
 
-  platforms(lookups: CatalogLookups | null): readonly Platform[] {
-    return lookups ? [...lookups.platforms.values()] : [];
-  }
 
   setSearch(value: string): void { this.patch({ search: value || undefined }); }
   setPlatform(value: string): void { this.patch({ platformIds: value ? [value] : undefined }); }
@@ -393,4 +441,26 @@ export class StorePage {
       page: { page: 1, pageSize: this.pageSize },
     });
   }
+}
+
+/** The platforms a product is offered for, as catalog records in catalog order. */
+export function offeredPlatforms(detail: ProductDetail, lookups: CatalogLookups): readonly Platform[] {
+  const ids = new Set(detail.offers.filter((offer) => offer.active).map((offer) => offer.platformId));
+  return detail.product.platformIds
+    .filter((id) => ids.has(id))
+    .map((id) => lookups.platforms.get(id))
+    .filter((platform): platform is Platform => platform !== undefined)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+/**
+ * Filter options for the product types that exist. Until the catalog has
+ * answered, nothing is offered rather than everything: an option that leads
+ * to an empty page is worse than a moment without options.
+ */
+export function availableTypes(
+  all: readonly { value: ProductType; label: string }[],
+  present: ReadonlySet<ProductType>,
+): readonly { value: string; label: string }[] {
+  return all.filter((entry) => present.has(entry.value)).map((entry) => ({ value: entry.value, label: entry.label }));
 }

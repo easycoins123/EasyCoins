@@ -154,7 +154,7 @@ import { MobileNavComponent } from './mobile-nav.component';
       box-shadow: var(--tt-glass-highlight), 0 10px 30px rgba(0, 0, 0, 0.35);
     }
     .inner { display: flex; align-items: center; gap: var(--tt-space-5); min-block-size: var(--tt-header-height); }
-    .brand { display: inline-flex; flex: none; }
+    .brand { display: inline-flex; align-items: center; flex: none; min-block-size: 44px; }
     .brand:hover { text-decoration: none; }
 
     .nav { display: flex; gap: var(--tt-space-4); }
