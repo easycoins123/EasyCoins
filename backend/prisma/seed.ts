@@ -452,10 +452,13 @@ async function main(): Promise<void> {
       active: true,
       featured: product.featured,
     };
+    // `active` is live commercial state: the owner's ladder activation retires
+    // the FC26 rows, and a redeploy (the seed runs on every build) must not put
+    // them back on sale. A rerun refreshes copy and prices, never the switch.
     await prisma.product.upsert({
       where: { id: product.id },
       create: productRow,
-      update: productRow,
+      update: { ...productRow, active: undefined },
     });
 
     for (const [index, variant] of product.variants.entries()) {
@@ -474,7 +477,7 @@ async function main(): Promise<void> {
       await prisma.productVariant.upsert({
         where: { id: variantId },
         create: variantRow,
-        update: variantRow,
+        update: { ...variantRow, active: undefined },
       });
 
       // One offer per (variant x platform x region). This is the unit of
@@ -504,7 +507,7 @@ async function main(): Promise<void> {
           await prisma.offer.upsert({
             where: { id: offerId },
             create: offerRow,
-            update: offerRow,
+            update: { ...offerRow, active: undefined },
           });
 
           const inventoryRow = {
