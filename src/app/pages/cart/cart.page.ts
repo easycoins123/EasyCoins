@@ -12,13 +12,16 @@ import { launchBonusOf } from '../../core/commerce';
 import { formatQuantity, itemsLabel } from '../../core/value';
 import { LocalizePipe } from '../../core/i18n';
 import { CartItem, Platform, ProductDetail, ProductType, ProductVariant } from '../../domain';
-import { CartFacade, CatalogFacade, CatalogLookups, PlatformPreferenceService } from '../../state';
+import { CartFacade, CatalogFacade, CatalogLookups, PlatformPreferenceService, StorefrontFacade } from '../../state';
 import {
   BundleLadderComponent, CoinArtComponent,
   EmptyStateComponent, FulfillmentBadgeComponent, IconComponent, MoneyPipe, PlatformBadgeComponent,
   QuantitySelectorComponent, RegionBadgeComponent,
 } from '../../ui';
 import { PlatformPickerComponent } from '../../ui/components/commerce/platform-picker.component';
+import { BenefitsNoteComponent } from '../../ui/components/growth/benefits-note.component';
+import { RewardPickerComponent } from '../../ui/components/growth/reward-picker.component';
+import { GrowthFacade } from '../../state/growth.facade';
 
 /**
  * The cart.
@@ -36,6 +39,7 @@ import { PlatformPickerComponent } from '../../ui/components/commerce/platform-p
     CommonModule, FormsModule, RouterLink, LocalizePipe, MoneyPipe, IconComponent,
     QuantitySelectorComponent, PlatformBadgeComponent, RegionBadgeComponent,
     FulfillmentBadgeComponent, EmptyStateComponent, BundleLadderComponent, CoinArtComponent, PlatformPickerComponent,
+    BenefitsNoteComponent, RewardPickerComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -133,9 +137,19 @@ import { PlatformPickerComponent } from '../../ui/components/commerce/platform-p
             </div>
             <div class="row"><span>סכום ביניים</span><span>{{ cart.totals().subtotal | money }}</span></div>
             <div class="row" *ngIf="cart.totals().discount.amountMinor > 0">
-              <span>הנחה</span><span>−{{ cart.totals().discount | money }}</span>
+              <span>{{ discountLabel() }}</span><span>−{{ cart.totals().discount | money }}</span>
             </div>
             <div class="row total"><span>לתשלום</span><span>{{ cart.totals().total | money }}</span></div>
+            <!-- Which benefit is on this order and which was set aside, in the server's words. -->
+            <tt-benefits-note [benefits]="cart.benefits()"></tt-benefits-note>
+
+            <!-- Earned rewards: one per order, chosen here, priced by the server. -->
+            <tt-reward-picker class="rewards"
+                              [rewards]="growth.redeemable()"
+                              [selectedId]="cart.rewardId()"
+                              [busy]="cart.busy()"
+                              (select)="useReward($event)"
+                              (clear)="cart.clearReward()"></tt-reward-picker>
 
             <details class="coupon-box">
               <summary><tt-icon name="tag" [size]="14"></tt-icon> יש לכם קוד קופון?</summary>
@@ -212,6 +226,7 @@ import { PlatformPickerComponent } from '../../ui/components/commerce/platform-p
     .summary h2 { font-size: var(--tt-text-lg); margin: 0; }
     .row { display: flex; justify-content: space-between; font-size: var(--tt-text-sm); }
     .row.total { font-size: var(--tt-text-lg); font-weight: 700; padding-block-start: var(--tt-space-2); border-block-start: 1px solid var(--tt-border); }
+    .rewards { margin-block-start: var(--tt-space-1); }
     .coupon-box > summary { display: flex; align-items: center; gap: 6px; min-block-size: 40px; cursor: pointer; list-style: none; color: var(--tt-text-muted); font-size: var(--tt-text-sm); font-weight: 600; }
     .coupon-box > summary::-webkit-details-marker { display: none; }
     .coupon-box[open] > summary { color: var(--tt-text); }
@@ -226,6 +241,8 @@ export class CartPage {
   private readonly router = inject(Router);
   private readonly analytics = inject(AnalyticsService);
   private readonly preference = inject(PlatformPreferenceService);
+  private readonly storefront = inject(StorefrontFacade);
+  readonly growth = inject(GrowthFacade);
 
   readonly lookups$ = this.catalog.lookups$;
 
@@ -249,7 +266,10 @@ export class CartPage {
 
   /** The coin product, so a line can say what it delivers and offer its other platforms. */
   private readonly coins = toSignal(
-    this.catalog.productBySlug(STOREFRONT.focusProductSlug).pipe(catchError(() => of(null as ProductDetail | null))),
+    this.storefront.focusProductSlug$.pipe(
+      switchMap((slug) => this.catalog.productBySlug(slug)),
+      catchError(() => of(null as ProductDetail | null)),
+    ),
     { initialValue: null as ProductDetail | null },
   );
 
@@ -257,8 +277,16 @@ export class CartPage {
     (this.coins()?.product.variants ?? []).map((variant) => [variant.id, variant]),
   ));
 
-  /** Coins across every coin line, bonus included; undefined when no line is coins. */
+  /**
+   * Coins across every coin line, launch bonus and applied reward included;
+   * undefined when no line is coins. The server states each line's coins; a
+   * line restored from storage before that existed falls back to the catalog.
+   */
   readonly totalCoins = computed<string | undefined>(() => {
+    const fromServer = this.cart.totalCoins();
+    if (fromServer !== undefined) {
+      return formatQuantity(fromServer);
+    }
     let sum = 0;
     let any = false;
     for (const item of this.cart.items()) {
@@ -268,7 +296,7 @@ export class CartPage {
         sum += (variant.quantityValue + launchBonusOf(variant)) * item.quantity;
       }
     }
-    return any ? formatQuantity(sum) : undefined;
+    return any ? formatQuantity(sum + (this.cart.benefits()?.rewardCoins ?? 0)) : undefined;
   });
 
   readonly countLabel = computed(() => itemsLabel(this.cart.items().length));
@@ -279,8 +307,16 @@ export class CartPage {
     this.analytics.pageView('/cart', 'Cart');
   }
 
-  /** Base plus bonus equals received, for a coin line with a bonus. */
+  /** Base plus bonus equals received, for a coin line with a bonus. Per unit. */
   receipt(item: CartItem): { base: string; bonus: string; total: string } | undefined {
+    if (item.coins !== undefined && item.bonusCoins !== undefined) {
+      if (item.coins <= 0 || item.bonusCoins <= 0) {
+        return undefined;
+      }
+      const base = item.coins / item.quantity;
+      const bonus = item.bonusCoins / item.quantity;
+      return { base: formatQuantity(base), bonus: formatQuantity(bonus), total: formatQuantity(base + bonus) };
+    }
     const variant = this.variants().get(item.variantId);
     const bonus = launchBonusOf(variant);
     if (!variant?.quantityValue || bonus <= 0) {
@@ -318,6 +354,17 @@ export class CartPage {
     }
     this.preference.set(platform.id);
     this.cart.replaceOffer(item.id, offer.id).subscribe();
+  }
+
+  /** What the discount row is, in the customer's words. */
+  discountLabel(): string {
+    const applied = this.cart.benefits()?.applied ?? [];
+    const reward = applied.find((benefit) => benefit.kind === 'REWARD' && benefit.effect.discount.amountMinor > 0);
+    return reward ? `הטבה: ${reward.label.he}` : 'הנחה';
+  }
+
+  useReward(rewardId: string): void {
+    this.cart.applyReward(rewardId).subscribe();
   }
 
   applyCoupon(): void {

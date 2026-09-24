@@ -11,6 +11,11 @@ import { TokenStore } from './auth/token.store';
   template: `
     <header *ngIf="tokens.isSignedIn()">
       <a routerLink="/" class="brand">EASYCOINS · תפעול</a>
+      <nav class="links">
+        <a routerLink="/">תור</a>
+        <a routerLink="/pricing">מחירים</a>
+        <a routerLink="/pricing/codes">קודי יוצרים</a>
+      </nav>
       <button (click)="signOut()">יציאה</button>
     </header>
 
@@ -33,6 +38,9 @@ import { TokenStore } from './auth/token.store';
         color: var(--text);
         font-weight: 600;
       }
+      .links { display: flex; gap: 1rem; margin-inline-start: auto; margin-inline-end: 1rem; }
+      .links a { color: var(--muted); }
+      .links a:hover { color: var(--accent); text-decoration: none; }
       .brand:hover {
         text-decoration: none;
         color: var(--accent);

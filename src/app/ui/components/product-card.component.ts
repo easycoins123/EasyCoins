@@ -164,7 +164,7 @@ export class ProductCardComponent {
 
   /** The FUT coin art belongs to the coin product only; FC Points and the rest keep their own picture. */
   get coinQuantity(): number | undefined {
-    return this.product.slug === STOREFRONT.focusProductSlug ? this.largestQuantity : undefined;
+    return this.product.type === ProductType.GameCurrency ? this.largestQuantity : undefined;
   }
 
   get largestQuantity(): number | undefined {

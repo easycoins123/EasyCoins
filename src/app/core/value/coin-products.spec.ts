@@ -113,3 +113,26 @@ describe('coin products', () => {
     expect(products.every((product) => product.game === 'fc27')).toBe(true);
   });
 });
+
+describe('coin product value labels', () => {
+  const platforms = new Map([
+    ['plat-ps5', { id: 'plat-ps5', kind: 'PLAYSTATION_5', family: 'PLAYSTATION', name: { he: 'פלייסטיישן 5' }, shortName: { he: 'PS5' }, sortOrder: 1 }],
+  ]) as unknown as ReadonlyMap<string, import('../../domain').Platform>;
+  const variant = (id: string, quantityValue: number) => ({ id, productId: 'p', name: { he: id }, sku: id, quantityValue, metadata: {}, sortOrder: 0, active: true });
+  const offer = (variantId: string, amountMinor: number) => ({
+    id: `o-${variantId}`, productId: 'p', variantId, platformId: 'plat-ps5', regionId: 'reg-global',
+    price: { current: { amountMinor, currency: 'ILS' } }, inventory: { status: 'IN_STOCK' }, fulfillmentMethod: 'MANUAL_DELIVERY', checkoutRequirements: [], active: true,
+  });
+  const detail = {
+    product: { id: 'p', gameId: 'g', slug: 'fc27-coins', type: 'GAME_CURRENCY', name: { he: 'x' }, shortDescription: { he: '' }, description: { he: '' }, platformIds: ['plat-ps5'], regionIds: ['reg-global'], images: [], metadata: {}, variants: [variant('v100k', 100_000), variant('v1m', 1_000_000)], fulfillmentMethods: [], tags: [], active: true, featured: true },
+    offers: [offer('v100k', 8_500), offer('v1m', 69_900)],
+  } as unknown as import('../../domain').ProductDetail;
+
+  it('states the price per 100K in agorot, rounded up, and the saving against the smallest bundle', () => {
+    const products = coinProductsFrom(detail, platforms, { game: 'fc27' });
+    expect(products[0].per100KMinor).toBe(8_500);
+    expect(products[1].per100KMinor).toBe(6_990);
+    expect(products[0].savingVsStarterPercent).toBe(0);
+    expect(products[1].savingVsStarterPercent).toBe(17); // (8500 - 6990) / 8500 = 17.7%, floored
+  });
+});

@@ -1,17 +1,19 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { combineLatest, concat, map, of } from 'rxjs';
-import { catchError, shareReplay } from 'rxjs/operators';
+import { catchError, shareReplay, switchMap } from 'rxjs/operators';
 
 import { AnalyticsService } from '../../core/analytics';
 import { STOREFRONT } from '../../core/brand';
 import { isCurated, roleLabel } from '../../core/commerce';
 import { CoinPlan, coinProductsFrom, formatQuantity, withBestValue } from '../../core/value';
 import { LocalizePipe } from '../../core/i18n';
-import { CoinProduct, LocalizedText, Offer, Platform } from '../../domain';
-import { CampaignsFacade, CartFacade, CatalogFacade, PlatformPreferenceService } from '../../state';
+import { CoinProduct, GAME_EDITIONS, LocalizedText, Offer, Platform } from '../../domain';
+import { CampaignsFacade, CartFacade, CatalogFacade, PlatformPreferenceService, StorefrontFacade } from '../../state';
+import { GrowthFacade } from '../../state/growth.facade';
+import { TrustMetricsComponent } from '../../ui/components/growth/trust-metrics.component';
 // Imported by file rather than through the barrel: the barrel re-exports every
 // component in the library, and a chunk that imports it carries the store's
 // filters, search box and product cards to the first screen of the home page.
@@ -27,6 +29,7 @@ import { StadiumComponent } from '../../ui/components/world/stadium.component';
 import { LaunchStripComponent } from '../../ui/components/commerce/launch-strip.component';
 import { RewardsComponent } from '../../ui/components/commerce/rewards.component';
 import { PlatformPickerComponent } from '../../ui/components/commerce/platform-picker.component';
+import { FirstKickStripComponent } from '../../ui/components/commerce/first-kick-strip.component';
 import { ValueCalloutsComponent } from '../../ui/components/commerce/value-callouts.component';
 import { LiveDirective } from '../../ui/live.directive';
 import { RevealDirective } from '../../ui/reveal.directive';
@@ -49,7 +52,7 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
     CommonModule, RouterLink, LocalizePipe,
     HeroComponent, IconComponent, AmountSelectorComponent, EasyCoinsCardComponent, CoinArtComponent,
     ProcessArtComponent, ReviewsSectionComponent, SkeletonGridComponent, LiveDirective, RevealDirective, StadiumComponent,
-    LaunchStripComponent, ValueCalloutsComponent, RewardsComponent, PlatformPickerComponent,
+    LaunchStripComponent, ValueCalloutsComponent, RewardsComponent, PlatformPickerComponent, TrustMetricsComponent, FirstKickStripComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -57,6 +60,8 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
          image paint as soon as the chunk runs, and the numbers fill in. -->
     <ng-container *ngIf="{ vm: vm$ | async } as state">
     <tt-hero [ladder]="state.vm?.ladder ?? null"
+             [editionLabel]="editionYear()"
+             [launch]="storefront.state().launch"
              [platforms]="state.vm?.platforms ?? []"
              [selectedPlatform]="state.vm?.platform?.id ?? ''"
              (platformChange)="choosePlatform($event)"
@@ -66,13 +71,15 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
 
       <!-- Launch value, in one line under the hero. Renders only while the catalog carries a bonus. -->
       <tt-launch-strip [products]="vm.products"></tt-launch-strip>
+      <!-- The launch welcome benefit, while the server says it is live. -->
+      <tt-first-kick-strip [launch]="storefront.state().launch"></tt-first-kick-strip>
 
       <!-- The packages: the five leading bundles, roles on the chips, best value from the numbers. -->
       <section class="packages tt-section tt-section--tight" id="bundles">
         <div class="tt-container">
           <div class="chapter" ttReveal>
             <h2><span class="chapter__rule"></span>בחרו את החבילה שלכם<span class="chapter__rule"></span></h2>
-            <p class="tt-muted">מחיר סופי לכל חבילה, בונוס ההשקה כלול.<ng-container *ngIf="vm.samePrice"> אותו מחיר בכל הפלטפורמות.</ng-container></p>
+            <p class="tt-muted">מחיר סופי לכל חבילה<ng-container *ngIf="vm.hasBonus">, בונוס ההשקה כלול</ng-container>. המחיר לקוין יורד ככל שעולים בכמות.<ng-container *ngIf="vm.samePrice"> אותו מחיר בכל הפלטפורמות.</ng-container></p>
           </div>
 
           <!-- The platform the shelf is priced for. The same choice as the hero's,
@@ -167,15 +174,18 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
         <div class="tt-container">
           <div class="chapter chapter--start" ttReveal>
             <h2>סיבות לחזור</h2>
-            <p class="tt-muted">מה שפעיל מסומן פעיל. מה שבהכנה כתוב שהוא בהכנה. בלי שעונים מזויפים.</p>
+            <p class="tt-muted">EASYDROP אחרי כל הזמנה ששולמה, EASYCLUB שצובר על כל שקל, ודרופים עם שעון אמיתי בלבד. מה שפעיל מסומן פעיל.</p>
           </div>
           <tt-rewards [campaigns]="campaigns$ | async" ttReveal="1"></tt-rewards>
         </div>
       </section>
 
-      <!-- The trust rail: five things the shop keeps. -->
+      <!-- The trust rail: five things the shop keeps. Above it, the figures the
+           shop has actually earned, once the server publishes them; nothing
+           renders until it does. -->
       <div class="rail-band rail-band--late">
         <div class="tt-container">
+          <tt-trust-metrics [snapshot]="trust$ | async"></tt-trust-metrics>
           <ul class="rail" ttReveal>
             <li class="rail__item" *ngFor="let item of trust">
               <span class="rail__glyph" [class.rail__glyph--gold]="item.gold"><tt-icon [name]="item.icon" [size]="20"></tt-icon></span>
@@ -236,7 +246,7 @@ interface Reason { readonly icon: IconName; readonly title: string; readonly not
             <a class="tt-btn tt-btn--buy tt-btn--lg" routerLink="/store"><tt-icon name="cart" [size]="18"></tt-icon> לקניית קוינס</a>
             <a class="tt-btn tt-btn--ghost tt-btn--lg" routerLink="/faq">שאלות נפוצות</a>
           </div>
-          <p class="close__fine"><tt-icon name="lock" [size]="13"></tt-icon> תשלום מאובטח · מחיר סופי · בונוס ההשקה בכל הזמנה</p>
+          <p class="close__fine"><tt-icon name="lock" [size]="13"></tt-icon> תשלום מאובטח · מחיר סופי · בונוס ההשקה בכל הזמנה · EASYDROP אחרי כל הזמנה ששולמה</p>
         </div>
         <div class="close__art" aria-hidden="true"><tt-coin-art variant="bundle" artKey="fut-podium" tier="legend"></tt-coin-art></div>
       </div>
@@ -360,9 +370,15 @@ export class HomePage {
   private readonly analytics = inject(AnalyticsService);
   private readonly campaignsFacade = inject(CampaignsFacade);
   private readonly preference = inject(PlatformPreferenceService);
+  readonly storefront = inject(StorefrontFacade);
+  private readonly growth = inject(GrowthFacade);
+
+  /** "27", for the hero kicker; the edition the storefront sells right now. */
+  readonly editionYear = computed(() => String(GAME_EDITIONS[this.storefront.state().activeEdition].year));
 
   readonly gameName = STOREFRONT.focusGameName;
   readonly campaigns$ = this.campaignsFacade.campaigns$;
+  readonly trust$ = this.growth.trust$;
 
   /** Only what the shop actually keeps. Five, so the rail reads at a glance. */
   readonly trust: readonly TrustItem[] = [
@@ -384,7 +400,7 @@ export class HomePage {
 
   readonly vm$ = combineLatest([
     this.catalog.lookups$,
-    this.catalog.productBySlug(STOREFRONT.focusProductSlug).pipe(catchError(() => of(null))),
+    this.storefront.focusProductSlug$.pipe(switchMap((slug) => this.catalog.productBySlug(slug)), catchError(() => of(null))),
     toObservable(this.preference.platformId),
   ]).pipe(
     map(([lookups, ladder]) => {
@@ -396,9 +412,10 @@ export class HomePage {
       // Priced for the platform the customer chose; the first offered until they do.
       const platform = this.preference.resolve(platforms);
       const products: readonly CoinProduct[] = ladder
-        ? coinProductsFrom(ladder, lookups.platforms, { game: STOREFRONT.focusGameEdition, platformId: platform?.id })
+        ? coinProductsFrom(ladder, lookups.platforms, { game: this.storefront.state().activeEdition, platformId: platform?.id })
         : [];
       const samePrice = ladder ? samePriceOnEveryPlatform(ladder) : false;
+      const hasBonus = products.some((product) => product.bonus > 0);
       // The custom-amount plan is built from the chosen platform's offers only,
       // so a plan never mixes consoles or lands on one the customer did not pick.
       const plannable = ladder && platform
@@ -407,7 +424,7 @@ export class HomePage {
       const method = ladder?.offers[0]?.fulfillmentMethod;
       const delivery: LocalizedText | undefined = method ? lookups.fulfillment.get(method)?.description : undefined;
       const curated = withBestValue(products.filter((product) => isCurated(product.amount)));
-      return { lookups, ladder, plannable, platforms, platform, products, curated, delivery, samePrice };
+      return { lookups, ladder, plannable, platforms, platform, products, curated, delivery, samePrice, hasBonus };
     }),
     shareReplay({ bufferSize: 1, refCount: true }),
   );

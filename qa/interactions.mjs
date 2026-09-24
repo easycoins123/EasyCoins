@@ -24,7 +24,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { startServer } from './serve.mjs';
 
 const PORT = 4398;
-const ROUTES = ['/', '/store', '/products/ea-fc-ultimate-team-coins', '/products/ea-fc-points', '/cart', '/support', '/faq', '/deals', '/account'];
+const ROUTES = ['/', '/store', '/products/fc27-coins', '/products/ea-fc-points', '/cart', '/support', '/faq', '/deals', '/account'];
 const WIDTHS = [390, 1440];
 const CONTROL = 'a,button,[role="button"],[role="radio"],[role="tab"],[role="checkbox"],[role="switch"],[role="menuitem"],[role="option"],input,select,textarea,summary,[tabindex]:not([tabindex="-1"])';
 /** Inline links inside running text are allowed under the floor; nothing else is. */

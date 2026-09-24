@@ -4,3 +4,6 @@ export * from './mock-backend.service';
 export * from './mock-catalog-api.service';
 export * from './mock-commerce-api.service';
 export * from './mock-content-api.service';
+export * from './mock-growth-api.service';
+export * from './mock-storefront-api.service';
+export * from './growth.seed';

@@ -6,6 +6,8 @@ import { generateId } from '../../common/crypto/tokens';
 import { AppLogger } from '../../common/logging/app-logger.service';
 import { PrismaService } from '../../database/prisma.service';
 import { AutoFulfillmentService } from '../fulfillment/auto-fulfillment.service';
+import { GrowthEventsService } from '../growth/growth-events.service';
+import { RewardsService } from '../growth/rewards.service';
 import { InventoryService } from '../orders/inventory.service';
 import { NotificationService } from '../notifications/notification.service';
 import { ProviderPaymentStatus } from './providers/payment-provider';
@@ -55,6 +57,8 @@ export class PaymentStateService {
     private readonly inventory: InventoryService,
     private readonly notifications: NotificationService,
     private readonly autoFulfillment: AutoFulfillmentService,
+    private readonly rewards: RewardsService,
+    private readonly growth: GrowthEventsService,
     private readonly logger: AppLogger,
   ) {}
 
@@ -171,6 +175,8 @@ export class PaymentStateService {
           },
         },
       });
+      // The order will be refunded, so a reward it was holding goes back.
+      await this.rewards.releaseForOrder(tx, orderId);
 
       const order = await tx.order.findUniqueOrThrow({ where: { id: orderId } });
       this.logger.warn('payment succeeded after the order was already closed', {
@@ -191,10 +197,12 @@ export class PaymentStateService {
     // Same transaction as the order status, so paid and committed are one fact.
     await this.inventory.commit(tx, orderId);
     await this.openFulfillments(tx, orderId);
+    // A reward the order was holding is spent by the same fact.
+    await this.rewards.redeemForOrder(tx, orderId);
 
     await tx.order.update({
       where: { id: orderId },
-      data: { status: 'FULFILLMENT_PENDING' },
+      data: { status: 'FULFILLMENT_PENDING', paidAt: new Date() },
     });
 
     await tx.checkoutSession.updateMany({
@@ -264,6 +272,7 @@ export class PaymentStateService {
 
     if (claimedOrder.count === 1) {
       await this.inventory.release(tx, orderId);
+      await this.growth.onOrderClosed(tx, orderId);
     }
 
     const order = await tx.order.findUniqueOrThrow({ where: { id: orderId } });
@@ -365,6 +374,7 @@ export class PaymentStateService {
 
         if (cancelled.count === 1) {
           await this.inventory.release(tx, intent.order_id);
+          await this.growth.onOrderClosed(tx, intent.order_id);
           ordersCancelled += 1;
         }
       });
@@ -401,6 +411,18 @@ export class PaymentStateService {
         await this.autoFulfillment.planOrder(outcome.orderId);
       } catch (error) {
         this.logger.error('automatic fulfillment planning failed', {
+          orderId: outcome.orderId,
+          reason: error instanceof Error ? error.message : 'unknown',
+        });
+      }
+
+      // What a paid order earns: the EasyDrop, a founders seat, a streak step,
+      // a referral, a campaign reward. After the commit, never inside it, and
+      // every step idempotent, so a replayed event earns nothing twice.
+      try {
+        await this.growth.onOrderPaid(outcome.orderId);
+      } catch (error) {
+        this.logger.error('growth programmes failed after payment', {
           orderId: outcome.orderId,
           reason: error instanceof Error ? error.message : 'unknown',
         });

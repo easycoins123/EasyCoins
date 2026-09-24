@@ -47,6 +47,10 @@ export interface CoinProduct {
   readonly totalCoins: number;
   /** Price per million coins received, bonus included. */
   readonly effectivePerMillionIls?: number;
+  /** Price per 100K coins received, in minor units, rounded up: what the card states. */
+  readonly per100KMinor?: number;
+  /** How much cheaper per coin than the smallest bundle on the same shelf, whole percent; zero for the smallest. */
+  readonly savingVsStarterPercent: number;
   /** The bundle's place on the shelf, in shelf language. */
   readonly role?: CoinRole;
   readonly tier: CoinTier;

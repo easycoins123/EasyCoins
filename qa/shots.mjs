@@ -18,7 +18,7 @@ const WIDTHS = [
 const PAGES = [
   { name: 'home', path: '/' },
   { name: 'store', path: '/store' },
-  { name: 'product', path: '/products/ea-fc-ultimate-team-coins' },
+  { name: 'product', path: '/products/fc27-coins' },
   { name: 'deals', path: '/deals' },
   { name: 'support', path: '/support' },
 ];

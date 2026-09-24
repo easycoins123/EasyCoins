@@ -11,7 +11,7 @@ const lookups = {
   fulfillment: new Map(),
 } as unknown as CatalogLookups;
 
-const product = PRODUCTS.find((candidate) => candidate.slug === 'ea-fc-ultimate-team-coins')!;
+const product = PRODUCTS.find((candidate) => candidate.slug === 'fc27-coins')!;
 const coins = { product, offers: OFFERS.filter((offer) => offer.productId === product.id) };
 
 describe('store helpers', () => {

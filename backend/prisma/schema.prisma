@@ -442,6 +442,9 @@ model Customer {
   orders           Order[]
   reviews          Review[]
   supportTickets   SupportTicket[]
+  rewards          CustomerReward[]
+  founderSeat      FounderSeat?
+  referralCode     ReferralCode?
 
   @@map("customers")
 }
@@ -525,6 +528,7 @@ model CustomerSession {
   carts            Cart[]
   checkoutSessions CheckoutSession[]
   orders           Order[]
+  rewards          CustomerReward[]
 
   @@index([customerId, revokedAt])
   @@map("customer_sessions")
@@ -586,6 +590,11 @@ model CheckoutSession {
   discountMinor        Int                   @default(0) @map("discount_minor")
   totalMinor           Int                   @map("total_minor")
   couponCode           String?               @map("coupon_code")
+  /// The earned reward the customer chose to use on this order, if any. Its
+  /// effect is frozen in `benefitsSnapshot` with the prices, for the same
+  /// reason the prices are: what was quoted is what is honoured.
+  rewardId             String?               @map("reward_id")
+  benefitsSnapshot     Json?                 @map("benefits_snapshot")
   contactValues        Json?                 @map("contact_values")
   expiresAt            DateTime              @map("expires_at")
   createdAt            DateTime              @default(now()) @map("created_at")
@@ -650,6 +659,9 @@ model Order {
   couponCode        String?     @map("coupon_code")
   statusMessage     Json?       @map("status_message")
   metadata          Json        @default("{}")
+  /// When payment settled. Null until it does; the trust metrics measure
+  /// fulfillment time from here rather than from when the order was opened.
+  paidAt            DateTime?   @map("paid_at")
   createdAt         DateTime    @default(now()) @map("created_at")
   updatedAt         DateTime    @updatedAt @map("updated_at")
 
@@ -662,6 +674,9 @@ model Order {
   paymentIntents  PaymentIntent[]
   reservations    InventoryReservation[]
   redemptions     CouponRedemption[]
+  rewardsIssued   CustomerReward[]       @relation("RewardSourceOrder")
+  rewardsRedeemed CustomerReward[]       @relation("RewardRedeemedOrder")
+  easyDrop        EasyDrop?
 
   @@index([customerId, createdAt])
   @@index([sessionId, createdAt])
@@ -863,6 +878,9 @@ model Review {
   id                String   @id
   productId         String?  @map("product_id")
   customerId        String?  @map("customer_id")
+  /// The paid order behind a verified review. One review per order, and a
+  /// review claims `verifiedPurchase` only when this is set.
+  orderId           String?  @unique @map("order_id")
   authorDisplayName String   @map("author_display_name")
   rating            Int
   title             String?
@@ -956,4 +974,249 @@ model RateLimitCounter {
 
   @@index([windowEnds])
   @@map("rate_limit_counters")
+}
+
+// ---------------------------------------------------------------------------
+// Growth: the reward ledger, EasyDrop, EasyClub, referral, campaigns
+//
+// Every row here describes something a customer earned from a real paid order,
+// or configuration an operator wrote. Nothing is inferred on the client: the
+// storefront reads these and renders them. Points and tiers are NOT stored;
+// they are computed from paid orders and this ledger on every read, so a
+// refund removes them without a second bookkeeping system to keep in step.
+// ---------------------------------------------------------------------------
+
+/// What a reward does. The `value` on a reward is read according to its kind:
+/// coins, agorot, points, a multiplier in hundredths (200 = x2), or tiers.
+enum RewardKind {
+  NEXT_ORDER_COINS
+  NEXT_ORDER_CREDIT
+  POINTS_BONUS
+  POINTS_MULTIPLIER
+  TIER_BOOST
+  OFFER_UNLOCK
+  EXTRA_COINS
+}
+
+enum RewardSource {
+  EASYDROP
+  EASYBACK
+  REFERRAL_REFERRER
+  REFERRAL_FRIEND
+  STREAK
+  FOUNDER
+  CAMPAIGN
+}
+
+/// AVAILABLE -> RESERVED (an order is being placed with it) -> REDEEMED (that
+/// order was paid). RESERVED goes back to AVAILABLE if the order is cancelled
+/// or expires. EXPIRED and REVOKED are terminal.
+enum RewardStatus {
+  AVAILABLE
+  RESERVED
+  REDEEMED
+  EXPIRED
+  REVOKED
+}
+
+enum EasyDropTier {
+  DROP
+  DROP_PLUS
+  VIP
+}
+
+enum EasyDropStatus {
+  ISSUED
+  REVEALED
+  VOID
+}
+
+enum CampaignKind {
+  WEEKEND_DROP
+  MATCHDAY_DROP
+  PAYDAY_DROP
+  PROMO_DROP
+  COMMUNITY_DROP
+  VIP_DROP
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  ENDED
+}
+
+enum ReferralStatus {
+  PENDING
+  QUALIFIED
+  REWARDED
+  REJECTED
+}
+
+/// Operator-editable configuration for every growth programme, keyed by
+/// setting name with a JSON value. Code carries conservative defaults for
+/// each key; a row here overrides one. See `modules/growth/growth-config.ts`.
+model GrowthSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedBy String?  @map("updated_by")
+
+  @@map("growth_settings")
+}
+
+/// The reward ledger. One row per reward a customer holds, held or spent.
+///
+/// Ownership mirrors orders: a signed-in customer's rewards carry the
+/// customer id; a guest's carry the browser session that earned them and move
+/// to the customer when they sign in. A reward is issued at most once per
+/// source and order, which is what makes a replayed webhook or a double
+/// reveal unable to mint a second one.
+model CustomerReward {
+  id              String       @id
+  customerId      String?      @map("customer_id")
+  sessionId       String?      @map("session_id")
+  source          RewardSource
+  kind            RewardKind
+  value           Int
+  status          RewardStatus @default(AVAILABLE)
+  title           Json
+  sourceOrderId   String?      @map("source_order_id")
+  redeemedOrderId String?      @map("redeemed_order_id")
+  /// Smallest order subtotal, in minor units, the reward may be used on.
+  minOrderMinor   Int?         @map("min_order_minor")
+  expiresAt       DateTime?    @map("expires_at")
+  metadata        Json         @default("{}")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  customer      Customer?        @relation(fields: [customerId], references: [id])
+  session       CustomerSession? @relation(fields: [sessionId], references: [id])
+  sourceOrder   Order?           @relation("RewardSourceOrder", fields: [sourceOrderId], references: [id])
+  redeemedOrder Order?           @relation("RewardRedeemedOrder", fields: [redeemedOrderId], references: [id])
+  easyDrop      EasyDrop?
+
+  @@unique([source, sourceOrderId], name: "reward_once_per_source_order")
+  @@index([customerId, status])
+  @@index([sessionId, status])
+  @@map("customer_rewards")
+}
+
+/// One EasyDrop per paid order. The three cards are drawn once, at issue, and
+/// stored; the reveal only records which card was picked. A refresh therefore
+/// shows the same reward, and a second reveal is refused by the row itself.
+model EasyDrop {
+  id          String         @id
+  orderId     String         @unique @map("order_id")
+  customerId  String?        @map("customer_id")
+  sessionId   String?        @map("session_id")
+  tier        EasyDropTier
+  status      EasyDropStatus @default(ISSUED)
+  cards       Json
+  pickedIndex Int?           @map("picked_index")
+  rewardId    String?        @unique @map("reward_id")
+  issuedAt    DateTime       @default(now()) @map("issued_at")
+  revealedAt  DateTime?      @map("revealed_at")
+
+  order  Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reward CustomerReward? @relation(fields: [rewardId], references: [id])
+
+  @@index([customerId])
+  @@index([sessionId])
+  @@map("easy_drops")
+}
+
+/// The founders programme: the first N customers with a paid order, seated in
+/// the order they paid. A seat is permanent and numbered; the count of seats
+/// is the only source for "spots remaining".
+model FounderSeat {
+  customerId String   @id @map("customer_id")
+  seatNumber Int      @unique @map("seat_number")
+  orderId    String   @map("order_id")
+  grantedAt  DateTime @default(now()) @map("granted_at")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("founder_seats")
+}
+
+/// A referral identity per customer. Created on first request, never rotated.
+model ReferralCode {
+  customerId String   @id @map("customer_id")
+  code       String   @unique
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  customer     Customer              @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  attributions ReferralAttribution[]
+
+  @@map("referral_codes")
+}
+
+/// Who arrived through whose link. Attached to the visitor's session (and
+/// customer once known); qualified only by that visitor's first paid order.
+model ReferralAttribution {
+  id                 String         @id
+  code               String
+  referrerCustomerId String         @map("referrer_customer_id")
+  referredCustomerId String?        @unique @map("referred_customer_id")
+  referredSessionId  String?        @map("referred_session_id")
+  status             ReferralStatus @default(PENDING)
+  orderId            String?        @unique @map("order_id")
+  reason             String?
+  requestIp          String?        @map("request_ip")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+
+  referral ReferralCode @relation(fields: [code], references: [code])
+
+  @@index([referredSessionId])
+  @@index([referrerCustomerId, status])
+  @@map("referral_attributions")
+}
+
+/// A drop in the Drop Zone. Its effective state is computed from `status` and
+/// the dates: a scheduled drop becomes active when `startsAt` passes and ends
+/// when `endsAt` does. No countdown exists without a real `endsAt`.
+model Campaign {
+  id           String         @id
+  slug         String         @unique
+  kind         CampaignKind
+  status       CampaignStatus @default(DRAFT)
+  title        Json
+  lede         Json
+  points       Json           @default("[]")
+  startsAt     DateTime?      @map("starts_at")
+  endsAt       DateTime?      @map("ends_at")
+  eligibility  Json           @default("{}")
+  reward       Json?
+  capTotal     Int?           @map("cap_total")
+  claimedCount Int            @default(0) @map("claimed_count")
+  ctaLabel     Json?          @map("cta_label")
+  ctaLink      String?        @map("cta_link")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  claims CampaignClaim[]
+
+  @@index([status, startsAt])
+  @@map("campaigns")
+}
+
+/// One claim per campaign and order; the cap is enforced by a conditional
+/// increment on the campaign row.
+model CampaignClaim {
+  id         String   @id
+  campaignId String   @map("campaign_id")
+  customerId String?  @map("customer_id")
+  sessionId  String?  @map("session_id")
+  orderId    String   @map("order_id")
+  rewardId   String?  @map("reward_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, orderId], name: "campaign_once_per_order")
+  @@index([campaignId, customerId])
+  @@map("campaign_claims")
 }

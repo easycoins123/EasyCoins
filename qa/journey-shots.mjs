@@ -56,13 +56,13 @@ await go('/'); await shot('home');
 await go('/store'); await shot('store');
 await go('/store?search=zzzznothing'); await shot('store-empty');
 await go('/games'); await shot('games');
-await go('/products/ea-fc-ultimate-team-coins'); await shot('product');
+await go('/products/fc27-coins'); await shot('product');
 
 // --- Empty cart before anything is added ------------------------------------
 await go('/cart'); await shot('cart-empty');
 
 // --- Buy -------------------------------------------------------------------
-await go('/products/ea-fc-ultimate-team-coins');
+await go('/products/fc27-coins');
 await page.locator('button', { hasText: 'הוספה לעגלה' }).first().click();
 await page.waitForTimeout(900);
 await go('/cart'); await shot('cart-filled');

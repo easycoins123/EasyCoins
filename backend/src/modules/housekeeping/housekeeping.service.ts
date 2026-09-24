@@ -6,6 +6,8 @@ import { RateLimitService } from '../../common/rate-limit/rate-limit.service';
 import { APP_CONFIG } from '../../config/config.module';
 import { AppConfig } from '../../config/environment';
 import { PrismaService } from '../../database/prisma.service';
+import { CustomCoinsService } from '../growth/custom-coins.service';
+import { RewardsService } from '../growth/rewards.service';
 import { InventoryService } from '../orders/inventory.service';
 import { PaymentStateService } from '../payments/payment-state.service';
 
@@ -19,6 +21,10 @@ export interface SweepResult {
   readonly checkoutsExpired: number;
   readonly idempotencyKeysPruned: number;
   readonly rateLimitBucketsPruned: number;
+  readonly rewardsExpired: number;
+  readonly rewardsRevoked: number;
+  readonly rewardsReleased: number;
+  readonly customOffersRetired: number;
 }
 
 /**
@@ -46,6 +52,8 @@ export class HousekeepingService implements OnModuleInit, OnApplicationShutdown 
     private readonly payments: PaymentStateService,
     private readonly idempotency: IdempotencyService,
     private readonly rateLimit: RateLimitService,
+    private readonly rewards: RewardsService,
+    private readonly customCoins: CustomCoinsService,
     private readonly logger: AppLogger,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
@@ -126,6 +134,12 @@ export class HousekeepingService implements OnModuleInit, OnApplicationShutdown 
     const idempotencyKeysPruned = await this.idempotency.prune();
     const rateLimitBucketsPruned = await this.rateLimit.prune();
 
+    // The reward ledger against the orders behind it: expiries, rewards from
+    // orders that were refunded, holds on orders that never got paid. Then the
+    // custom coin offers nobody used.
+    const ledger = await this.rewards.reconcile(now);
+    const customOffersRetired = await this.customCoins.pruneStale(now);
+
     const result: SweepResult = {
       reservationsReleased,
       paymentsExpired: expiry.intents,
@@ -133,10 +147,15 @@ export class HousekeepingService implements OnModuleInit, OnApplicationShutdown 
       checkoutsExpired: checkouts.count,
       idempotencyKeysPruned,
       rateLimitBucketsPruned,
+      rewardsExpired: ledger.expired,
+      rewardsRevoked: ledger.revoked,
+      rewardsReleased: ledger.released,
+      customOffersRetired,
     };
 
     const touched =
-      reservationsReleased + expiry.intents + checkouts.count + idempotencyKeysPruned;
+      reservationsReleased + expiry.intents + checkouts.count + idempotencyKeysPruned
+      + ledger.expired + ledger.revoked + ledger.released + customOffersRetired;
     if (touched > 0) {
       this.logger.info('housekeeping sweep', { ...result });
     }

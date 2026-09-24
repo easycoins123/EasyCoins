@@ -3,9 +3,25 @@ import { Observable, of, throwError } from 'rxjs';
 import { delay } from 'rxjs/operators';
 
 import {
-  AppError, CheckoutSession, FulfillmentStatus, Offer, Order, OrderStatus, PaymentIntent,
-  SupportTicket, localized, notFoundError,
+  AppError, CheckoutSession, EasyDropTier, FulfillmentStatus, LocalizedText, Offer, Order, OrderStatus,
+  PaymentIntent, ProductVariant, Reward, SupportTicket, localized, notFoundError,
 } from '../../domain';
+import type { MockRewardTemplate } from './growth.seed';
+import { OFFERS, PRODUCTS } from './catalog.seed';
+import type { Product } from '../../domain';
+
+/** An EasyDrop as the mock keeps it: the drawn cards stay server-side until revealed. */
+export interface MockDrop {
+  readonly orderId: string;
+  readonly tier: EasyDropTier;
+  readonly tierName: LocalizedText;
+  readonly status: 'ISSUED' | 'REVEALED';
+  readonly cards: readonly MockRewardTemplate[];
+  readonly pickedIndex?: number;
+  readonly rewardId?: string;
+  readonly issuedAt: string;
+  readonly revealedAt?: string;
+}
 
 /**
  * In-memory stand-in for the future backend.
@@ -35,8 +51,34 @@ export class MockBackendService {
    */
   readonly supportTickets = new Map<string, SupportTicket>();
 
+  // --- growth: the reward ledger and what feeds it -------------------------
+  // Single-owner, because the mock has one visitor. The real server scopes
+  // every one of these by customer or session.
+  readonly rewards = new Map<string, Reward>();
+  readonly drops = new Map<string, MockDrop>();
+  readonly customOffers = new Map<string, Offer>();
+  readonly customVariants = new Map<string, ProductVariant>();
+  readonly founderSeats = new Map<string, number>();
+  readonly reviewedOrders = new Set<string>();
+  referral: { readonly code: string; readonly attachedAt: string; readonly status: 'PENDING' | 'REWARDED' | 'REJECTED' } | null = null;
+  /** Who is signed in, as the mock customer service reports it. */
+  currentCustomerId: string | null = null;
+
   private sequence = 0;
   private readonly fulfillmentTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  /** An offer from the seed catalog or one minted for a custom amount. */
+  findOffer(offerId: string): Offer | undefined {
+    return this.customOffers.get(offerId) ?? OFFERS.find((offer) => offer.id === offerId);
+  }
+
+  findProduct(productId: string): Product | undefined {
+    return PRODUCTS.find((product) => product.id === productId);
+  }
+
+  findVariant(variantId: string): ProductVariant | undefined {
+    return this.customVariants.get(variantId) ?? PRODUCTS.flatMap((product) => product.variants).find((variant) => variant.id === variantId);
+  }
 
   /** Simulated network latency so loading and skeleton states are exercised. */
   respond<T>(value: T, latencyMs = 220): Observable<T> {

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 import { LocaleService } from './core/i18n';
+import { SeoService } from './core/seo/seo.service';
 // Imported by file rather than through the barrel. The shell is eager, and a
 // barrel import pulls every component the barrel re-exports into the initial
 // bundle with it, including the ones only a lazy route ever renders.
@@ -46,10 +47,13 @@ import { CartDockComponent } from './ui/components/cart-dock.component';
 })
 export class AppComponent {
   private readonly locale = inject(LocaleService);
+  private readonly seo = inject(SeoService);
 
   constructor() {
     // Direction is derived from the active locale rather than assumed, so an
     // English build flips to LTR without touching a single stylesheet.
     this.locale.setLocale(this.locale.locale());
+    // Titles, descriptions and structured data follow the edition on sale.
+    this.seo.start();
   }
 }

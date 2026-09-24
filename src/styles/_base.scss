@@ -353,6 +353,11 @@ img { max-width: 100%; display: block; }
 .tt-btn--block { inline-size: 100%; }
 .tt-btn--sm { padding: 0.4rem 0.85rem; font-size: var(--tt-text-sm); }
 
+/* A small pill is still a finger target where there is no mouse. */
+@media (pointer: coarse), (max-width: 640px) {
+  .tt-btn--sm { min-block-size: 44px; }
+}
+
 // --- Badges ------------------------------------------------------------------
 
 .tt-badge {

@@ -10,7 +10,9 @@ import { AuthMethods, CustomerApiService } from '../../data/api';
 import { localized, toAppError } from '../../domain';
 import { CampaignsFacade } from '../../state/campaigns.facade';
 import { AuthFacade } from '../../state/customer.facade';
+import { GrowthFacade } from '../../state/growth.facade';
 import { CoinArtComponent } from '../../ui/components/cards/coin-art.component';
+import { ClubProgressComponent } from '../../ui/components/growth/club-progress.component';
 import { IconComponent } from '../../ui/components/icon.component';
 
 type Mode = 'signIn' | 'register' | 'forgot';
@@ -44,7 +46,7 @@ function safeReturnPath(value: string | null): string | null {
 @Component({
   selector: 'tt-account-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, IconComponent, CoinArtComponent],
+  imports: [CommonModule, FormsModule, RouterLink, IconComponent, CoinArtComponent, ClubProgressComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="auth" [ngSwitch]="auth.status()">
@@ -170,8 +172,8 @@ function safeReturnPath(value: string | null): string | null {
           <h2>ההזמנות שלכם, במקום אחד.</h2>
           <ul class="brand__points">
             <li><tt-icon name="delivery" [size]="16"></tt-icon><span><strong>מעקב מכל מכשיר</strong><span>סטטוס כל הזמנה, מהתשלום ועד האספקה.</span></span></li>
-            <li><tt-icon name="coins" [size]="16"></tt-icon><span><strong>הבונוס רשום בהזמנה</strong><span>בונוס ההשקה מופיע על כל שורה, לא צריך לזכור אותו.</span></span></li>
-            <li><tt-icon name="star" [size]="16"></tt-icon><span><strong>הטבות לחוזרים</strong><span>הצעות לחשבון שכבר הזמין, וחבר מביא חבר כשייפתח.</span></span></li>
+            <li><tt-icon name="gift" [size]="16"></tt-icon><span><strong>EASYDROP נשמר לחשבון</strong><span>ההטבה שפתחתם אחרי התשלום מחכה כאן להזמנה הבאה, מכל מכשיר.</span></span></li>
+            <li><tt-icon name="crown" [size]="16"></tt-icon><span><strong>EASYCLUB</strong><span>נקודות על כל שקל ששולם, דרגות, רצף הזמנות וקישור חבר-מביא-חבר.</span></span></li>
             <li><tt-icon name="headset" [size]="16"></tt-icon><span><strong>תמיכה בעברית</strong><span>שאלה על הזמנה? עונים במייל, עם מספר ההזמנה ביד.</span></span></li>
           </ul>
         </aside>
@@ -188,7 +190,22 @@ function safeReturnPath(value: string | null): string | null {
           </div>
         </header>
 
+        <!-- EASYCLUB, in short: tier, points, the road ahead. The full page has the rest. -->
+        <section class="tt-card tt-card--pad club" *ngIf="club$ | async as club">
+          <tt-club-progress [club]="club"></tt-club-progress>
+          <div class="club__foot">
+            <span class="tt-faint" *ngIf="club.rewards.available.length > 0">{{ club.rewards.available.length === 1 ? 'הטבה אחת זמינה' : club.rewards.available.length + ' הטבות זמינות' }}</span>
+            <span class="tt-faint" *ngIf="club.rewards.available.length === 0">{{ club.orders.count === 0 ? 'ההזמנה הראשונה ששולמה פותחת EASYDROP' : 'ה־EASYDROP הבא אחרי ההזמנה הבאה' }}</span>
+            <a class="tt-btn tt-btn--buy tt-btn--sm" routerLink="/account/club"><tt-icon name="crown" [size]="14"></tt-icon> ל־EASYCLUB</a>
+          </div>
+        </section>
+
         <nav class="tiles" aria-label="החשבון שלי">
+          <a class="tile" routerLink="/account/club">
+            <tt-icon name="crown" [size]="20"></tt-icon>
+            <span><strong>EASYCLUB</strong><span class="tt-faint">הטבות, נקודות, דרגות, חבר מביא חבר</span></span>
+            <tt-icon name="chevron" [size]="16" dir="auto"></tt-icon>
+          </a>
           <a class="tile" routerLink="/account/orders">
             <tt-icon name="package" [size]="20"></tt-icon>
             <span><strong>ההזמנות שלי</strong><span class="tt-faint">כל הזמנה, הבונוס שלה והמצב שלה</span></span>
@@ -216,23 +233,18 @@ function safeReturnPath(value: string | null): string | null {
           </a>
         </nav>
 
-        <!-- Friend brings friend, in its real state: designed, not yet open. -->
+        <!-- Friend brings friend lives in EASYCLUB with the customer's real link. -->
         <section class="tt-card tt-card--pad referral" *ngIf="referral$ | async as referral">
           <header class="referral__head">
-            <span class="referral__glyph" aria-hidden="true"><tt-icon name="star" [size]="20"></tt-icon></span>
+            <span class="referral__glyph" aria-hidden="true"><tt-icon name="market" [size]="20"></tt-icon></span>
             <div>
               <p class="tt-eyebrow">חבר מביא חבר</p>
               <h2>{{ referral.title }}</h2>
             </div>
-            <span class="status status--soon">{{ referral.statusLabel }}</span>
+            <span class="status" [class.status--live]="referral.status === 'active'" [class.status--soon]="referral.status !== 'active'">{{ referral.statusLabel }}</span>
           </header>
           <p class="tt-muted small">{{ referral.lede }}</p>
-          <ol class="steps">
-            <li><span class="steps__n">1</span><span>תקבלו קישור אישי מהחשבון הזה.</span></li>
-            <li><span class="steps__n">2</span><span>חבר שנכנס דרכו מקבל הטבה על ההזמנה הראשונה שלו.</span></li>
-            <li><span class="steps__n">3</span><span>אחרי שההזמנה שלו שולמה ואושרה, התגמול שלכם נרשם כאן.</span></li>
-          </ol>
-          <p class="tt-faint small">התגמול נרשם בשרת רק אחרי תשלום שאושר, אז אי אפשר לזייף אותו מהדפדפן. נעדכן כאן כשהתוכנית נפתחת.</p>
+          <a class="tt-btn tt-btn--ghost tt-btn--sm" routerLink="/account/club">{{ referral.status === 'active' ? 'לקישור האישי שלכם' : 'ל־EASYCLUB' }}</a>
         </section>
 
         <section class="tt-card tt-card--pad">
@@ -341,10 +353,11 @@ function safeReturnPath(value: string | null): string | null {
     .referral__head h2 { margin: 2px 0 0; font-size: var(--tt-text-xl); }
     .referral__glyph { display: grid; place-items: center; flex: none; inline-size: 44px; block-size: 44px; border-radius: var(--tt-radius-md); border: 1px solid var(--tt-gold-600); background: var(--tt-surface-2); color: var(--tt-gold-400); transform: skewX(-9deg); }
     .referral__glyph tt-icon { transform: skewX(9deg); }
-    .status { margin-inline-start: auto; padding: 3px 9px; border-radius: var(--tt-radius-pill); font-size: 10px; font-weight: 800; letter-spacing: 0.04em; border: 1px solid var(--tt-gold-600); color: var(--tt-gold-400); white-space: nowrap; }
-    .steps { margin: var(--tt-space-3) 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--tt-space-2); font-size: var(--tt-text-sm); }
-    .steps li { display: flex; align-items: center; gap: var(--tt-space-2); }
-    .steps__n { display: grid; place-items: center; inline-size: 24px; block-size: 24px; flex: none; border-radius: 50%; background: var(--tt-gold-metal); color: var(--tt-text-on-gold); font-size: 12px; font-weight: 900; }
+    .status { margin-inline-start: auto; padding: 3px 9px; border-radius: var(--tt-radius-pill); font-size: 10px; font-weight: 800; letter-spacing: 0.04em; border: 1px solid var(--tt-border-strong); color: var(--tt-text-muted); white-space: nowrap; }
+    .status--live { color: var(--tt-energy); border-color: rgba(47, 211, 111, 0.4); }
+    .status--soon { color: var(--tt-gold-400); border-color: var(--tt-gold-600); }
+    .club { border-color: var(--tt-gold-600); }
+    .club__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--tt-space-3); flex-wrap: wrap; margin-block-start: var(--tt-space-4); padding-block-start: var(--tt-space-3); border-block-start: 1px solid var(--tt-border); }
 
     section { margin-block-end: var(--tt-space-4); }
     section h2 { margin: 0 0 var(--tt-space-2); font-size: var(--tt-text-lg); }
@@ -367,8 +380,11 @@ export class AccountPage {
   private readonly notifications = inject(NotificationService);
   private readonly analytics = inject(AnalyticsService);
   private readonly campaigns = inject(CampaignsFacade);
+  private readonly growth = inject(GrowthFacade);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+
+  readonly club$ = this.growth.club$;
 
   readonly methods = signal<AuthMethods | null>(null);
   readonly mode = signal<Mode>('signIn');

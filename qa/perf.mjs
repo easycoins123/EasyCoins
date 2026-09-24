@@ -40,7 +40,7 @@ const assetBytes = assets.reduce((sum, name) => sum + statSync(join(DIST, 'asset
 console.log(`  product art: ${assets.length} files, ${(assetBytes / 1024).toFixed(1)} kB total`);
 
 const browser = await chromium.launch();
-const routes = ['/', '/store', '/products/ea-fc-ultimate-team-coins', '/cart', '/faq'];
+const routes = ['/', '/store', '/products/fc27-coins', '/cart', '/faq'];
 const measurements = [];
 
 console.log('\n== Per-route load ==');

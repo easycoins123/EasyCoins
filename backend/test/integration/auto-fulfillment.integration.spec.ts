@@ -4,6 +4,12 @@ import request from 'supertest';
 
 import { createApp } from '../../src/main';
 
+/** Launch bonus coins a variant promises, from its metadata. Zero when none. */
+function launchBonusOf(metadata: unknown): number {
+  const bonus = metadata && typeof metadata === 'object' ? (metadata as Record<string, unknown>)['launchBonus'] : undefined;
+  return typeof bonus === 'number' && bonus > 0 ? Math.round(bonus) : 0;
+}
+
 /**
  * Automatic delivery planning, end to end.
  *
@@ -128,7 +134,10 @@ describe('automatic delivery planning', () => {
       const fulfillment = await prisma.fulfillment.findFirstOrThrow({ where: { orderId } });
       const instruction = fulfillment.customerInstruction as { requestedCoins: number; deliveredCoins: number };
 
-      expect(instruction.requestedCoins).toBe(offer.variant.quantityValue);
+      // The variant's coins plus the launch bonus its metadata promises. The
+      // planner used to deliver the base amount alone, which under-delivered
+      // every bundle sold with a bonus.
+      expect(instruction.requestedCoins).toBe((offer.variant.quantityValue ?? 0) + launchBonusOf(offer.variant.metadata));
       // Rounding favours the customer, always.
       expect(instruction.deliveredCoins).toBeGreaterThanOrEqual(instruction.requestedCoins);
     });
@@ -140,7 +149,7 @@ describe('automatic delivery planning', () => {
       const fulfillment = await prisma.fulfillment.findFirstOrThrow({ where: { orderId } });
       const instruction = fulfillment.customerInstruction as { requestedCoins: number };
 
-      expect(instruction.requestedCoins).toBe((offer.variant.quantityValue ?? 0) * 2);
+      expect(instruction.requestedCoins).toBe(((offer.variant.quantityValue ?? 0) + launchBonusOf(offer.variant.metadata)) * 2);
     });
 
     it('attributes the instruction to the system, not to a person', async () => {

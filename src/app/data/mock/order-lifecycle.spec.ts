@@ -10,7 +10,8 @@ import { provideMockDataLayer } from './providers';
 import { OFFERS } from './catalog.seed';
 
 const GIFT_50 = 'offer__prod-ps-gift-card__50__plat-ps5__reg-il';
-const COINS_100K = 'offer__prod-fc-coins__100k__plat-ps5__reg-global';
+// The edition on sale in mock mode; the retired FC26 offers are not purchasable.
+const COINS_100K = 'offer__prod-fc27-coins__100k__plat-ps5__reg-global';
 
 function cartWith(offerId: string): Cart {
   const offer = OFFERS.find((candidate) => candidate.id === offerId)!;

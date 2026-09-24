@@ -201,7 +201,7 @@ const SECRET_EMAIL = 'security-probe@example.com';
 const SECRET_HANDLE = 'SecretHandle_42';
 const SECRET_NAME = 'שם פרטי לבדיקה';
 
-await page.goto(`${BASE}/products/ea-fc-ultimate-team-coins`, { waitUntil: 'networkidle' });
+await page.goto(`${BASE}/products/fc27-coins`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(600);
 await page.getByRole('button', { name: 'הוספה לעגלה' }).click();
 await page.waitForTimeout(700);

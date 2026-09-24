@@ -50,6 +50,16 @@ export class CartRequestDto {
   // exotic away from the lookup below.
   @Matches(/^[a-zA-Z0-9_-]*$/, { message: 'couponCode contains invalid characters' })
   couponCode?: string;
+
+  /**
+   * An earned reward the customer wants to use. An id, never a value: what the
+   * reward is worth is read from the ledger, and only if the caller owns it.
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @Matches(/^[a-zA-Z0-9_-]*$/, { message: 'rewardId contains invalid characters' })
+  rewardId?: string;
 }
 
 export class ValidateCouponDto {
@@ -63,4 +73,10 @@ export class ValidateCouponDto {
   @MaxLength(40)
   @Matches(/^[a-zA-Z0-9_-]*$/, { message: 'code contains invalid characters' })
   code!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @Matches(/^[a-zA-Z0-9_-]*$/, { message: 'rewardId contains invalid characters' })
+  rewardId?: string;
 }

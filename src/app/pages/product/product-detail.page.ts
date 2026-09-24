@@ -15,7 +15,7 @@ import {
   isPurchasable, toAppError,
 } from '../../domain';
 import { ReviewApiService } from '../../data/api';
-import { CartFacade, CatalogFacade, CatalogLookups, PlatformPreferenceService } from '../../state';
+import { CartFacade, CatalogFacade, CatalogLookups, PlatformPreferenceService, StorefrontFacade } from '../../state';
 import {
   ErrorStateComponent, FulfillmentBadgeComponent, MoneyPipe, PlatformBadgeComponent,
   ProductCardComponent, QuantitySelectorComponent, RegionBadgeComponent, ReviewCardComponent,
@@ -173,6 +173,11 @@ interface ProductViewModel {
 
                 <p class="delivery tt-muted">
                   {{ vm.lookups.fulfillment.get(offer.fulfillmentMethod)?.description | t }}
+                </p>
+
+                <p class="kick" *ngIf="isCoins(vm) && storefront.state().launch.live">
+                  <tt-icon name="bolt" [size]="14"></tt-icon>
+                  הזמנה ראשונה? <strong>+{{ launchPercent() }}% קוינס מתנה</strong> (עד {{ launchCap() }}). נבדק בעגלה, לפי חשבון או אימייל.
                 </p>
 
                 <!-- The order, as it will be placed: what, for which platform, how much. -->
@@ -366,6 +371,8 @@ interface ProductViewModel {
 
     .badges { gap: var(--tt-space-1); }
     .delivery { font-size: var(--tt-text-sm); margin: 0; }
+    .kick { display: flex; align-items: center; gap: 6px; margin: 0; padding: var(--tt-space-2) var(--tt-space-3); border: 1px solid var(--tt-gold-600); border-radius: var(--tt-radius-md); background: var(--tt-gold-tint); font-size: var(--tt-text-sm); }
+    .kick tt-icon { color: var(--tt-gold-400); flex: none; }
     .tt-alert span span { display: block; }
 
     .buy .tt-ticket__main { display: flex; flex-direction: column; gap: var(--tt-space-3); padding: var(--tt-space-5); }
@@ -406,6 +413,7 @@ export class ProductDetailPage implements AfterViewInit {
   private readonly reviewApi = inject(ReviewApiService);
   private readonly analytics = inject(AnalyticsService);
   private readonly preference = inject(PlatformPreferenceService);
+  readonly storefront = inject(StorefrontFacade);
   private readonly zone = inject(NgZone);
   private readonly destroyRef = inject(DestroyRef);
   readonly cart = inject(CartFacade);
@@ -423,6 +431,8 @@ export class ProductDetailPage implements AfterViewInit {
   readonly ticketVisible = signal(false);
 
   readonly cartLabel = computed(() => `${this.cart.itemCount()} ${this.cart.itemCount() === 1 ? 'פריט' : 'פריטים'}`);
+  readonly launchPercent = computed(() => Math.round(this.storefront.state().launch.percentBps / 100));
+  readonly launchCap = computed(() => formatQuantity(this.storefront.state().launch.capCoins));
 
   @ViewChild('buyBlock') private set buyBlock(ref: ElementRef<HTMLElement> | undefined) {
     this.observe(ref?.nativeElement);

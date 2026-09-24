@@ -69,7 +69,8 @@ export type IconName =
   | 'star'
   | 'payment'
   | 'tracking'
-  | 'mark';
+  | 'mark'
+  | 'gift';
 
 interface IconArt {
   /** The silhouette. Drawn filled, and it is what reads at small sizes. */
@@ -245,6 +246,13 @@ const ART: Record<string, IconArt> = {
   package: { fill: `${coin(9, 13.5, 6.4)}${coin(15.5, 9.5, 5.6)}` },
   /* A rating star. */
   star: { fill: 'M12 2.4l2.9 6.1 6.7.8-4.9 4.6 1.3 6.6L12 17.2l-6 3.3 1.3-6.6L2.4 9.3l6.7-.8Z' },
+  /* A closed reward: the box, its lid, and the ribbon knocked out of both.
+     The EasyDrop card in miniature, drawn on the same mitred geometry. */
+  gift: {
+    fill: 'M3 8.4h18v3.4H3ZM4.2 12.8h15.6V21a1 1 0 0 1-1 1H5.2a1 1 0 0 1-1-1Z',
+    knockout: 'M10.9 8.4h2.2V22h-2.2Z',
+    stroke: 'M12 8.4c-1.2-2.6-2.6-4.2-4.4-4.2a1.9 1.9 0 0 0 0 3.8H12Zm0 0c1.2-2.6 2.6-4.2 4.4-4.2a1.9 1.9 0 0 1 0 3.8H12Z',
+  },
 };
 
 /** Vocabulary names that share a drawing with an existing icon. */

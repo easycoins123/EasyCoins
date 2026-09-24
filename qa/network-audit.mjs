@@ -20,7 +20,7 @@ const BASE = `http://localhost:${PORT}`;
 const server = await startServer(PORT);
 
 const ROUTES = [
-  '/', '/store', '/products/ea-fc-ultimate-team-coins', '/cart', '/checkout', '/account',
+  '/', '/store', '/products/fc27-coins', '/cart', '/checkout', '/account',
   '/account/orders', '/support', '/faq', '/deals', '/delivery', '/about', '/terms',
 ];
 const WIDTHS = [390, 1440];

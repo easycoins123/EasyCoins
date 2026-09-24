@@ -108,6 +108,8 @@ export function coinProductsFrom(
         bonus,
         totalCoins,
         effectivePerMillionIls: totalCoins > 0 ? Math.round((priceIls / totalCoins) * 1_000_000) : undefined,
+        per100KMinor: totalCoins > 0 ? Math.ceil((row.offer.price.current.amountMinor * 100_000) / totalCoins) : undefined,
+        savingVsStarterPercent: 0,
         tier,
         artKey: bundleArtKey(amount),
         inStock: purchasable(row.offer),
@@ -129,9 +131,16 @@ export function withBestValue(shelf: readonly CoinProduct[]): readonly CoinProdu
   const rates = shelf.map((product) => product.effectivePerMillionIls).filter((rate): rate is number => rate !== undefined);
   const cheapest = rates.length > 1 ? Math.min(...rates) : undefined;
   const dearest = rates.length > 1 ? Math.max(...rates) : undefined;
+  // The saving is against the smallest bundle on this shelf, so "18% cheaper
+  // per coin than 100K" is true for the shelf the customer is looking at.
+  const starter = [...shelf].sort((a, b) => a.amount - b.amount)[0];
+  const starterRate = starter?.per100KMinor;
   return shelf.map((product) => {
     const bestValue = cheapest !== undefined && dearest !== undefined && dearest > cheapest && product.effectivePerMillionIls === cheapest;
-    return { ...product, badge: bestValue ? 'best-value' : undefined, role: roleFor(product.amount, bestValue) };
+    const saving = starterRate !== undefined && product.per100KMinor !== undefined && starterRate > product.per100KMinor
+      ? Math.floor(((starterRate - product.per100KMinor) * 100) / starterRate)
+      : 0;
+    return { ...product, badge: bestValue ? 'best-value' : undefined, role: roleFor(product.amount, bestValue), savingVsStarterPercent: saving };
   });
 }
 

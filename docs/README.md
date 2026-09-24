@@ -7,6 +7,9 @@
 | [ARCHITECTURE.md](ARCHITECTURE.md) | How the Angular application is put together and why |
 | [COMMERCE-FLOWS.md](COMMERCE-FLOWS.md) | What actually happens, end to end, when someone buys something |
 | [API-CONTRACT.md](API-CONTRACT.md) | The versioned REST contract the frontend already consumes |
+| [GROWTH-AND-REWARDS.md](GROWTH-AND-REWARDS.md) | EasyDrop, EasyClub, custom coins, referral, drops and trust: what is active, every configured value, every anti-abuse rule |
+| [PRICING.md](PRICING.md) | The FC27 price ladder, the owner's controls, the safety rails, the FIRST KICK launch offer, stacking and creator codes |
+| [FC27-MARKET-SNAPSHOT.md](FC27-MARKET-SNAPSHOT.md) | The Israeli FC27 coin market as checked on 2026-09-23, with sources, timestamps and what is not verified |
 | [BACKEND-ARCHITECTURE.md](BACKEND-ARCHITECTURE.md) | The service to be built: layers, modules, stack, transactions |
 | [DATABASE-DESIGN.md](DATABASE-DESIGN.md) | Conceptual schema, constraints and data-integrity invariants |
 | [PAYMENT-ARCHITECTURE.md](PAYMENT-ARCHITECTURE.md) | Provider abstraction, intent lifecycle, webhooks, refunds |

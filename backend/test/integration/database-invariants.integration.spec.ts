@@ -42,7 +42,8 @@ describe('seed data is present and coherent', () => {
     expect(await prisma.platform.count()).toBe(6);
     expect(await prisma.region.count()).toBe(4);
     expect(await prisma.game.count()).toBe(5);
-    expect(await prisma.product.count()).toBe(8);
+    // Eight seeded products; the FC27 ladder adds a ninth once it has been activated in this database.
+    expect(await prisma.product.count()).toBeGreaterThanOrEqual(8);
     expect(await prisma.offer.count()).toBeGreaterThan(50);
   });
 

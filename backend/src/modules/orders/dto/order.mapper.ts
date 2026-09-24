@@ -1,5 +1,8 @@
 import type { Fulfillment, Order, OrderItem, PaymentIntent } from '@prisma/client';
 
+import { toBenefitsDto } from '../../cart/dto/cart.mapper';
+import { NO_BENEFITS, type CartBenefits } from '../../cart/pricing.service';
+
 /**
  * Order rows to the wire shape the Angular mapper already parses.
  *
@@ -26,18 +29,36 @@ export interface OrderResponse {
   payment: unknown | null;
   checkoutValues: Record<string, unknown>;
   couponCode: string | null;
+  rewardId: string | null;
+  rewardCoins: number;
+  campaignId: string | null;
+  campaignCoins: number;
+  benefits: ReturnType<typeof toBenefitsDto>;
+  paidAt: string | null;
   createdAt: string;
   updatedAt: string;
   statusMessage: unknown | null;
 }
 
+/** The variant and product fields an item response derives its coins from. */
+export type OrderItemWithVariant = OrderItem & {
+  variant?: { quantityValue: number | null; metadata: unknown };
+  product?: { type: string; metadata?: unknown };
+};
+
 export type OrderWithRelations = Order & {
-  items: OrderItem[];
+  items: OrderItemWithVariant[];
   fulfillments: Fulfillment[];
   paymentIntents: PaymentIntent[];
 };
 
-function toItem(item: OrderItem, currency: string) {
+function launchBonusOf(metadata: unknown): number {
+  const bonus = metadata && typeof metadata === 'object' ? (metadata as Record<string, unknown>)['launchBonus'] : undefined;
+  return typeof bonus === 'number' && bonus > 0 ? Math.round(bonus) : 0;
+}
+
+function toItem(item: OrderItemWithVariant, currency: string) {
+  const isCoins = item.product?.type === 'GAME_CURRENCY';
   return {
     id: item.id,
     offerId: item.offerId,
@@ -53,6 +74,35 @@ function toItem(item: OrderItem, currency: string) {
     displayName: item.displayName,
     displayVariantName: item.displayVariant,
     imageUrl: item.imageUrl,
+    coins: isCoins ? (item.variant?.quantityValue ?? 0) * item.quantity : 0,
+    bonusCoins: isCoins ? launchBonusOf(item.variant?.metadata) * item.quantity : 0,
+    // The game edition the product belonged to when it was sold. Read from
+    // the product's own record, so an FC26 order stays an FC26 order after
+    // FC27 goes on sale.
+    edition: editionOf(item.variant?.metadata) ?? editionOf(item.product?.metadata) ?? (isCoins ? 'fc26' : null),
+  };
+}
+
+function editionOf(metadata: unknown): string | null {
+  const value = metadata && typeof metadata === 'object' ? (metadata as Record<string, unknown>)['edition'] : undefined;
+  return typeof value === 'string' && /^fc\d\d$/.test(value) ? value : null;
+}
+
+/** What the order carried beyond its lines, read from its own record. */
+function growthOf(order: Order): { rewardId: string | null; rewardCoins: number; campaignId: string | null; campaignCoins: number; benefits: CartBenefits } {
+  const metadata = (order.metadata ?? {}) as Record<string, unknown>;
+  const rewardCoins = typeof metadata['rewardCoins'] === 'number' ? metadata['rewardCoins'] : 0;
+  const campaignCoins = typeof metadata['campaignCoins'] === 'number' ? metadata['campaignCoins'] : 0;
+  const campaignId = typeof metadata['campaignId'] === 'string' ? metadata['campaignId'] : null;
+  const benefits = metadata['benefits'] && typeof metadata['benefits'] === 'object'
+    ? (metadata['benefits'] as unknown as CartBenefits)
+    : NO_BENEFITS;
+  return {
+    rewardId: typeof metadata['rewardId'] === 'string' ? metadata['rewardId'] : null,
+    rewardCoins,
+    campaignId,
+    campaignCoins,
+    benefits,
   };
 }
 
@@ -133,6 +183,7 @@ function toPayment(intent: PaymentIntent | undefined) {
 
 export function toOrderResponse(order: OrderWithRelations): OrderResponse {
   const paid = PAID_STATUSES.has(order.status);
+  const growth = growthOf(order);
 
   return {
     id: order.id,
@@ -151,6 +202,12 @@ export function toOrderResponse(order: OrderWithRelations): OrderResponse {
     payment: toPayment(order.paymentIntents[0]),
     checkoutValues: (order.checkoutValues as Record<string, unknown>) ?? {},
     couponCode: order.couponCode,
+    rewardId: growth.rewardId,
+    rewardCoins: growth.rewardCoins,
+    campaignId: growth.campaignId,
+    campaignCoins: growth.campaignCoins,
+    benefits: toBenefitsDto(growth.benefits),
+    paidAt: order.paidAt?.toISOString() ?? null,
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
     statusMessage: order.statusMessage,

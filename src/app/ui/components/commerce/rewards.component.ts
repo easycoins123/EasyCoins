@@ -6,12 +6,13 @@ import { CampaignView } from '../../../core/commerce';
 import { IconComponent } from '../icon.component';
 
 /**
- * Reasons to come back: the drop, the opening squad, friend brings friend.
+ * Reasons to come back: EASYDROP after every paid order, EASYCLUB, and the
+ * Drop Zone.
  *
  * Three panels driven by the campaigns facade, so each shows its real state.
- * A drop with a real end time gets its clock; a campaign in preparation says
- * so; nothing here counts participants or announces winners, because there
- * are none to announce yet.
+ * A drop with a real end time gets its clock; a drop zone with nothing live
+ * says the next one is cooking; nothing here counts participants or announces
+ * winners, because there are none to announce.
  */
 @Component({
   selector: 'tt-rewards',
@@ -20,7 +21,7 @@ import { IconComponent } from '../icon.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="rewards" *ngIf="panels.length > 0">
-      <article class="panel" *ngFor="let campaign of panels" [class.panel--live]="campaign.status === 'active'" [class.panel--lead]="campaign.kind === 'weekend-drop'">
+      <article class="panel" *ngFor="let campaign of panels" [class.panel--live]="campaign.status === 'active'" [class.panel--lead]="campaign.kind === 'easydrop'">
         <header class="panel__head">
           <span class="panel__glyph" aria-hidden="true"><tt-icon [name]="campaign.icon" [size]="20"></tt-icon></span>
           <span class="panel__eyebrow">{{ campaign.eyebrow }}</span>
@@ -67,9 +68,9 @@ import { IconComponent } from '../icon.component';
 export class RewardsComponent {
   panels: readonly CampaignView[] = [];
 
-  /** The drop, the opening squad and referral, in that order, when present. */
+  /** EASYDROP, EASYCLUB and the Drop Zone, in that order, when present. */
   @Input() set campaigns(list: readonly CampaignView[] | null | undefined) {
-    const order: CampaignView['kind'][] = ['weekend-drop', 'first-buyers', 'referral'];
+    const order: CampaignView['kind'][] = ['easydrop', 'easyclub', 'weekend-drop'];
     this.panels = order
       .map((kind) => (list ?? []).find((campaign) => campaign.kind === kind))
       .filter((campaign): campaign is CampaignView => campaign !== undefined);

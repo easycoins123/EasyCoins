@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -15,10 +15,11 @@ import {
   CheckoutFieldKey, CheckoutFieldValues, CheckoutRequirement, CheckoutValidationIssue, LocalizedText,
   PaymentProviderId, PaymentStatus, ProductVariant,
 } from '../../domain';
-import { CartFacade, CatalogFacade, CheckoutFacade } from '../../state';
+import { CartFacade, CatalogFacade, CheckoutFacade, StorefrontFacade } from '../../state';
 import {
   FulfillmentBadgeComponent, IconComponent, MoneyPipe, RegionBadgeComponent,
 } from '../../ui';
+import { BenefitsNoteComponent } from '../../ui/components/growth/benefits-note.component';
 import { FIELD_HELP, validateLocally } from './checkout-validation';
 
 /**
@@ -41,7 +42,7 @@ import { FIELD_HELP, validateLocally } from './checkout-validation';
 @Component({
   selector: 'tt-checkout-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, LocalizePipe, MoneyPipe, RegionBadgeComponent, FulfillmentBadgeComponent, IconComponent],
+  imports: [CommonModule, FormsModule, RouterLink, LocalizePipe, MoneyPipe, RegionBadgeComponent, FulfillmentBadgeComponent, IconComponent, BenefitsNoteComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-container tt-section">
@@ -318,12 +319,14 @@ import { FIELD_HELP, validateLocally } from './checkout-validation';
             <span>סה״כ קוינס שתקבלו</span><span class="tt-numeric coins">{{ coins }}</span>
           </div>
           <div class="row" *ngIf="cart.totals().discount.amountMinor > 0">
-            <span>הנחה</span><span class="tt-numeric">−{{ cart.totals().discount | money }}</span>
+            <span>הנחה / הטבה</span><span class="tt-numeric">−{{ cart.totals().discount | money }}</span>
           </div>
           <div class="row total">
             <span>לתשלום</span>
             <span class="tt-price tt-numeric">{{ cart.totals().total | money }}</span>
           </div>
+          <!-- Which benefit is on this order and which is not, in the server's words. -->
+          <tt-benefits-note class="benefits" [benefits]="cart.benefits()"></tt-benefits-note>
 
           <a class="back" routerLink="/cart" *ngIf="!checkout.orderId()">
             <tt-icon name="edit" [size]="14"></tt-icon>שינוי ההזמנה
@@ -354,13 +357,13 @@ import { FIELD_HELP, validateLocally } from './checkout-validation';
     }
 
     .intro { margin: calc(var(--tt-space-3) * -1) 0 var(--tt-space-4); font-size: var(--tt-text-sm); }
-    .failed { display: flex; flex-direction: column; gap: var(--tt-space-2); }
+    .failed { display: grid; gap: var(--tt-space-2); }
     .failed h2 { margin: 0; }
 
     .pay { justify-content: space-between; padding-inline: var(--tt-space-4); }
     .pay__sum { font-weight: 800; font-variant-numeric: tabular-nums; }
     .pay__note { margin: calc(var(--tt-space-2) * -1) 0 0; text-align: center; }
-    .summary__main { display: flex; flex-direction: column; gap: var(--tt-space-3); padding: var(--tt-space-5); }
+    .summary__main { display: grid; gap: var(--tt-space-3); padding: var(--tt-space-5); }
     .next { display: grid; gap: var(--tt-space-2); margin: var(--tt-space-3) 0 0; padding: var(--tt-space-3) 0 0; border-block-start: 1px solid var(--tt-border); list-style: none; }
     .next li { display: flex; align-items: center; gap: var(--tt-space-3); font-size: var(--tt-text-sm); }
     .next li strong { display: block; }
@@ -382,7 +385,7 @@ import { FIELD_HELP, validateLocally } from './checkout-validation';
 
     .back { display: inline-flex; align-items: center; gap: 6px; min-block-size: 40px; color: var(--tt-gold-400); font-size: var(--tt-text-sm); font-weight: 700; }
     h2 { font-size: var(--tt-text-lg); margin-block-end: var(--tt-space-4); }
-    .fields { display: flex; flex-direction: column; gap: var(--tt-space-4); }
+    .fields { display: grid; gap: var(--tt-space-4); }
     .summary-errors { align-items: center; margin: 0; }
     .label { display: flex; align-items: baseline; gap: 6px; }
     .label__optional { font-weight: 500; color: var(--tt-text-faint); font-size: var(--tt-text-xs); }
@@ -398,7 +401,7 @@ import { FIELD_HELP, validateLocally } from './checkout-validation';
     .tt-check-field--invalid { border-color: var(--tt-danger); }
     .tt-check .tt-hint { display: block; }
 
-    .providers { display: flex; flex-direction: column; gap: var(--tt-space-2); margin-block: var(--tt-space-4); }
+    .providers { display: grid; gap: var(--tt-space-2); margin-block: var(--tt-space-4); }
     .provider {
       display: flex; align-items: center; justify-content: space-between; gap: var(--tt-space-3);
       min-block-size: 56px; padding: var(--tt-space-3) var(--tt-space-4); border-radius: var(--tt-radius-md);
@@ -411,7 +414,7 @@ import { FIELD_HELP, validateLocally } from './checkout-validation';
     .provider.on .provider__check { opacity: 1; }
     .provider:focus-visible { outline: 2px solid var(--tt-gold-400); outline-offset: 2px; }
     .provider:disabled { opacity: 0.5; cursor: not-allowed; }
-    .instruments { border: 0; margin: 0 0 var(--tt-space-4); padding: 0; display: flex; flex-direction: column; gap: var(--tt-space-2); }
+    .instruments { border: 0; margin: 0 0 var(--tt-space-4); padding: 0; display: grid; gap: var(--tt-space-2); }
     .instruments legend { padding: 0; margin-block-end: var(--tt-space-2); }
     .instrument {
       display: flex; gap: var(--tt-space-3); align-items: flex-start; min-block-size: 44px;
@@ -434,6 +437,7 @@ import { FIELD_HELP, validateLocally } from './checkout-validation';
     .row--coins { padding: var(--tt-space-2) var(--tt-space-3); margin-block-end: var(--tt-space-2); border: 1px solid var(--tt-gold-600); border-radius: var(--tt-radius-md); background: var(--tt-gold-tint); font-weight: 700; }
     .row--coins .coins { color: var(--tt-gold-400); font-size: var(--tt-text-lg); font-weight: 900; }
     .row.total { font-weight: 700; padding-block-start: var(--tt-space-2); border-block-start: 1px solid var(--tt-border); margin-block-end: var(--tt-space-3); }
+    .benefits { margin-block-end: var(--tt-space-2); }
 
     .waiting { display: flex; flex-direction: column; gap: var(--tt-space-3); margin-block-end: var(--tt-space-4); }
     .waiting__plate { display: flex; align-items: center; gap: var(--tt-space-3); padding: var(--tt-space-3) var(--tt-space-4); border: 1px solid var(--tt-gold-600); border-radius: var(--tt-radius-md);
@@ -453,6 +457,7 @@ export class CheckoutPage implements OnDestroy {
   readonly checkout = inject(CheckoutFacade);
   readonly cart = inject(CartFacade);
   private readonly catalog = inject(CatalogFacade);
+  private readonly storefront = inject(StorefrontFacade);
   private readonly router = inject(Router);
   private readonly analytics = inject(AnalyticsService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -482,7 +487,8 @@ export class CheckoutPage implements OnDestroy {
 
   /** The coin product's variants by id, so the ticket can total the coins. */
   private readonly variants = toSignal(
-    this.catalog.productBySlug(STOREFRONT.focusProductSlug).pipe(
+    this.storefront.focusProductSlug$.pipe(
+      switchMap((slug) => this.catalog.productBySlug(slug)),
       map((detail) => new Map(detail.product.variants.map((variant) => [variant.id, variant]))),
       catchError(() => of(new Map<string, ProductVariant>())),
     ),
@@ -490,6 +496,12 @@ export class CheckoutPage implements OnDestroy {
   );
 
   readonly totalCoins = computed<string | undefined>(() => {
+    // The server states each line's coins and any reward coins; a line from
+    // older storage falls back to the catalog variant.
+    const fromServer = this.cart.totalCoins();
+    if (fromServer !== undefined) {
+      return formatQuantity(fromServer);
+    }
     let sum = 0;
     let any = false;
     for (const item of this.cart.items()) {
@@ -499,7 +511,7 @@ export class CheckoutPage implements OnDestroy {
         sum += (variant.quantityValue + launchBonusOf(variant)) * item.quantity;
       }
     }
-    return any ? formatQuantity(sum) : undefined;
+    return any ? formatQuantity(sum + (this.cart.benefits()?.rewardCoins ?? 0)) : undefined;
   });
 
   readonly countLabel = computed(() => itemsLabel(this.cart.items().length));

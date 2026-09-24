@@ -179,6 +179,8 @@ export interface CartItemDto {
   readonly displayVariantName: LocalizedTextDto;
   readonly imageUrl?: string | null;
   readonly addedAt?: string | null;
+  readonly coins?: number | null;
+  readonly bonusCoins?: number | null;
 }
 
 export interface CartTotalsDto {
@@ -188,11 +190,39 @@ export interface CartTotalsDto {
   readonly itemCount?: number;
 }
 
+export interface AppliedBenefitDto {
+  readonly kind: string;
+  readonly label: LocalizedTextDto;
+  readonly effect?: { readonly discountMinor?: number | null; readonly coins?: number | null } | null;
+  readonly rewardId?: string | null;
+  readonly couponCode?: string | null;
+}
+
+export interface RejectedBenefitDto {
+  readonly kind: string;
+  readonly label: LocalizedTextDto;
+  readonly code: string;
+  readonly reason: LocalizedTextDto;
+  readonly rewardId?: string | null;
+  readonly couponCode?: string | null;
+}
+
+export interface BenefitsDto {
+  readonly applied?: readonly AppliedBenefitDto[] | null;
+  readonly rejected?: readonly RejectedBenefitDto[] | null;
+  readonly rewardId?: string | null;
+  readonly rewardCoins?: number | null;
+  readonly campaignId?: string | null;
+  readonly campaignCoins?: number | null;
+}
+
 export interface CartDto {
   readonly id: string;
   readonly items: readonly CartItemDto[];
   readonly totals: CartTotalsDto;
   readonly couponCode?: string | null;
+  readonly rewardId?: string | null;
+  readonly benefits?: BenefitsDto | null;
   readonly updatedAt?: string | null;
 }
 
@@ -346,6 +376,9 @@ export interface OrderItemDto {
   readonly displayName: LocalizedTextDto;
   readonly displayVariantName: LocalizedTextDto;
   readonly imageUrl?: string | null;
+  readonly coins?: number | null;
+  readonly bonusCoins?: number | null;
+  readonly edition?: string | null;
 }
 
 export interface OrderDto {
@@ -360,9 +393,185 @@ export interface OrderDto {
   readonly payment?: PaymentIntentDto | null;
   readonly checkoutValues?: Readonly<Record<string, string | boolean>> | null;
   readonly couponCode?: string | null;
+  readonly rewardId?: string | null;
+  readonly rewardCoins?: number | null;
+  readonly campaignId?: string | null;
+  readonly campaignCoins?: number | null;
+  readonly benefits?: BenefitsDto | null;
+  readonly paidAt?: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly statusMessage?: LocalizedTextDto | null;
+}
+
+// --- Growth ----------------------------------------------------------------
+
+export interface RewardDto {
+  readonly id: string;
+  readonly source: string;
+  readonly kind: string;
+  readonly value: number;
+  readonly title: LocalizedTextDto;
+  readonly status: string;
+  readonly usage?: string | null;
+  readonly minOrderMinor?: number | null;
+  readonly expiresAt?: string | null;
+  readonly sourceOrderId?: string | null;
+  readonly redeemedOrderId?: string | null;
+  readonly createdAt: string;
+}
+
+export interface RewardWalletDto {
+  readonly available?: readonly RewardDto[] | null;
+  readonly history?: readonly RewardDto[] | null;
+}
+
+export interface EasyDropDto {
+  readonly orderId: string;
+  readonly tier: string;
+  readonly tierName: LocalizedTextDto;
+  readonly status: string;
+  readonly cardCount: number;
+  readonly pickedIndex?: number | null;
+  readonly reward?: RewardDto | null;
+  readonly issuedAt: string;
+  readonly revealedAt?: string | null;
+}
+
+export interface EasyDropEnvelopeDto {
+  readonly drop?: EasyDropDto | null;
+}
+
+export interface ClubTierDto {
+  readonly id: string;
+  readonly name: LocalizedTextDto;
+  readonly minPoints: number;
+  readonly perks?: readonly LocalizedTextDto[] | null;
+}
+
+export interface FoundersDto {
+  readonly enabled: boolean;
+  readonly name: LocalizedTextDto;
+  readonly cap: number;
+  readonly taken: number;
+  readonly remaining: number;
+  readonly reward?: LocalizedTextDto | null;
+  readonly seatNumber?: number | null;
+}
+
+export interface ReferralSummaryDto {
+  readonly enabled: boolean;
+  readonly code?: string | null;
+  readonly path?: string | null;
+  readonly friendReward: LocalizedTextDto;
+  readonly referrerReward: LocalizedTextDto;
+  readonly stats?: { readonly pending?: number; readonly rewarded?: number; readonly rejected?: number } | null;
+  readonly monthlyCap?: number | null;
+}
+
+export interface ReferralAttachDto {
+  readonly attached: boolean;
+  readonly outcome: string;
+  readonly friendReward?: LocalizedTextDto | null;
+}
+
+export interface ClubSummaryDto {
+  readonly tier: { readonly id: string; readonly name: LocalizedTextDto; readonly index: number };
+  readonly boost?: { readonly tiers: number; readonly until?: string | null } | null;
+  readonly points: { readonly total: number; readonly base: number; readonly bonus: number; readonly perShekel: number };
+  readonly nextTier?: { readonly id: string; readonly name: LocalizedTextDto; readonly minPoints: number; readonly pointsToGo: number; readonly percent: number } | null;
+  readonly tiers?: readonly ClubTierDto[] | null;
+  readonly perks?: readonly LocalizedTextDto[] | null;
+  readonly orders: { readonly count: number; readonly lifetimeMinor: number; readonly lastPaidAt?: string | null };
+  readonly streak: {
+    readonly enabled: boolean;
+    readonly count: number;
+    readonly windowDays: number;
+    readonly activeUntil?: string | null;
+    readonly nextRewardAt?: number | null;
+    readonly nextRewardTitle?: LocalizedTextDto | null;
+  };
+  readonly founders: FoundersDto;
+  readonly rewards: RewardWalletDto;
+  readonly referral: ReferralSummaryDto;
+}
+
+export interface DropDto {
+  readonly id: string;
+  readonly slug: string;
+  readonly kind: string;
+  readonly status: string;
+  readonly title: LocalizedTextDto;
+  readonly lede: LocalizedTextDto;
+  readonly points?: readonly LocalizedTextDto[] | null;
+  readonly startsAt?: string | null;
+  readonly endsAt?: string | null;
+  readonly reward?: { readonly title: LocalizedTextDto; readonly kind: string; readonly value: number } | null;
+  readonly eligibility?: { readonly minOrderMinor?: number | null; readonly firstOrderOnly?: boolean | null } | null;
+  readonly cta?: { readonly label: LocalizedTextDto; readonly link: string } | null;
+  readonly remaining?: number | null;
+}
+
+export interface TrustMetricDto {
+  readonly key: string;
+  readonly label: LocalizedTextDto;
+  readonly unit: string;
+  readonly value?: number | null;
+  readonly published: boolean;
+  readonly sampleSize: number;
+  readonly threshold: number;
+}
+
+export interface TrustSnapshotDto {
+  readonly enabled: boolean;
+  readonly asOf: string;
+  readonly metrics?: readonly TrustMetricDto[] | null;
+}
+
+export interface CustomRulesDto {
+  readonly enabled: boolean;
+  readonly minCoins: number;
+  readonly maxCoins: number;
+  readonly stepCoins: number;
+  readonly platformIds?: readonly string[] | null;
+}
+
+export interface CustomQuoteDto {
+  readonly offerId: string;
+  readonly productSlug: string;
+  readonly variantId: string;
+  readonly platformId: string;
+  readonly regionId: string;
+  readonly amount: number;
+  readonly priceMinor: number;
+  readonly currency: string;
+  readonly bonus: number;
+  readonly totalCoins: number;
+  readonly perMillionMinor: number;
+  readonly rungAmount: number;
+  readonly mode: string;
+  readonly rules: { readonly minCoins: number; readonly maxCoins: number; readonly stepCoins: number };
+}
+
+export interface ProgrammesDto {
+  readonly easydrop: {
+    readonly enabled: boolean;
+    readonly cardsPerDrop: number;
+    readonly expiresInDays: number;
+    readonly tiers?: readonly { readonly tier: string; readonly name: LocalizedTextDto; readonly minTotalMinor: number }[] | null;
+  };
+  readonly easyclub: { readonly pointsPerShekel: number; readonly tiers?: readonly ClubTierDto[] | null };
+  readonly founders: FoundersDto;
+  readonly streak: { readonly enabled: boolean; readonly windowDays: number; readonly rewards?: readonly { readonly purchase: number; readonly title: LocalizedTextDto }[] | null };
+  readonly referral: { readonly enabled: boolean; readonly friendReward: LocalizedTextDto; readonly referrerReward: LocalizedTextDto };
+  readonly customCoins: CustomRulesDto;
+  readonly easyback: { readonly enabled: boolean };
+}
+
+export interface SubmitReviewResultDto {
+  readonly id: string;
+  readonly published: boolean;
+  readonly verifiedPurchase: boolean;
 }
 
 export interface OrderStatusDto {

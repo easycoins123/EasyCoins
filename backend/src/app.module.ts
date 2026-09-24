@@ -12,6 +12,8 @@ import { CheckoutModule } from './modules/checkout/checkout.module';
 import { ContentModule } from './modules/content/content.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { FulfillmentModule } from './modules/fulfillment/fulfillment.module';
+import { GrowthModule } from './modules/growth/growth.module';
+import { PricingModule } from './modules/pricing/pricing.module';
 import { HousekeepingModule } from './modules/housekeeping/housekeeping.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PaymentsModule } from './modules/payments/payments.module';
@@ -38,6 +40,8 @@ import { OrdersModule } from './modules/orders/orders.module';
     ContentModule,
     CustomersModule,
     NotificationsModule,
+    GrowthModule,
+    PricingModule,
     OrdersModule,
     PaymentsModule,
     FulfillmentModule,

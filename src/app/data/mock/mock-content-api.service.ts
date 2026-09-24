@@ -109,6 +109,7 @@ export class MockCustomerApiService extends CustomerApiService {
       ? { ...customer, displayName: displayName.trim() }
       : customer;
     this.state.next({ kind: 'AUTHENTICATED', customer: named });
+    this.backend.currentCustomerId = customer.id;
     return this.backend.respond(undefined, 300);
   }
 
@@ -116,6 +117,7 @@ export class MockCustomerApiService extends CustomerApiService {
     void password;
     const next: AuthState = { kind: 'AUTHENTICATED', customer: this.customerFor(email) };
     this.state.next(next);
+    this.backend.currentCustomerId = next.kind === 'AUTHENTICATED' ? next.customer.id : null;
     return this.backend.respond(next, 300);
   }
 
@@ -142,6 +144,7 @@ export class MockCustomerApiService extends CustomerApiService {
 
   requestAccountDeletion(): Observable<void> {
     this.state.next(ANONYMOUS);
+    this.backend.currentCustomerId = null;
     return this.backend.respond(undefined, 200);
   }
 
@@ -169,6 +172,7 @@ export class MockCustomerApiService extends CustomerApiService {
 
   signOut(): Observable<void> {
     this.state.next(ANONYMOUS);
+    this.backend.currentCustomerId = null;
     return this.backend.respond(undefined, 60);
   }
 }

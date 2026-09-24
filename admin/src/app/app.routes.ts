@@ -36,5 +36,17 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/job.page').then((m) => m.JobPage),
     title: 'עבודה',
   },
+  {
+    path: 'pricing',
+    canActivate: [requireToken],
+    loadComponent: () => import('./pages/pricing.page').then((m) => m.PricingPage),
+    title: 'מחירים',
+  },
+  {
+    path: 'pricing/codes',
+    canActivate: [requireToken],
+    loadComponent: () => import('./pages/codes.page').then((m) => m.CodesPage),
+    title: 'קודי יוצרים',
+  },
   { path: '**', redirectTo: '' },
 ];

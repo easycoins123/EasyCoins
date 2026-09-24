@@ -55,7 +55,7 @@ import { IconComponent } from '../icon.component';
 
       <div class="table" role="table" aria-label="סולם החבילות">
         <div class="thead" role="row" aria-hidden="true">
-          <span>חבילה</span><span>בונוס השקה</span><span>מקבלים</span><span>מחיר</span><span>למיליון</span><span></span>
+          <span>חבילה</span><span>בונוס</span><span>מקבלים</span><span>מחיר</span><span>ל־100K</span><span></span>
         </div>
         <div class="row" role="row" #row
              *ngFor="let product of products; trackBy: trackById"
@@ -84,8 +84,8 @@ import { IconComponent } from '../icon.component';
             <span class="was tt-numeric" *ngIf="product.offer.price.compareAt as was">{{ was | money }}</span>
           </span>
           <span class="cell cell--rate" role="cell">
-            <span class="rate tt-numeric" *ngIf="product.effectivePerMillionIls as rate">₪{{ rate | number:'1.0-0' }}</span>
-            <span class="cell__label" *ngIf="product.bonus > 0">כולל בונוס</span>
+            <span class="rate tt-numeric" *ngIf="product.per100KMinor as rate">{{ { amountMinor: rate, currency: product.offer.price.current.currency } | money }}</span>
+            <span class="cell__label" *ngIf="product.savingVsStarterPercent > 0">{{ product.savingVsStarterPercent }}% זול יותר מ־{{ label(products[0].amount) }}</span>
           </span>
           <span class="cell cell--act" role="cell">
             <button type="button" class="tt-btn tt-btn--sm buy"
@@ -152,7 +152,7 @@ import { IconComponent } from '../icon.component';
       .cell--bonus::before { content: 'בונוס'; font-size: 10px; font-weight: 700; color: var(--tt-text-faint); }
       .cell--total { grid-area: total; flex-direction: row; align-items: baseline; gap: 6px; justify-content: flex-end; }
       .cell--rate { grid-area: rate; flex-direction: row; align-items: baseline; gap: 6px; }
-      .cell--rate::before { content: 'למיליון'; font-size: 10px; font-weight: 700; color: var(--tt-text-faint); }
+      .cell--rate::before { content: 'ל־100K'; font-size: 10px; font-weight: 700; color: var(--tt-text-faint); }
       .cell--act { grid-area: act; align-items: flex-end; }
       .buy { min-inline-size: 120px; }
     }

@@ -134,6 +134,15 @@ export const FAQ_ENTRIES: readonly FaqEntry[] = [
       'Every order gets its own status page with a timeline showing exactly where it stands, from payment through delivery. The link is emailed to you and is also available in your account.',
     ),
   },
+  {
+    id: 'faq-price-match',
+    topic: SupportTopic.General,
+    question: localized('מצאתם מחיר נמוך יותר? (EASY MATCH)', 'Found a lower price? (EASY MATCH)'),
+    answer: localized(
+      'מצאתם מחיר נמוך יותר בישראל? שלחו לנו את הקישור דרך טופס התמיכה (נושא: אחר, נושא ההודעה: השוואת מחיר). נבדוק מול ההצעה הציבורית באותה פלטפורמה, באותה כמות, באותם תנאי אספקה ותשלום, כולל מע"מ, ונחזור אליכם במייל. הבדיקה היא ידנית ואינה התחייבות אוטומטית להשוואה.',
+      'Found a lower price in Israel? Send us the link through the support form (topic: other, subject: price comparison). We check it against the public offer for the same platform, quantity, delivery and payment terms, VAT included, and reply by email. The review is manual and not an automatic promise to match.',
+    ),
+  },
 ];
 
 /**

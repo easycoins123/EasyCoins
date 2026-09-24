@@ -376,6 +376,8 @@ interface ProductSeed {
   readonly imageUrl: string;
   readonly termsHe?: string;
   readonly termsEn?: string;
+  /** False for a product that is no longer on sale but must stay resolvable. */
+  readonly active?: boolean;
   /**
    * A star average, when one genuinely exists.
    *
@@ -395,10 +397,50 @@ const IN_STOCK: Inventory = { status: InventoryStatus.InStock, maxPerOrder: 10 }
 
 const PRODUCT_SEEDS: readonly ProductSeed[] = [
   {
+    // The FC27 ladder as the pricing configuration drafts it
+    // (backend/src/modules/pricing/pricing-config.ts). Prices carry the value;
+    // there is no launch bonus on the rungs. Mock mode sells this edition.
+    id: 'prod-fc27-coins',
+    gameId: 'game-ea-fc',
+    slug: 'fc27-coins',
+    type: ProductType.GameCurrency,
+    nameHe: 'קוינס FC 27 · Ultimate Team',
+    nameEn: 'FC 27 Ultimate Team Coins',
+    shortHe: 'קוינס ל-EA SPORTS FC 27 Ultimate Team',
+    shortEn: 'Coins for EA SPORTS FC 27 Ultimate Team',
+    descHe: 'חבילות קוינס ל-FC 27 Ultimate Team. האספקה מתבצעת ידנית על ידי נציג, בתיאום איתכם, ללא צורך בפרטי התחברות כלשהם.',
+    descEn: 'Coin bundles for FC 27 Ultimate Team. Delivery is performed manually by a team member in coordination with you, and never requires any login details.',
+    platformIds: ['plat-ps5', 'plat-ps4', 'plat-xbox', 'plat-pc'],
+    regionIds: ['reg-global'],
+    fulfillmentMethod: FulfillmentMethod.ManualDelivery,
+    extraRequirements: [PLATFORM_ACCOUNT_HANDLE, SERVICE_NOTE],
+    tags: ['coins', 'ultimate-team', 'fc27'],
+    featured: true,
+    imageUrl: 'assets/products/coins.svg',
+    metadata: { edition: 'fc27' },
+    termsHe: 'האספקה מתבצעת בתיאום מולכם. לעולם לא נבקש סיסמה, קוד אימות או קודי גיבוי.',
+    termsEn: 'Delivery is coordinated with you. We will never ask for a password, a verification code or backup codes.',
+    variants: [
+      { key: '100k', nameHe: '100K קוינס', nameEn: '100K coins', quantityValue: 100000, unitHe: 'קוינס', unitEn: 'coins', priceMajor: 85, metadata: { edition: 'fc27', tier: 'starter' } },
+      { key: '250k', nameHe: '250K קוינס', nameEn: '250K coins', quantityValue: 250000, unitHe: 'קוינס', unitEn: 'coins', priceMajor: 205, metadata: { edition: 'fc27', tier: 'starter' } },
+      { key: '500k', nameHe: '500K קוינס', nameEn: '500K coins', quantityValue: 500000, unitHe: 'קוינס', unitEn: 'coins', priceMajor: 375, metadata: { edition: 'fc27', tier: 'pro' } },
+      { key: '750k', nameHe: '750K קוינס', nameEn: '750K coins', quantityValue: 750000, unitHe: 'קוינס', unitEn: 'coins', priceMajor: 545, metadata: { edition: 'fc27', tier: 'pro' } },
+      { key: '1m', nameHe: '1M קוינס', nameEn: '1M coins', quantityValue: 1000000, unitHe: 'קוינס', unitEn: 'coins', priceMajor: 699, metadata: { edition: 'fc27', tier: 'elite', recommended: true } },
+      { key: '1500k', nameHe: '1.5M קוינס', nameEn: '1.5M coins', quantityValue: 1500000, unitHe: 'קוינס', unitEn: 'coins', priceMajor: 1029, metadata: { edition: 'fc27', tier: 'elite' } },
+      { key: '2m', nameHe: '2M קוינס', nameEn: '2M coins', quantityValue: 2000000, unitHe: 'קוינס', unitEn: 'coins', priceMajor: 1339, metadata: { edition: 'fc27', tier: 'legend' } },
+      { key: '3m', nameHe: '3M קוינס', nameEn: '3M coins', quantityValue: 3000000, unitHe: 'קוינס', unitEn: 'coins', priceMajor: 1959, metadata: { edition: 'fc27', tier: 'legend' } },
+      { key: '5m', nameHe: '5M קוינס', nameEn: '5M coins', quantityValue: 5000000, unitHe: 'קוינס', unitEn: 'coins', priceMajor: 3199, metadata: { edition: 'fc27', tier: 'legend' } },
+      { key: '10m', nameHe: '10M קוינס', nameEn: '10M coins', quantityValue: 10000000, unitHe: 'קוינס', unitEn: 'coins', priceMajor: 6199, metadata: { edition: 'fc27', tier: 'legend' } },
+    ],
+  },
+  {
+    // The FC26 season ladder, retired: resolvable for history, not on sale.
     id: 'prod-fc-coins',
     gameId: 'game-ea-fc',
     slug: 'ea-fc-ultimate-team-coins',
     type: ProductType.GameCurrency,
+    active: false,
+    metadata: { edition: 'fc26' },
     nameHe: 'מטבעות Ultimate Team',
     nameEn: 'Ultimate Team Coins',
     shortHe: 'מטבעות ל-EA SPORTS FC Ultimate Team',
@@ -611,7 +653,7 @@ function buildVariants(seed: ProductSeed): readonly ProductVariant[] {
     quantityUnit: variant.unitHe === undefined ? undefined : localized(variant.unitHe, variant.unitEn),
     metadata: variant.metadata ?? {},
     sortOrder: index,
-    active: true,
+    active: seed.active ?? true,
   }));
 }
 
@@ -637,7 +679,7 @@ function buildOffers(seed: ProductSeed): readonly Offer[] {
           fulfillmentMethod: seed.fulfillmentMethod,
           checkoutRequirements: seed.extraRequirements,
           terms: seed.termsHe === undefined ? undefined : localized(seed.termsHe, seed.termsEn),
-          active: true,
+          active: seed.active ?? true,
         });
       }
     }
@@ -666,7 +708,7 @@ export const PRODUCTS: readonly Product[] = PRODUCT_SEEDS.map((seed) => ({
   fulfillmentMethods: [seed.fulfillmentMethod],
   tags: seed.tags,
   fromPrice: cheapestPrice(seed),
-  active: true,
+  active: seed.active ?? true,
   featured: seed.featured,
   ratingAverage: seed.ratingAverage,
   ratingCount: seed.ratingCount,

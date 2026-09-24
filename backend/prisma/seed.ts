@@ -18,6 +18,8 @@
  * id, so running it twice produces the same database as running it once.
  */
 import {
+  CampaignKind,
+  CampaignStatus,
   FulfillmentMethod,
   InventoryStatus,
   PlatformFamily,
@@ -379,6 +381,7 @@ const FAQ = [
   { id: 'faq-payment', topic: SupportTopic.PAYMENT_PROBLEM, sortOrder: 4, question: t('אילו אמצעי תשלום נתמכים?', 'Which payment methods are supported?'), answer: t('האתר נמצא כרגע בשלב פיתוח ומריץ סימולציית תשלום בלבד. לא מתבצע חיוב אמיתי ולא נאספים פרטי כרטיס אשראי. אמצעי תשלום אמיתיים יופעלו לאחר חיבור ספק סליקה.', 'The site is currently in development and runs a payment simulation only. No real charge is made and no card details are collected. Real payment methods will be enabled once a payment provider is connected.') },
   { id: 'faq-refund', topic: SupportTopic.REFUND_REQUEST, sortOrder: 5, question: t('מה מדיניות ההחזרים?', 'What is the refund policy?'), answer: t('הזמנה שטרם סופקה ניתנת לביטול והחזר מלא. קוד דיגיטלי שכבר נחשף אינו ניתן להחזר, אלא אם התברר שהוא פגום או שאינו תואם לאזור שהוזמן. פרטים מלאים בעמוד מדיניות ההחזרים.', 'An order that has not been delivered yet can be cancelled for a full refund. A digital code that has already been revealed cannot be refunded, unless it turns out to be faulty or to not match the region ordered. Full details are on the refund policy page.') },
   { id: 'faq-order-status', topic: SupportTopic.ORDER_STATUS, sortOrder: 6, question: t('איך אני עוקב אחרי ההזמנה?', 'How do I track my order?'), answer: t('כל הזמנה מקבלת דף סטטוס משלה עם ציר זמן שמראה בדיוק היכן היא עומדת, מהתשלום ועד האספקה. הקישור נשלח למייל וזמין גם באזור האישי.', 'Every order gets its own status page with a timeline showing exactly where it stands, from payment through delivery. The link is emailed to you and is also available in your account.') },
+  { id: 'faq-price-match', topic: SupportTopic.GENERAL, sortOrder: 7, question: t('מצאתם מחיר נמוך יותר? (EASY MATCH)', 'Found a lower price? (EASY MATCH)'), answer: t('מצאתם מחיר נמוך יותר בישראל? שלחו לנו את הקישור דרך טופס התמיכה (נושא: אחר, נושא ההודעה: השוואת מחיר). נבדוק מול ההצעה הציבורית באותה פלטפורמה, באותה כמות, באותם תנאי אספקה ותשלום, כולל מע"מ, ונחזור אליכם במייל. הבדיקה היא ידנית ואינה התחייבות אוטומטית להשוואה.', 'Found a lower price in Israel? Send us the link through the support form (topic: other, subject: price comparison). We check it against the public offer for the same platform, quantity, delivery and payment terms, VAT included, and reply by email. The review is manual and not an automatic promise to match.') },
 ];
 
 const PROMOTIONS = [
@@ -386,6 +389,30 @@ const PROMOTIONS = [
   // reopen the code once the bonus ends.
   { id: 'promo-launch', slug: 'launch-week', kind: PromotionKind.PERCENT_OFF, title: t('שבוע השקה, 10% הנחה', 'Launch week, 10% off'), description: t('קוד LAUNCH10 מעניק 10% הנחה על כל הזמנה מעל 100 ₪.', 'Code LAUNCH10 gives 10% off any order above 100 ILS.'), percentOff: 10, amountOffMinor: null, currency: 'ILS', productIds: [] as string[], startsAt: '2026-01-01T00:00:00.000Z', active: false },
   { id: 'promo-ps-plus', slug: 'ps-plus-annual', kind: PromotionKind.AMOUNT_OFF, title: t('PlayStation Plus שנתי במחיר מיוחד', 'PlayStation Plus annual deal'), description: t('מנוי ל-12 חודשים ב-329 ₪ במקום 399 ₪.', 'A 12-month membership for 329 ILS instead of 399 ILS.'), percentOff: null, amountOffMinor: 7000, currency: 'ILS', productIds: ['prod-ps-plus'], startsAt: '2026-01-01T00:00:00.000Z' },
+];
+
+/**
+ * The Drop Zone's first entry, as a DRAFT.
+ *
+ * Invisible to customers until an operator schedules or activates it from the
+ * admin API. Created once and never overwritten by a rerun: the seed must not
+ * be able to switch a live drop back to draft on the next deploy.
+ */
+const CAMPAIGNS = [
+  {
+    id: 'camp-weekend-01',
+    slug: 'weekend-drop-01',
+    kind: CampaignKind.WEEKEND_DROP,
+    status: CampaignStatus.DRAFT,
+    title: t('דרופ סוף שבוע', 'Weekend drop'),
+    lede: t('בונוס קוינס להזמנה הבאה על כל הזמנה מעל 500K בסוף השבוע. התאריך יפורסם כאן כשייקבע.', 'A next-order coin bonus on every order above 500K over the weekend. The date is published here once it is set.'),
+    points: [t('בונוס בקוינס, לא הנחה על נייר', 'A bonus in coins, not a discount on paper'), t('נכנס ל־EASYCLUB אחרי התשלום', 'Lands in EASYCLUB after payment')],
+    eligibility: { minOrderMinor: 3900 },
+    reward: { kind: 'NEXT_ORDER_COINS', value: 20000, minOrderMinor: 3100, title: t('+20K קוינס להזמנה הבאה', '+20K coins on your next order') },
+    capTotal: 200,
+    ctaLabel: t('לחנות', 'To the store'),
+    ctaLink: '/store',
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -544,6 +571,12 @@ async function main(): Promise<void> {
     // redemptionCount is live state and is deliberately not reset.
     update: { ...coupon, redemptionCount: undefined },
   });
+
+  for (const campaign of CAMPAIGNS) {
+    // Create only. A campaign's status is live commercial state once an
+    // operator touches it, and the seed must never drag it back.
+    await prisma.campaign.upsert({ where: { id: campaign.id }, create: campaign, update: {} });
+  }
 
   process.stdout.write(
     `Seed complete in ${Date.now() - startedAt}ms: ` +

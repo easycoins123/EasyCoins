@@ -1,4 +1,4 @@
-import type { PricedCart, PricedLine } from '../pricing.service';
+import type { CartBenefits, PricedCart, PricedLine } from '../pricing.service';
 
 /**
  * Priced lines to the wire shape the Angular mappers expect.
@@ -46,6 +46,38 @@ export function toCartItemDto(line: PricedLine) {
     displayName: localized(offer.product.name),
     displayVariantName: localized(offer.variant.name),
     imageUrl: primaryImage(offer.product.images),
+    // What the line delivers, stated by the server. Zero for anything that is
+    // not game currency.
+    coins: line.coins,
+    bonusCoins: line.bonusCoins,
+  };
+}
+
+/** The stacking decision on the wire: what applies, what was set aside, and why. */
+export function toBenefitsDto(benefits: CartBenefits) {
+  return {
+    applied: benefits.applied.map((benefit) => ({
+      kind: benefit.kind,
+      label: benefit.label,
+      effect: {
+        discountMinor: benefit.effect.discountMinor ?? 0,
+        coins: benefit.effect.coins ?? 0,
+      },
+      rewardId: benefit.rewardId ?? null,
+      couponCode: benefit.couponCode ?? null,
+    })),
+    rejected: benefits.rejected.map((benefit) => ({
+      kind: benefit.kind,
+      label: benefit.label,
+      code: benefit.code,
+      reason: benefit.reason,
+      rewardId: benefit.rewardId ?? null,
+      couponCode: benefit.couponCode ?? null,
+    })),
+    rewardId: benefits.rewardId,
+    rewardCoins: benefits.rewardCoins,
+    campaignId: benefits.campaignId ?? null,
+    campaignCoins: benefits.campaignCoins ?? 0,
   };
 }
 
@@ -63,6 +95,8 @@ export function toCartDto(cart: PricedCart, options: { id?: string; couponCode?:
       itemCount: cart.lines.reduce((count, line) => count + line.quantity, 0),
     },
     couponCode: options.couponCode ?? null,
+    rewardId: cart.benefits.rewardId,
+    benefits: toBenefitsDto(cart.benefits),
   };
 }
 

@@ -64,7 +64,10 @@ import { TIERS, Tier } from './tiers';
       <p class="meta">
         <span class="platform" [attr.aria-label]="'פלטפורמה: ' + (product.platformLabel | t)"><tt-icon [name]="platformIcon" [size]="14"></tt-icon>{{ product.platformLabel | t }}</span>
         <span class="edition">{{ edition }}</span>
-        <span class="rate tt-numeric" *ngIf="perMillion as rate">{{ rate | money }} / מיליון<ng-container *ngIf="product.bonus > 0"> כולל בונוס</ng-container></span>
+        <span class="rate tt-numeric" *ngIf="per100K as rate">{{ rate | money }} / 100K<ng-container *ngIf="product.bonus > 0"> כולל בונוס</ng-container></span>
+      </p>
+      <p class="saving-line" *ngIf="product.savingVsStarterPercent > 0">
+        <tt-icon name="check" [size]="12"></tt-icon> {{ product.savingVsStarterPercent }}% זול יותר לקוין מחבילת {{ starterLabel }}
       </p>
 
       <p class="price">
@@ -174,6 +177,7 @@ import { TIERS, Tier } from './tiers';
     .platform { display: inline-flex; align-items: center; gap: 5px; min-block-size: 26px; padding: 0 9px; border-radius: var(--tt-radius-pill); border: 1px solid var(--tt-border-strong); background: var(--tt-surface-3); color: var(--tt-text); font-size: var(--tt-text-xs); font-weight: 800; direction: ltr; }
     .platform tt-icon { color: var(--tt-gold-400); }
     .rate { color: var(--tt-text-faint); }
+    .saving-line { display: inline-flex; align-items: center; gap: 4px; margin: 4px 0 0; font-size: var(--tt-caption); font-weight: 700; color: var(--tt-energy); }
 
     .price { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: var(--tt-space-2) 0 var(--tt-space-3); }
     .price .tt-price { font-size: 2.2rem; color: var(--tt-text); }
@@ -281,12 +285,15 @@ export class EasyCoinsCardComponent {
     return formatQuantity(this.product.totalCoins);
   }
 
-  get perMillion(): Money | undefined {
-    const rate = this.product.bonus > 0 ? this.product.effectivePerMillionIls : this.product.perMillionIls;
-    return rate === undefined
+  /** The price per 100K coins received, stated by the projection, never divided here. */
+  get per100K(): Money | undefined {
+    return this.product.per100KMinor === undefined
       ? undefined
-      : { amountMinor: Math.round(rate * 100), currency: this.product.offer.price.current.currency };
+      : { amountMinor: this.product.per100KMinor, currency: this.product.offer.price.current.currency };
   }
+
+  /** The smallest bundle on the shelf, named by the shelf. */
+  @Input() starterLabel = '100K';
 
   get saved(): Money | undefined {
     return savedAmount(this.product.offer.price);

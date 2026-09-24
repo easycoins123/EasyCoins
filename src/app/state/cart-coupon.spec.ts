@@ -1,7 +1,8 @@
 import { TestBed, fakeAsync, flush, tick } from '@angular/core/testing';
 
 import { provideMockDataLayer } from '../data/mock/providers';
-import { OFFERS } from '../data/mock/catalog.seed';
+import { OFFERS, PRODUCTS } from '../data/mock/catalog.seed';
+import { ProductType } from '../domain';
 import { CartFacade } from './cart.facade';
 
 /**
@@ -18,13 +19,15 @@ import { CartFacade } from './cart.facade';
  * assert on `CartFacade.totals()` — the value every price in the UI reads from.
  */
 // A single line worth well over the coupon's hundred-shekel minimum, so the
-// discount qualifies without needing several items. A product without the
-// launch bonus: coin bundles carry the bonus and take no code (one benefit
-// per order), which the last test covers.
+// discount qualifies without needing several items. A product that is not a
+// coin bundle: coin bundles carry a first-order benefit (FIRST KICK) in mock
+// mode and take no code (one benefit per order), which the first test covers.
 const BIG_PLAIN_OFFER = OFFERS.find(
-  (offer) => offer.productId !== 'prod-fc-coins' && offer.price.current.amountMinor >= 10_000,
+  (offer) => offer.active
+    && PRODUCTS.find((product) => product.id === offer.productId)?.type !== ProductType.GameCurrency
+    && offer.price.current.amountMinor >= 10_000,
 )!;
-const COIN_OFFER = OFFERS.find((offer) => offer.productId === 'prod-fc-coins')!;
+const COIN_OFFER = OFFERS.find((offer) => offer.active && offer.productId === 'prod-fc27-coins')!;
 const CODE = 'QA10';
 
 describe('CartFacade coupons', () => {
@@ -41,7 +44,7 @@ describe('CartFacade coupons', () => {
     tick(500);
   }
 
-  it('refuses a code on a line that carries the launch bonus', fakeAsync(() => {
+  it('refuses a code on a line that carries a coin benefit', fakeAsync(() => {
     cart.add({ offerId: COIN_OFFER.id, quantity: 1 }).subscribe();
     tick(500);
     let applied = true;

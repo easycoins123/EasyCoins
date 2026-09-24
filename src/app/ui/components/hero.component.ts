@@ -7,7 +7,7 @@ import { RouterLink } from '@angular/router';
 import { STOREFRONT } from '../../core/brand';
 import { LocalizePipe } from '../../core/i18n';
 import { formatQuantity, rankByValue } from '../../core/value';
-import { GAME_EDITIONS, Platform, ProductDetail } from '../../domain';
+import { GAME_EDITIONS, LaunchOffer, Platform, ProductDetail } from '../../domain';
 import { TIERS, Tier, tierForAmount } from './cards/tiers';
 import { HeroSceneComponent } from './hero-scene.component';
 import { IconComponent } from './icon.component';
@@ -61,6 +61,7 @@ interface PriceTag {
             <li><tt-icon name="check" [size]="14"></tt-icon> מחיר סופי לפני התשלום</li>
             <li><tt-icon name="check" [size]="14"></tt-icon> תשלום מאובטח</li>
             <li><tt-icon name="check" [size]="14"></tt-icon> דף מעקב לכל הזמנה</li>
+            <li class="facts__kick" *ngIf="launch?.live"><tt-icon name="bolt" [size]="14"></tt-icon> הזמנה ראשונה: +{{ launchPercent }}% קוינס מתנה</li>
           </ul>
 
           <div class="deal seq seq--word" *ngIf="best || pending" style="--seq-delay: 760ms">
@@ -68,13 +69,13 @@ interface PriceTag {
               <span class="deal__from">מ־</span>
               <span class="deal__value tt-figure">{{ price }}</span>
               <span class="deal__currency">₪</span>
-              <span class="deal__unit">לכל מיליון קוינס <span class="deal__sub">בחבילה הגדולה</span></span>
+              <span class="deal__unit">ל־100K קוינס <span class="deal__sub">בחבילה הגדולה</span></span>
             </ng-container>
             <ng-template #dealPending>
               <span class="deal__from">מ־</span>
               <span class="deal__value tt-figure tt-skeleton deal__value--pending" aria-hidden="true">000</span>
               <span class="deal__currency">₪</span>
-              <span class="deal__unit">לכל מיליון קוינס <span class="deal__sub">בחבילה הגדולה</span></span>
+              <span class="deal__unit">ל־100K קוינס <span class="deal__sub">בחבילה הגדולה</span></span>
             </ng-template>
           </div>
 
@@ -88,9 +89,12 @@ interface PriceTag {
           <!-- Step one of buying coins, asked here and remembered everywhere. -->
           <div class="platforms seq seq--word" *ngIf="platforms.length > 0 || pending" style="--seq-delay: 960ms">
             <ng-container *ngIf="platforms.length === 0">
-              <span class="platforms__label">על מה משחקים?</span>
+              <span class="platforms__head"><span class="platforms__label">על מה משחקים?</span></span>
               <ul class="pills" aria-hidden="true">
-                <li class="pill pill--pending tt-skeleton" *ngFor="let slot of placeholders">פלייסטיישן 5</li>
+                <li class="pill pill--pending tt-skeleton" *ngFor="let slot of placeholders">
+                  <span class="pill__glyph"></span>
+                  <span class="pill__text"><span class="pill__name">פלייסטיישן 5</span><span class="pill__short">PS5</span></span>
+                </li>
               </ul>
             </ng-container>
             <tt-platform-picker *ngIf="platforms.length > 0"
@@ -173,6 +177,7 @@ interface PriceTag {
     .facts { display: flex; flex-wrap: wrap; gap: var(--tt-space-2) var(--tt-space-4); margin: var(--tt-space-4) 0 0; padding: 0; list-style: none; font-size: var(--tt-text-sm); font-weight: 700; color: var(--tt-text-muted); }
     .facts li { display: inline-flex; align-items: center; gap: 6px; }
     .facts tt-icon { color: var(--tt-energy); }
+    .facts__kick { color: var(--tt-gold-400); }
 
     .deal { display: flex; align-items: baseline; gap: 4px; margin-block-start: var(--tt-space-4); }
     .deal__from { color: var(--tt-text-faint); font-size: var(--tt-text-sm); }
@@ -188,11 +193,20 @@ interface PriceTag {
     .cta { display: flex; gap: var(--tt-space-3); flex-wrap: wrap; margin-block-start: var(--tt-space-5); }
     .cta .tt-btn { white-space: nowrap; }
 
-    .platforms { display: flex; flex-direction: column; gap: var(--tt-space-2); margin-block-start: var(--tt-space-5); }
-    .platforms__label { font-size: var(--tt-caption); font-weight: 700; color: var(--tt-text-faint); }
-    .pills { display: flex; flex-wrap: wrap; gap: var(--tt-space-2); margin: 0; padding: 0; list-style: none; }
-    .pill { display: inline-flex; align-items: center; min-block-size: 52px; min-inline-size: 128px; padding: 0.35rem 0.75rem; border: 1px solid var(--tt-border-strong); border-radius: var(--tt-radius-md); background: rgba(255, 248, 235, 0.03); color: var(--tt-text); font-size: var(--tt-caption); font-weight: 800; }
-    .platforms tt-platform-picker { inline-size: 100%; max-inline-size: 560px; }
+    /* A definite width, so the picker's grid lays its options in a row
+       instead of a shrink-to-fit column; the skeleton is the same grid at the
+       same height, so the hero does not move when the catalog answers. */
+    .platforms { display: flex; flex-direction: column; gap: var(--tt-space-2); margin-block-start: var(--tt-space-5); inline-size: 100%; max-inline-size: 560px; }
+    .platforms__head { display: flex; align-items: center; min-block-size: 40px; }
+    .platforms__label { font-size: var(--tt-text-sm); font-weight: 700; }
+    .pills { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: var(--tt-space-2); margin: 0; padding: 0; list-style: none; }
+    /* The same box as the picker's option: glyph, two text lines, padding, so the two measure alike. */
+    .pill { display: flex; align-items: center; gap: var(--tt-space-2); min-block-size: 52px; padding: var(--tt-space-2) var(--tt-space-3); padding-inline-end: 34px; border: 1px solid var(--tt-border-strong); border-radius: var(--tt-radius-md); background: rgba(255, 248, 235, 0.03); color: var(--tt-text); }
+    .pill__glyph { flex: none; inline-size: 30px; block-size: 30px; border-radius: var(--tt-radius-sm); background: var(--tt-surface-3); }
+    .pill__text { display: flex; flex-direction: column; gap: 1px; }
+    .pill__name { font-size: var(--tt-text-sm); font-weight: 800; line-height: 1.15; }
+    .pill__short { font-size: var(--tt-caption); font-weight: 700; direction: ltr; text-align: start; }
+    .platforms tt-platform-picker { inline-size: 100%; }
 
     .art { position: relative; display: flex; justify-content: center; perspective: 1200px; }
     .art__stage {
@@ -247,7 +261,15 @@ interface PriceTag {
 })
 export class HeroComponent implements AfterViewInit {
   readonly gameName = STOREFRONT.focusGameName;
-  readonly editionLabel = String(GAME_EDITIONS[STOREFRONT.focusGameEdition].year);
+  /** "27": the edition the storefront sells, from the server, not the build. */
+  @Input() editionLabel = String(GAME_EDITIONS[STOREFRONT.focusGameEdition].year);
+  /** The launch offer, announced only while the server says it is live. */
+  @Input() launch: LaunchOffer | null = null;
+
+  /** "+10%": the welcome benefit as a whole percentage. */
+  get launchPercent(): number {
+    return Math.round((this.launch?.percentBps ?? 0) / 100);
+  }
 
 
   /** Cheapest price per million in the catalog, in whole shekels. */
@@ -341,7 +363,8 @@ export class HeroComponent implements AfterViewInit {
     if (rates.length === 0) {
       return null;
     }
-    return Math.round(Math.min(...rates) / 100).toLocaleString('he-IL');
+    // Per 100K, rounded up: a "from" price must never be lower than any real one.
+    return Math.ceil(Math.min(...rates) / 1000).toLocaleString('he-IL');
   }
 
   private tagsFor(detail: ProductDetail | null | undefined): readonly PriceTag[] {

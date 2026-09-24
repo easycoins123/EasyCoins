@@ -63,8 +63,8 @@ await page.waitForTimeout(500);
 const eaProducts = await page.locator('tt-product-card').count();
 check('EA FC game page lists its products', eaProducts >= 3, `${eaProducts} products`);
 
-await page.locator('a[href="/products/ea-fc-ultimate-team-coins"]').first().click();
-await page.waitForURL('**/products/ea-fc-ultimate-team-coins');
+await page.locator('a[href="/products/fc27-coins"]').first().click();
+await page.waitForURL('**/products/fc27-coins');
 await page.waitForTimeout(600);
 
 const variantChips = page.locator('.chooser--variant').locator('.chip');
@@ -75,7 +75,7 @@ check('product exposes variants', variantCount >= 5, `${variantCount} variants`)
 await variantChips.filter({ hasText: '500K' }).first().click(); // by label: the ladder has eleven sizes
 await page.waitForTimeout(250);
 const priceAfterVariant = await page.locator('.tt-price').first().innerText();
-check('variant selection changes price', priceAfterVariant.includes('39'), `price=${priceAfterVariant}`); // 500K on the launch ladder
+check('variant selection changes price', priceAfterVariant.includes('375'), `price=${priceAfterVariant}`); // 500K on the FC27 draft ladder
 
 const platformChips = page.locator('.chooser--platform').locator('[role="radio"]');
 const platformCount = await platformChips.count();

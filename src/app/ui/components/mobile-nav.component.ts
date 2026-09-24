@@ -13,6 +13,7 @@ import { formatQuantity, rankByValue } from '../../core/value';
 import { ProductDetail } from '../../domain';
 import { CatalogFacade } from '../../state/catalog.facade';
 import { AuthFacade } from '../../state/customer.facade';
+import { StorefrontFacade } from '../../state/storefront.facade';
 import { TIERS, tierForAmount } from './cards/tiers';
 import { BrandLogoComponent } from './brand-logo.component';
 import { IconComponent, IconName } from './icon.component';
@@ -343,6 +344,7 @@ export class MobileNavComponent implements OnChanges {
   @ViewChild('panel') private readonly panel?: ElementRef<HTMLElement>;
   @ViewChild('closeButton') private readonly closeButton?: ElementRef<HTMLButtonElement>;
 
+  private readonly storefront = inject(StorefrontFacade);
   readonly gameName = STOREFRONT.focusGameName;
 
   readonly groups: readonly MenuGroup[] = [
@@ -357,6 +359,7 @@ export class MobileNavComponent implements OnChanges {
       title: 'החשבון שלי',
       items: [
         { route: '/account/orders', icon: 'clock', label: 'ההזמנות שלי' },
+        { route: '/account/club', icon: 'crown', label: 'EASYCLUB', signedIn: true },
         { route: '/account', icon: 'user', label: 'החשבון שלי', exact: true },
         { route: '/account/security', icon: 'lock', label: 'אבטחת החשבון', signedIn: true },
       ],
@@ -378,7 +381,8 @@ export class MobileNavComponent implements OnChanges {
   readonly tiers$: Observable<readonly QuickTier[] | null> = this.opened.pipe(
     filter(Boolean),
     take(1),
-    switchMap(() => this.catalog.productBySlug(STOREFRONT.focusProductSlug).pipe(catchError(() => of(null)))),
+    switchMap(() => this.storefront.focusProductSlug$.pipe(take(1))),
+    switchMap((slug) => this.catalog.productBySlug(slug).pipe(catchError(() => of(null)))),
     map((detail) => this.tiersOf(detail)),
     catchError(() => of(null)),
     startWith(null),

@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /checkout
+Disallow: /cart
+Disallow: /account
+Disallow: /order/
+
+Sitemap: https://www.easycoins.co.il/sitemap.xml

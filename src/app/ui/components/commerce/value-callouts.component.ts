@@ -72,13 +72,13 @@ export class ValueCalloutsComponent {
     const anyBonus = shelf.some((product) => product.bonus > 0);
 
     const callouts: Callout[] = [];
-    if (cheapest?.effectivePerMillionIls !== undefined) {
+    if (cheapest?.per100KMinor !== undefined) {
       callouts.push({
         icon: 'tag',
-        figure: `₪${Math.round(cheapest.effectivePerMillionIls)}`,
-        unit: 'למיליון',
+        figure: `₪${Math.ceil(cheapest.per100KMinor / 100)}`,
+        unit: 'ל־100K',
         title: `בחבילת ${formatQuantity(cheapest.amount)}`,
-        note: anyBonus ? 'המחיר לכל מיליון קוינס שמתקבלים, כולל בונוס ההשקה.' : 'המחיר לכל מיליון קוינס.',
+        note: anyBonus ? 'המחיר לכל 100K קוינס שמתקבלים, כולל הבונוס.' : 'המחיר לכל 100K קוינס בחבילה הגדולה. ככל שעולים בכמות, המחיר לקוין יורד.',
       });
     }
     if (anyBonus) {

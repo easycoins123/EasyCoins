@@ -585,6 +585,43 @@ Not called by the browser. Documented because they are the authoritative path.
 - Content is untrusted: stored as text, never rendered as HTML.
 - **Rate limit** 5/hour per email → `429`, never a silent 200.
 
+### 7.10 Growth: EasyDrop, EasyClub, custom coins, referral, drops, trust
+
+All under `/api/v1`; session cookie as elsewhere. Every value is computed
+server-side; see `docs/GROWTH-AND-REWARDS.md` for rules and defaults.
+
+#### `GET /growth/programmes` — `GrowthProgrammesDto`, public
+Enabled flags and configured reward titles for easydrop / easyclub / founders / referral / streak / easyback / customCoins, so the storefront shows only what is on.
+#### `GET /growth/founders` — `{ enabled, name, cap, taken, remaining, reward }`, public (real counts).
+#### `GET /growth/campaigns` — `DropDto[]`, public: active and scheduled campaigns only, with real `startAt` / `endAt`, `kind`, `status`, reward and optional cap remaining.
+#### `GET /growth/trust` — `TrustSnapshotDto`, public: only metrics above their publish thresholds.
+#### `GET /coins/custom/rules` — `{ enabled, minCoins, maxCoins, stepCoins, platforms }`.
+#### `POST /coins/custom/quote` — `{ mode: 'amount' | 'budget', amount? | budgetMinor?, platformId, regionId? }` → `CustomCoinsQuoteDto` `{ offerId, coins, bonusCoins, totalCoins, price, perCoin }`.
+- 422 `AMOUNT_TOO_SMALL` / `AMOUNT_TOO_LARGE` / `BUDGET_TOO_SMALL`; 404 when disabled. The quote is a real offer; the cart adds it by `offerId`, priced by the server.
+#### `GET /account/club` — `ClubSummaryDto` (auth): tier, points, next tier, perks, rewards available / history, streak, founders, referral, orders summary.
+#### `GET /account/rewards` — `RewardWalletDto` (session or auth): the caller's rewards.
+#### `GET /account/referral` — `ReferralSummaryDto` (auth): code, path, rewards, stats, monthly cap.
+#### `POST /referral/attach` — `{ code }` → `{ attached, outcome }` with outcome `ATTACHED | ALREADY_ATTACHED | SELF | EXISTING_CUSTOMER | UNKNOWN_CODE | DISABLED`; rate-limited 30/hour per IP; never rewards.
+#### `GET /orders/:orderId/easydrop` — `EasyDropDto` (owner only): tier, cards (face down), `pickedIndex`, reward when revealed; 404 until the order is paid.
+#### `POST /orders/:orderId/easydrop/reveal` — `{ index }` → `EasyDropDto`; idempotent: a second call returns the first pick.
+#### `POST /account/reviews` — `{ orderId, rating, title?, body }` → `{ id, published }` (auth, order FULFILLED and owned; one per order; 409 `REVIEW_EXISTS`).
+#### Cart additions
+`POST /cart/price`, `POST /promotions/validate` and checkout session creation accept `rewardId`; responses carry `benefits: { applied[], rejected[], rewardCoins }` and each line carries `coins` and `bonusCoins`. Orders carry `rewardId`, `rewardCoins`, `benefits`, `paidAt`.
+#### Admin: `/admin/growth/*` (bearer admin token) — overview, settings, campaigns, trust, reviews.
+
+### 7.11 Editions, pricing and the launch offer
+
+See `docs/PRICING.md` for the rules; every number below is decided by the server.
+
+#### `GET /storefront` — `{ activeEdition: 'fc26' | 'fc27', editions: [{ id, label, productSlug, status }], ladderStatus }`, public
+Which edition has live offers. The storefront reads it once per session and titles, hero, shelf and JSON-LD follow it; when the call fails the client falls back to its build constants.
+#### Cart and checkout additions
+`benefits` gains `campaignId` and `campaignCoins` (the FIRST KICK bonus, in coins, never money). `BenefitKind` gains `FIRST_ORDER`, which combines with `LAUNCH_BONUS`, `REWARD` and `LOYALTY` and never with `COUPON`; a rejected code is reported as `FIRST_ORDER_ONLY`. A coupon is capped by the ladder's `maxDiscountBps`.
+#### Order additions
+Each order item carries `edition` (the edition of the product it was sold under; historical FC26 orders keep `fc26` and their frozen prices). Orders carry `campaignId` and `campaignCoins`; a first-order bonus that the email recheck removes at creation is absent from the order, with the reason in `benefits.rejected`.
+#### Admin: `/admin/pricing/*` (bearer admin token)
+`GET/PUT/DELETE settings/:key` (`economics`, `ladder`, `launch`, `competitors`; every write is validated and audited), `GET evaluation[?platformId]`, `GET storefront`, `GET ladder/preview`, `POST ladder/activate { acknowledgeUnknownCost? }`, `POST ladder/republish`, `POST ladder/deactivate`, `GET/POST codes`, `PATCH codes/:code`, `GET codes/:code/attribution`. Activation is refused (422) with an unknown supplier cost unless acknowledged, and always when a costed package sits under the margin floor.
+
 ---
 
 ## 8. What the client already guarantees
@@ -604,7 +641,7 @@ Verified by the test suite, so the backend can rely on it:
 ## 9. Not specified yet
 
 - Customer-initiated cancellation and refund requests
-- Review submission (the store only reads reviews today)
+- Review submission for orders that are not fulfilled (verified reviews are specified in 7.10)
 - Invoicing / Israeli tax receipt data
 - Stock reservation is specified in `docs/FULFILLMENT-ARCHITECTURE.md` but has no
   endpoint, because it happens inside checkout session creation
