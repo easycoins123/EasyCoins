@@ -158,6 +158,10 @@ JSON-LD block follows. Historical orders keep their edition: each order item
 answers `edition` from the product it was sold under, so an FC26 order reads
 FC 26 after the switch and keeps its frozen prices.
 
+The sitemap follows the same state: `GET /api/v1/sitemap.xml` (served at
+`/sitemap.xml` on the storefront host) lists a product URL only for an
+edition with live offers, so nothing is advertised that has nothing to buy.
+
 ## 10. Runbook: going live with FC27
 
 1. Admin → Pricing → Economics: enter the supplier cost per 1M (and per

@@ -5,6 +5,7 @@ import { FirstOrderService } from './first-order.service';
 import { LadderService } from './ladder.service';
 import { PricingAdminController } from './pricing-admin.controller';
 import { PricingConfigService } from './pricing-config.service';
+import { SitemapController } from './sitemap.controller';
 import { StorefrontController } from './storefront.controller';
 
 /**
@@ -14,7 +15,7 @@ import { StorefrontController } from './storefront.controller';
  * import this one, so it must never import them back.
  */
 @Module({
-  controllers: [PricingAdminController, StorefrontController],
+  controllers: [PricingAdminController, StorefrontController, SitemapController],
   providers: [PricingConfigService, LadderService, FirstOrderService, CreatorCodesService],
   exports: [PricingConfigService, LadderService, FirstOrderService, CreatorCodesService],
 })

@@ -177,6 +177,30 @@ describe('FC27 pricing', () => {
     expect((await api().get('/api/v1/storefront').expect(200)).body.activeEdition).toBe('fc26');
   });
 
+  it('advertises in the sitemap only the edition with live offers, never a page with nothing to buy', async () => {
+    const before = await api().get('/api/v1/sitemap.xml').expect(200);
+    expect(before.headers['content-type']).toContain('application/xml');
+    expect(before.text).toContain('<loc>http://localhost:4200/products/ea-fc-ultimate-team-coins</loc>');
+    expect(before.text).not.toContain('fc27-coins');
+    // Not advertised because there is nothing to buy: the page is missing
+    // (production, before the first activation) or has no live offers.
+    const draft = await api().get('/api/v1/products/fc27-coins');
+    expect(draft.status === 404 || draft.body.offers.length === 0).toBe(true);
+
+    await activateAcknowledged();
+    const after = await api().get('/api/v1/sitemap.xml').expect(200);
+    expect(after.text).toContain('<loc>http://localhost:4200/products/fc27-coins</loc>');
+    expect(after.text).not.toContain('ea-fc-ultimate-team-coins');
+    await api().get('/api/v1/products/fc27-coins').expect(200);
+
+    await admin('post', '/ladder/deactivate').expect(200);
+    config.invalidate();
+    const restored = await api().get('/api/v1/sitemap.xml').expect(200);
+    expect(restored.text).toContain('ea-fc-ultimate-team-coins');
+    expect(restored.text).not.toContain('fc27-coins');
+    await resetToFc26();
+  });
+
   it('re-prices the whole cart from the new rows and the checkout total equals the offer price', async () => {
     await activateAcknowledged();
     const offer = await fc27Offer(500_000, 'plat-pc');

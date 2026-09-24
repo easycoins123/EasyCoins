@@ -615,6 +615,8 @@ See `docs/PRICING.md` for the rules; every number below is decided by the server
 
 #### `GET /storefront` — `{ activeEdition: 'fc26' | 'fc27', editions: [{ id, label, productSlug, status }], ladderStatus }`, public
 Which edition has live offers. The storefront reads it once per session and titles, hero, shelf and JSON-LD follow it; when the call fails the client falls back to its build constants.
+#### `GET /sitemap.xml` — `application/xml`, public
+The sitemap, generated from the same edition state: static public pages plus one product URL per edition that has live offers. A draft or retired edition is not listed: its product page is missing (404) or has no live offers. The storefront host rewrites `/sitemap.xml` to this endpoint (root `vercel.json`); `robots.txt` points there.
 #### Cart and checkout additions
 `benefits` gains `campaignId` and `campaignCoins` (the FIRST KICK bonus, in coins, never money). `BenefitKind` gains `FIRST_ORDER`, which combines with `LAUNCH_BONUS`, `REWARD` and `LOYALTY` and never with `COUPON`; a rejected code is reported as `FIRST_ORDER_ONLY`. A coupon is capped by the ladder's `maxDiscountBps`.
 #### Order additions
