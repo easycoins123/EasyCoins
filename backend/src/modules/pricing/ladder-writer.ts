@@ -163,6 +163,10 @@ export async function reconcileLadder(prisma: PrismaClient, config: PricingConfi
   const fc27LiveBefore = await prisma.offer.count({ where: { productId: ladder.productId, active: true } });
   const fc26LiveBefore = await prisma.offer.count({ where: { productId: FC26_PRODUCT_ID, active: true } });
 
+  // One transaction, so the storefront never sees half a ladder; ninety-odd
+  // statements over a remote pooler need far more than Prisma's 5-second
+  // default (the API's own client already runs with raised limits, see
+  // PrismaService; the seed's bare client does not).
   const result = await prisma.$transaction(async (tx) => {
     if (ladder.status === 'active') {
       const offersWritten = await writeLadder(tx, config);
@@ -172,7 +176,7 @@ export async function reconcileLadder(prisma: PrismaClient, config: PricingConfi
     const offersRetired = await retireFc27(tx, config);
     const offersRestored = await restoreFc26(tx);
     return { status: ladder.status, switched: offersRetired > 0 || offersRestored > 0, offersWritten: 0, offersRetired, offersRestored };
-  });
+  }, { maxWait: 15_000, timeout: 180_000 });
 
   if (result.switched) {
     await prisma.auditLog.create({
