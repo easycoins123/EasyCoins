@@ -5,8 +5,8 @@ import { validationError } from '../../common/errors/api-error';
 import { AppLogger } from '../../common/logging/app-logger.service';
 import { PrismaService } from '../../database/prisma.service';
 import {
-  PRICING_CONFIG_KEYS, PRICING_DEFAULTS, PRICING_SETTING_PREFIX, PricingConfig, PricingConfigError, PricingConfigKey,
-  sanitizePricingSetting,
+  PRICING_CONFIG_KEYS, PRICING_SETTING_PREFIX, PricingConfig, PricingConfigError, PricingConfigKey,
+  resolvePricingConfig, sanitizePricingSetting,
 } from './pricing-config';
 
 const CACHE_TTL_MS = 15_000;
@@ -27,8 +27,7 @@ export interface PricingSettingView {
  * growth reader ignores these keys and this reader ignores theirs.
  *
  * An override that fails validation is ignored with a warning and the default
- * applies, which for pricing means: the draft ladder and no launch offer.
- * Nothing invalid can price a cart.
+ * applies. Nothing invalid can price a cart.
  */
 @Injectable()
 export class PricingConfigService {
@@ -44,22 +43,9 @@ export class PricingConfigService {
       return this.cache.value;
     }
     const rows = await this.prisma.growthSetting.findMany({ where: { key: { startsWith: PRICING_SETTING_PREFIX } } });
-    const merged: Record<string, unknown> = { ...PRICING_DEFAULTS };
-    for (const row of rows) {
-      const key = row.key.slice(PRICING_SETTING_PREFIX.length) as PricingConfigKey;
-      if (!PRICING_CONFIG_KEYS.includes(key)) {
-        continue;
-      }
-      try {
-        merged[key] = sanitizePricingSetting(key, row.value);
-      } catch (error) {
-        this.logger.warn('ignoring an invalid pricing setting; the default applies', {
-          key,
-          reason: error instanceof Error ? error.message : 'unknown',
-        });
-      }
-    }
-    const value = merged as unknown as PricingConfig;
+    const value = resolvePricingConfig(rows, (key, reason) => {
+      this.logger.warn('ignoring an invalid pricing setting; the default applies', { key, reason });
+    });
     this.cache = { at: Date.now(), value };
     return value;
   }

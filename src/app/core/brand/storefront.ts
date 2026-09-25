@@ -25,10 +25,10 @@ export const STOREFRONT = {
    * game's product list first. If the slug ever fails to load, every caller
    * falls back to showing the product as an ordinary card.
    */
-  focusProductSlug: 'ea-fc-ultimate-team-coins',
+  focusProductSlug: 'fc27-coins',
 
   /** The edition currently sold. FC 27 is a data change here, not a redesign. */
-  focusGameEdition: 'fc26',
+  focusGameEdition: 'fc27',
 
   /**
    * Whether to surface game browsing at all. False collapses the game routes

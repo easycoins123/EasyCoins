@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
+import { STOREFRONT } from '../../core/brand/storefront';
 import { GameEdition, StorefrontState } from '../../domain';
 import { StorefrontApiService } from '../api';
 import { ApiClient } from './api-client.service';
@@ -32,7 +33,7 @@ interface StorefrontDto {
 const EDITIONS: readonly GameEdition[] = ['fc26', 'fc27'];
 
 function edition(value: string): GameEdition {
-  return EDITIONS.includes(value as GameEdition) ? (value as GameEdition) : 'fc26';
+  return EDITIONS.includes(value as GameEdition) ? (value as GameEdition) : STOREFRONT.focusGameEdition;
 }
 
 function localized(value: { he: string; en?: string | null } | null | undefined): { he: string; en?: string } {

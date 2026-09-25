@@ -34,9 +34,9 @@ describe('StorefrontFacade', () => {
     TestBed.configureTestingModule({ providers: [{ provide: StorefrontApiService, useValue: new StubApi(() => throwError(() => new Error('down'))) }] });
     const facade = TestBed.inject(StorefrontFacade);
     facade.state$.subscribe((state) => {
-      expect(state.activeEdition).toBe('fc26');
+      expect(state.activeEdition).toBe('fc27');
       expect(state.launch.live).toBeFalse();
-      expect(focusSlug(state)).toBe('ea-fc-ultimate-team-coins');
+      expect(focusSlug(state)).toBe('fc27-coins');
       done();
     });
   });

@@ -31,6 +31,9 @@ import {
   SupportTopic,
 } from '@prisma/client';
 
+import { reconcileLadder } from '../src/modules/pricing/ladder-writer';
+import { PRICING_SETTING_PREFIX, resolvePricingConfig } from '../src/modules/pricing/pricing-config';
+
 const prisma = new PrismaClient();
 
 type Localized = { he: string; en?: string };
@@ -580,6 +583,16 @@ async function main(): Promise<void> {
     // operator touches it, and the seed must never drag it back.
     await prisma.campaign.upsert({ where: { id: campaign.id }, create: campaign, update: {} });
   }
+
+  // The edition on sale is the owner's decision (pricing config: code
+  // defaults under admin overrides), applied here on every build so a deploy
+  // confirms it and can never drift back to a previous edition.
+  const pricingRows = await prisma.growthSetting.findMany({ where: { key: { startsWith: PRICING_SETTING_PREFIX } } });
+  const pricing = resolvePricingConfig(pricingRows, (key, reason) => process.stderr.write(`ignoring invalid pricing.${key}: ${reason}\n`));
+  const ladder = await reconcileLadder(prisma, pricing);
+  process.stdout.write(
+    `Ladder ${ladder.status}: ${ladder.offersWritten} FC27 offers written, ${ladder.offersRetired} retired, ${ladder.offersRestored} restored${ladder.switched ? ' (edition switched)' : ''}.\n`,
+  );
 
   process.stdout.write(
     `Seed complete in ${Date.now() - startedAt}ms: ` +

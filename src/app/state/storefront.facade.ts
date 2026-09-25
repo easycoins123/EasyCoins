@@ -23,7 +23,8 @@ export class StorefrontFacade {
   static readonly FALLBACK: StorefrontState = {
     activeEdition: STOREFRONT.focusGameEdition,
     editions: [
-      { id: 'fc26', label: GAME_EDITIONS.fc26.label, productSlug: STOREFRONT.focusProductSlug, productId: 'prod-fc-coins', status: 'active' },
+      { id: 'fc27', label: GAME_EDITIONS.fc27.label, productSlug: STOREFRONT.focusProductSlug, productId: 'prod-fc27-coins', status: 'active' },
+      { id: 'fc26', label: GAME_EDITIONS.fc26.label, productSlug: 'ea-fc-ultimate-team-coins', productId: 'prod-fc-coins', status: 'retired' },
     ],
     launch: {
       id: 'none', live: false, name: { he: '' }, percentBps: 0, capCoins: 0, minOrderMinor: 0, eligibility: 'first-order', terms: [],

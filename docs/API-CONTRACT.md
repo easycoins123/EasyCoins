@@ -614,6 +614,7 @@ Enabled flags and configured reward titles for easydrop / easyclub / founders / 
 See `docs/PRICING.md` for the rules; every number below is decided by the server.
 
 #### `GET /storefront` — `{ activeEdition: 'fc26' | 'fc27', editions: [{ id, label, productSlug, status }], ladderStatus }`, public
+`activeEdition` is read from the offers (FC27 when its product has live offers). The seed applies the effective pricing configuration on every API build, so a deploy confirms the edition on sale and never reverts it.
 Which edition has live offers. The storefront reads it once per session and titles, hero, shelf and JSON-LD follow it; when the call fails the client falls back to its build constants.
 #### `GET /sitemap.xml` — `application/xml`, public
 The sitemap, generated from the same edition state: static public pages plus one product URL per edition that has live offers. A draft or retired edition is not listed: its product page is missing (404) or has no live offers. The storefront host rewrites `/sitemap.xml` to this endpoint (root `vercel.json`); `robots.txt` points there.

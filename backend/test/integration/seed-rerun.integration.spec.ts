@@ -1,28 +1,32 @@
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
+
+import { PRICING_DEFAULTS, PRICING_SETTING_PREFIX } from '../../src/modules/pricing/pricing-config';
 
 /**
- * The seed runs on every API build. It must be a refresh, never a switch.
+ * The seed runs on every API build. It applies the owner's decision, never
+ * a previous one.
  *
  * This exists because of a real defect: the seed upserted the FC26 product,
  * variants and offers with `active: true`, so the first deploy after the
- * owner activated the FC27 ladder (which retires the FC26 offers) would have
- * put FC26 back on sale beside it. Nothing here ran the seed twice.
- *
- * The seed is a script with `main()` at module level, so it is run the way
- * the build runs it, as a child process against the same database.
+ * FC27 ladder went live would have put FC26 back on sale beside it. The seed
+ * now reconciles the catalog with the pricing configuration (code defaults
+ * under admin overrides), so a deploy confirms the edition on sale and
+ * cannot revert it. These run the seed the way the build does, as a child
+ * process against the same database.
  */
 const prisma = new PrismaClient();
 const BACKEND_ROOT = join(__dirname, '..', '..');
 
-const OFFER_ID = 'offer__prod-fc-coins__100k__plat-ps5__reg-global';
-const VARIANT_ID = 'prod-fc-coins__100k';
-const PRODUCT_ID = 'prod-fc-coins';
-const SETTING_KEY = 'pricing.ladder';
+const FC27_PRODUCT_ID = PRICING_DEFAULTS.ladder.productId;
+const FC27_1M_PS5 = `offer__${FC27_PRODUCT_ID}__1m__plat-ps5__reg-global`;
+const FC26_PRODUCT_ID = 'prod-fc-coins';
+const LADDER_KEY = `${PRICING_SETTING_PREFIX}ladder`;
+const ONE_MILLION_MINOR = PRICING_DEFAULTS.ladder.packages.find((pack) => pack.key === '1m')!.priceMinor;
 
-function runSeed(): void {
+function runSeed(): string {
   const result = spawnSync('npm', ['run', 'seed'], {
     cwd: BACKEND_ROOT,
     env: process.env,
@@ -33,88 +37,107 @@ function runSeed(): void {
   if (result.status !== 0) {
     throw new Error(`seed exited with ${result.status}: ${result.stderr.slice(-800)}`);
   }
+  return result.stdout;
+}
+
+async function live(productId: string): Promise<number> {
+  return prisma.offer.count({ where: { productId, active: true, product: { active: true } } });
 }
 
 describe('seed rerun (what a redeploy does)', () => {
-  let priorSetting: { key: string; value: unknown; updatedBy: string | null } | null = null;
-
   beforeAll(async () => {
-    priorSetting = await prisma.growthSetting.findUnique({ where: { key: SETTING_KEY } });
+    // Whatever an earlier spec left behind, a deploy starts from the seed.
+    await prisma.growthSetting.deleteMany({ where: { key: { startsWith: PRICING_SETTING_PREFIX } } });
+    runSeed();
   });
 
   afterAll(async () => {
-    // Put the catalog back the way every other spec expects it.
-    await prisma.offer.update({ where: { id: OFFER_ID }, data: { active: true } });
-    await prisma.productVariant.update({ where: { id: VARIANT_ID }, data: { active: true } });
-    await prisma.product.update({ where: { id: PRODUCT_ID }, data: { active: true } });
-    if (priorSetting) {
-      await prisma.growthSetting.upsert({
-        where: { key: SETTING_KEY },
-        create: { key: SETTING_KEY, value: priorSetting.value as object, updatedBy: priorSetting.updatedBy },
-        update: { value: priorSetting.value as object, updatedBy: priorSetting.updatedBy },
-      });
-    } else {
-      await prisma.growthSetting.deleteMany({ where: { key: SETTING_KEY } });
-    }
+    await prisma.growthSetting.deleteMany({ where: { key: { startsWith: PRICING_SETTING_PREFIX } } });
+    runSeed();
     await prisma.$disconnect();
   });
 
-  it('leaves retired rows retired, keeps the owner\'s pricing settings, and adds nothing on a second run', async () => {
-    // The owner has activated FC27: the FC26 rows are retired, the ladder
-    // override is stored.
-    await prisma.offer.update({ where: { id: OFFER_ID }, data: { active: false } });
-    await prisma.productVariant.update({ where: { id: VARIANT_ID }, data: { active: false } });
-    await prisma.product.update({ where: { id: PRODUCT_ID }, data: { active: false } });
-    const marker = { edition: 'fc27', status: 'active', marker: 'seed-rerun-spec' };
-    await prisma.growthSetting.upsert({
-      where: { key: SETTING_KEY },
-      create: { key: SETTING_KEY, value: marker, updatedBy: 'spec' },
-      update: { value: marker, updatedBy: 'spec' },
-    });
+  it('sells FC27 at the configured prices after a deploy, with FC26 retired', async () => {
+    expect(await live(FC27_PRODUCT_ID)).toBe(PRICING_DEFAULTS.ladder.packages.filter((pack) => pack.active).length * 4);
+    expect(await live(FC26_PRODUCT_ID)).toBe(0);
+    const million = await prisma.offer.findUniqueOrThrow({ where: { id: FC27_1M_PS5 } });
+    expect(million.priceAmountMinor).toBe(ONE_MILLION_MINOR);
+    expect(million.active).toBe(true);
+    const fc26 = await prisma.product.findUniqueOrThrow({ where: { id: FC26_PRODUCT_ID } });
+    expect(fc26.featured).toBe(false);
+    expect((fc26.metadata as { edition?: string }).edition).toBe('fc26');
+  }, 200_000);
 
+  it('is idempotent: a second run adds nothing and moves nothing', async () => {
     const before = {
       products: await prisma.product.count(),
       variants: await prisma.productVariant.count(),
       offers: await prisma.offer.count(),
       inventory: await prisma.inventory.count(),
-      price: (await prisma.offer.findUniqueOrThrow({ where: { id: OFFER_ID } })).priceAmountMinor,
+      fc27: await live(FC27_PRODUCT_ID),
+      fc26: await live(FC26_PRODUCT_ID),
     };
-
-    // A redeploy.
-    runSeed();
-
-    const offer = await prisma.offer.findUniqueOrThrow({ where: { id: OFFER_ID } });
-    const variant = await prisma.productVariant.findUniqueOrThrow({ where: { id: VARIANT_ID } });
-    const product = await prisma.product.findUniqueOrThrow({ where: { id: PRODUCT_ID } });
-    const setting = await prisma.growthSetting.findUniqueOrThrow({ where: { key: SETTING_KEY } });
-
-    expect(offer.active).toBe(false);
-    expect(variant.active).toBe(false);
-    expect(product.active).toBe(false);
-    expect(setting.value).toEqual(marker);
-    expect(setting.updatedBy).toBe('spec');
-
-    // Idempotent: the same rows, the same prices, nothing added.
+    const output = runSeed();
+    expect(output).toContain('Ladder active');
+    expect(output).not.toContain('edition switched');
     expect(await prisma.product.count()).toBe(before.products);
     expect(await prisma.productVariant.count()).toBe(before.variants);
     expect(await prisma.offer.count()).toBe(before.offers);
     expect(await prisma.inventory.count()).toBe(before.inventory);
-    expect(offer.priceAmountMinor).toBe(before.price);
+    expect(await live(FC27_PRODUCT_ID)).toBe(before.fc27);
+    expect(await live(FC26_PRODUCT_ID)).toBe(before.fc26);
+  }, 200_000);
 
-    // And a second rerun changes nothing either.
+  it('restores a tampered or missing FC27 price on the next deploy', async () => {
+    await prisma.offer.update({ where: { id: FC27_1M_PS5 }, data: { priceAmountMinor: 100, active: false } });
     runSeed();
-    expect((await prisma.offer.findUniqueOrThrow({ where: { id: OFFER_ID } })).active).toBe(false);
-    expect(await prisma.offer.count()).toBe(before.offers);
+    const million = await prisma.offer.findUniqueOrThrow({ where: { id: FC27_1M_PS5 } });
+    expect(million.priceAmountMinor).toBe(ONE_MILLION_MINOR);
+    expect(million.active).toBe(true);
+
+    // A row that nothing references yet (no order, no hold), so it can go.
+    const TEN_MILLION_PC = `offer__${FC27_PRODUCT_ID}__10m__plat-pc__reg-global`;
+    const tenMillionMinor = PRICING_DEFAULTS.ladder.packages.find((pack) => pack.key === '10m')!.priceMinor;
+    await prisma.inventoryReservation.deleteMany({ where: { offerId: TEN_MILLION_PC } });
+    await prisma.inventory.deleteMany({ where: { offerId: TEN_MILLION_PC } });
+    await prisma.offer.delete({ where: { id: TEN_MILLION_PC } });
+    runSeed();
+    const recreated = await prisma.offer.findUniqueOrThrow({ where: { id: TEN_MILLION_PC } });
+    expect(recreated.priceAmountMinor).toBe(tenMillionMinor);
+    expect(recreated.active).toBe(true);
+    expect(await prisma.inventory.count({ where: { offerId: TEN_MILLION_PC } })).toBe(1);
   }, 400_000);
 
-  it('still creates a missing row as active (a fresh database sells the catalog)', async () => {
-    await prisma.inventory.deleteMany({ where: { offerId: OFFER_ID } });
-    await prisma.offer.delete({ where: { id: OFFER_ID } });
+  it('respects the owner\'s deactivation: with a draft override a deploy keeps FC26 on sale, and removing it brings FC27 back', async () => {
+    const draft = JSON.parse(JSON.stringify({ ...PRICING_DEFAULTS.ladder, status: 'draft' })) as Prisma.InputJsonObject;
+    await prisma.growthSetting.upsert({
+      where: { key: LADDER_KEY },
+      create: { key: LADDER_KEY, value: draft, updatedBy: 'spec' },
+      update: { value: draft, updatedBy: 'spec' },
+    });
 
-    runSeed();
+    const first = runSeed();
+    expect(first).toContain('Ladder draft');
+    expect(first).toContain('edition switched');
+    expect(await live(FC27_PRODUCT_ID)).toBe(0);
+    expect(await live(FC26_PRODUCT_ID)).toBeGreaterThan(0);
+    // The owner's override survives the deploy untouched.
+    const stored = await prisma.growthSetting.findUniqueOrThrow({ where: { key: LADDER_KEY } });
+    expect((stored.value as { status: string }).status).toBe('draft');
+    expect(stored.updatedBy).toBe('spec');
 
-    const offer = await prisma.offer.findUniqueOrThrow({ where: { id: OFFER_ID } });
-    expect(offer.active).toBe(true);
-    expect(await prisma.inventory.count({ where: { offerId: OFFER_ID } })).toBe(1);
-  }, 200_000);
+    const again = runSeed();
+    expect(again).not.toContain('edition switched');
+    expect(await live(FC27_PRODUCT_ID)).toBe(0);
+
+    await prisma.growthSetting.delete({ where: { key: LADDER_KEY } });
+    const back = runSeed();
+    expect(back).toContain('Ladder active');
+    expect(back).toContain('edition switched');
+    expect(await live(FC27_PRODUCT_ID)).toBeGreaterThan(0);
+    expect(await live(FC26_PRODUCT_ID)).toBe(0);
+
+    const audits = await prisma.auditLog.findMany({ where: { entityType: 'ladder', actorType: 'SYSTEM' }, orderBy: { createdAt: 'desc' }, take: 2 });
+    expect(audits.map((row) => row.eventType).sort()).toEqual(['pricing.ladder.activated', 'pricing.ladder.deactivated']);
+  }, 600_000);
 });

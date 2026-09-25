@@ -107,7 +107,7 @@ describe('FC27 pricing', () => {
 
   // --- 1. the gate --------------------------------------------------------
 
-  it('sells FC26 until the ladder is activated, and refuses activation without a cost or an acknowledgement', async () => {
+  it('reads the edition from the offers, and refuses activation without a cost or an acknowledgement', async () => {
     await resetToFc26();
     const before = await api().get('/api/v1/storefront').expect(200);
     expect(before.body.activeEdition).toBe('fc26');
@@ -198,6 +198,20 @@ describe('FC27 pricing', () => {
     const restored = await api().get('/api/v1/sitemap.xml').expect(200);
     expect(restored.text).toContain('ea-fc-ultimate-team-coins');
     expect(restored.text).not.toContain('fc27-coins');
+    await resetToFc26();
+  });
+
+  it('prices a custom amount from the FC27 ladder once it is on sale, with no bonus and no drift', async () => {
+    await activateAcknowledged();
+    const quote = await api().post('/api/v1/coins/custom/quote').send({ mode: 'amount', amount: 1_370_000, platformId: 'plat-ps5' }).expect(200);
+    const million = PRICING_DEFAULTS.ladder.packages.find((pack) => pack.key === '1m')!.priceMinor;
+    // 1.37M at the 1M rung's rate, rounded up to a whole shekel; integers only.
+    expect(quote.body.priceMinor).toBe(Math.ceil((1_370_000 * million) / 1_000_000 / 100) * 100);
+    expect(quote.body.bonus).toBe(0);
+    expect(quote.body.totalCoins).toBe(1_370_000);
+    expect(quote.body.productSlug).toBe(PRICING_DEFAULTS.ladder.productSlug);
+    const line = await api().post('/api/v1/cart/items').send({ offerId: quote.body.offerId, quantity: 1 }).expect(201);
+    expect(line.body.unitPrice.amountMinor).toBe(quote.body.priceMinor);
     await resetToFc26();
   });
 

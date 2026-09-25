@@ -6,8 +6,8 @@ import { AppLogger } from '../../common/logging/app-logger.service';
 import { PrismaService } from '../../database/prisma.service';
 import { isCustomVariant } from '../catalog/dto/catalog.mapper';
 import { CustomCoinsError, CustomCoinsQuote, LadderRung, quoteByAmount, quoteByBudget } from './custom-coins';
+import { LadderService } from '../pricing/ladder.service';
 import { GrowthConfigService } from './growth-config.service';
-import { COIN_PRODUCT_SLUG } from './growth-shared';
 
 /** A custom offer nobody has used in this long is retired from the catalog. */
 const STALE_CUSTOM_OFFER_DAYS = 7;
@@ -56,13 +56,20 @@ export class CustomCoinsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: GrowthConfigService,
+    private readonly ladders: LadderService,
     private readonly logger: AppLogger,
   ) {}
+
+  /** The coin product on sale right now: the active edition's, from the offers. */
+  private async coinSlug(): Promise<string> {
+    const state = await this.ladders.storefront();
+    return state.editions.find((edition) => edition.id === state.activeEdition)?.productSlug ?? state.editions[0].productSlug;
+  }
 
   async rules(): Promise<CustomRulesView> {
     const growth = await this.config.get();
     const platforms = await this.prisma.offer.findMany({
-      where: { product: { slug: COIN_PRODUCT_SLUG }, active: true },
+      where: { product: { slug: await this.coinSlug() }, active: true },
       select: { platformId: true },
       distinct: ['platformId'],
     });
@@ -103,7 +110,7 @@ export class CustomCoinsService {
     return {
       ...quote,
       offerId: offer.id,
-      productSlug: COIN_PRODUCT_SLUG,
+      productSlug: ladder.productSlug,
       variantId: offer.variantId,
       platformId: ladder.platformId,
       regionId: ladder.regionId,
@@ -134,9 +141,10 @@ export class CustomCoinsService {
   }
 
   private async ladderFor(platformId: string, regionId?: string) {
+    const productSlug = await this.coinSlug();
     const offers = await this.prisma.offer.findMany({
       where: {
-        product: { slug: COIN_PRODUCT_SLUG, active: true },
+        product: { slug: productSlug, active: true },
         platformId,
         active: true,
         ...(regionId ? { regionId } : {}),
@@ -156,6 +164,7 @@ export class CustomCoinsService {
       platformId,
       regionId: region,
       productId: inRegion[0]?.product.id ?? '',
+      productSlug,
       currency: inRegion[0]?.priceCurrency ?? 'ILS',
       offers: inRegion,
       rungs,
@@ -188,7 +197,7 @@ export class CustomCoinsService {
           id: variantId,
           productId: ladder.productId,
           name,
-          sku: `${COIN_PRODUCT_SLUG}-custom-${quote.amount}`.toUpperCase(),
+          sku: `${ladder.productSlug}-custom-${quote.amount}`.toUpperCase(),
           quantityValue: quote.amount,
           quantityUnit: rungOffer.variant.quantityUnit ?? undefined,
           metadata,

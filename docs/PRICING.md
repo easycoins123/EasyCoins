@@ -21,7 +21,7 @@ read. Integers only: agorot for money, basis points for percentages
 | Key | What it holds | Default |
 |---|---|---|
 | `economics` | supplier cost per 1M (null = unknown), per-platform overrides, payment fee bps, delivery loss bps (the in-game 5% tax = 526 bps of coins bought), margin floor bps, VAT bps | cost unknown, fee 0, loss 526, floor 2000, VAT 1800 |
-| `ladder` | the FC27 packages (key, coins, price, bonus, tier, recommended, active), platform adjustments bps, maximum discount bps, max per order, status draft/active | the draft ladder in §3, draft, max discount 1500 |
+| `ladder` | the FC27 packages (key, coins, price, bonus, tier, recommended, active), platform adjustments bps, maximum discount bps, max per order, status draft/active | the launch ladder in §4, **active**, max discount 1500 |
 | `launch` | FIRST KICK: enabled, dates, percent bps, cap coins, minimum order, eligibility, redemption cap, terms | disabled, 10%, cap 100K, min ₪50, 25/09–31/10/2026 |
 | `competitors` | the snapshot: seller, URL, checkedAt, platform, coins, price, promotion, effective price, notes | the 2026-09-23 snapshot |
 
@@ -74,7 +74,7 @@ Contribution per package = net revenue (price ÷ 1.18 when VAT is included)
 − payment fee (price × fee bps, rounded up). Costs round up and contribution
 rounds down; a ladder that passes does so with room.
 
-## 4. The proposed FC27 ladder (draft, not active)
+## 4. The FC27 launch ladder (active since 2026-09-25)
 
 | Package | Coins | ₪ | ₪/100K | vs FUTGOAT | vs FIFA Coins Israel (received) |
 |---|---|---|---|---|---|
@@ -93,11 +93,16 @@ No launch bonus on the rungs: the value is in the price, which is what a
 customer comparing two tabs reads first. No struck-through prices: nothing
 here was ever sold at another price.
 
-**Why it is not active.** The supplier cost is unknown to the system. With
-the market at ₪820–895 per million and FC26 having sold at ₪75, no assumption
-about cost is safe enough to put a price live on. The owner enters the cost
-under `economics`, reads the evaluation table, and activates; or activates
-with the acknowledgement and accepts that no floor was checked.
+**How it went live.** The supplier cost is unknown to the system, so no
+margin is computed or claimed anywhere; the admin's evaluation says UNKNOWN
+until a cost is entered. On 2026-09-25 the owner authorised these selling
+prices for production regardless. The decision is recorded as the code
+default `ladder.status: 'active'`; the seed, which runs on every API build,
+applies the effective configuration (defaults under admin overrides) to the
+catalog through `ladder-writer.ts`, the same code the admin's activate
+button uses. A deploy therefore confirms the edition on sale and cannot
+revert it; deactivating from the admin stores a `draft` override, which the
+next deploy respects just the same.
 
 ## 5. The launch offer: FIRST KICK
 
@@ -162,20 +167,22 @@ The sitemap follows the same state: `GET /api/v1/sitemap.xml` (served at
 `/sitemap.xml` on the storefront host) lists a product URL only for an
 edition with live offers, so nothing is advertised that has nothing to buy.
 
-## 10. Runbook: going live with FC27
+## 10. Runbook: operating the FC27 ladder
 
-1. Admin → Pricing → Economics: enter the supplier cost per 1M (and per
-   platform if it differs), the payment fee, the margin floor. Save.
-2. Read the evaluation table. Every package shows its margin against the
-   floor; a red row means the ladder needs a higher price or a cheaper supply.
+FC27 is on sale and FIRST KICK runs from 25/09 to 31/10/2026, both from the
+code defaults. From the admin:
+
+1. Pricing → Economics: enter the supplier cost per 1M (and per platform if
+   it differs), the payment fee, the margin floor. Save. Until then every
+   margin reads UNKNOWN and the page says so.
+2. Read the evaluation table. A red row means the ladder needs a higher price
+   or a cheaper supply.
 3. Edit the ladder if needed (prices in whole shekels; the validator refuses
-   an inverted ladder). Save.
-4. Press **Activate**. The gate answers; with a cost entered no
-   acknowledgement is needed. FC27 goes on sale, FC26 comes off.
-5. Enable FIRST KICK under Launch when the offer should start.
-6. Create creator codes as agreements are signed; pause them from the same
-   page.
-7. To roll back, press **Deactivate**: FC26 returns, FC27 comes off. Nothing is
-   deleted.
+   an inverted ladder). Save, then press **Republish** to rewrite the rows.
+4. To roll back, press **Deactivate**: FC26 returns, FC27 comes off, and the
+   stored `draft` override survives every later deploy. **Activate** brings
+   FC27 back.
+5. Switch FIRST KICK under Launch; create and pause creator codes as
+   agreements are signed.
 
-No deploy is needed for any step.
+No deploy is needed for any step, and no deploy undoes one.

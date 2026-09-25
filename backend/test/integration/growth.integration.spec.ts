@@ -3,6 +3,9 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 
 import { createApp } from '../../src/main';
+import { LadderService } from '../../src/modules/pricing/ladder.service';
+import { PRICING_DEFAULTS, PRICING_SETTING_PREFIX } from '../../src/modules/pricing/pricing-config';
+import { PricingConfigService } from '../../src/modules/pricing/pricing-config.service';
 import { GrowthConfigService } from '../../src/modules/growth/growth-config.service';
 import { GROWTH_DEFAULTS } from '../../src/modules/growth/growth-config';
 import { HousekeepingService } from '../../src/modules/housekeeping/housekeeping.service';
@@ -57,6 +60,13 @@ describe('growth programmes', () => {
     config = app.get(GrowthConfigService);
     await prisma.$connect();
 
+    // These prove the growth mechanics on the FC26 catalog they were written
+    // against (its launch-bonus variants). The owner's FC27 ladder and the
+    // FIRST KICK offer are switched off for this file through the same
+    // overrides the admin would use, and switched back on at the end.
+    await app.get(LadderService).deactivate('growth-spec');
+    await app.get(PricingConfigService).set('launch', { ...PRICING_DEFAULTS.launch, enabled: false }, 'growth-spec');
+
     const coin = await prisma.offer.findFirstOrThrow({
       where: { product: { slug: 'ea-fc-ultimate-team-coins' }, variant: { quantityValue: 1_000_000 }, platformId: 'plat-ps5', active: true },
     });
@@ -71,11 +81,12 @@ describe('growth programmes', () => {
 
   beforeEach(async () => {
     await prisma.rateLimitCounter.deleteMany({});
-    await prisma.growthSetting.deleteMany({});
+    await prisma.growthSetting.deleteMany({ where: { NOT: { key: { startsWith: PRICING_SETTING_PREFIX } } } });
     config.invalidate();
   });
 
   afterAll(async () => {
+    await app.get(LadderService).activate('growth-spec', true);
     await prisma.growthSetting.deleteMany({});
     // Reviews these tests wrote against their own orders. The content suites
     // assert that the seed's demonstration reviews are the only ones present.

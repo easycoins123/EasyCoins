@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { RateLimitService } from '../../common/rate-limit/rate-limit.service';
 import { CustomersModule } from '../customers/customers.module';
+import { PricingModule } from '../pricing/pricing.module';
 import { CampaignsService } from './campaigns.service';
 import { CustomCoinsService } from './custom-coins.service';
 import { EasyClubService } from './easyclub.service';
@@ -24,7 +25,7 @@ import { TrustService } from './trust.service';
  * exactly that reason.
  */
 @Module({
-  imports: [CustomersModule],
+  imports: [CustomersModule, PricingModule],
   controllers: [GrowthController, GrowthAdminController],
   providers: [
     RateLimitService,

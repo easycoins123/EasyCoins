@@ -149,11 +149,14 @@ export const FC26_PRODUCT_ID = 'prod-fc-coins';
  *
  * Positioned from the market snapshot of 2026-09-23 (docs/FC27-MARKET-SNAPSHOT.md):
  * under the strongest verified effective rate at every anchor, with a steeper
- * value curve than either competitor. It is a proposal, not a decision: the
- * supplier cost is unknown, so the ladder stays a draft until the owner has
- * costed it and pressed activate.
+ * value curve than either competitor.
+ *
+ * Authorised by the owner on 2026-09-25 as the launch selling prices, with
+ * the supplier cost still UNKNOWN: no margin is claimed anywhere, and the
+ * admin keeps saying so. The owner can still edit or deactivate from the
+ * admin; the stored override then wins over this default.
  */
-const DRAFT_LADDER: readonly LadderPackage[] = [
+const LAUNCH_LADDER: readonly LadderPackage[] = [
   { key: '100k', coins: 100_000, priceMinor: 8_500, bonusCoins: 0, tier: 'starter', recommended: false, active: true },
   { key: '250k', coins: 250_000, priceMinor: 20_500, bonusCoins: 0, tier: 'starter', recommended: false, active: true },
   { key: '500k', coins: 500_000, priceMinor: 37_500, bonusCoins: 0, tier: 'pro', recommended: false, active: true },
@@ -183,15 +186,18 @@ export const PRICING_DEFAULTS: PricingConfig = {
     edition: 'fc27',
     productSlug: FC27_PRODUCT_SLUG,
     productId: FC27_PRODUCT_ID,
-    status: 'draft',
-    packages: DRAFT_LADDER,
+    status: 'active',
+    packages: LAUNCH_LADDER,
     platformAdjustmentBps: {},
     maxDiscountBps: 1_500,
     maxPerOrder: 10,
   },
   launch: {
     id: 'fc27-first-kick',
-    enabled: false,
+    // On from launch day: eligibility, cap, window and redemptions are all
+    // decided by the server (FirstOrderService) and re-checked by email at
+    // order creation.
+    enabled: true,
     name: t('FIRST KICK: הטבת הצטרפות ל-FC27', 'FIRST KICK: the FC27 welcome benefit'),
     startsAt: '2026-09-25T00:00:00+03:00',
     endsAt: '2026-10-31T23:59:59+03:00',
@@ -469,6 +475,34 @@ export function sanitizeCompetitors(value: unknown): CompetitorsConfig {
     };
   });
   return { checkedAt, entries };
+}
+
+/**
+ * The effective configuration: code defaults under stored overrides. An
+ * override that fails validation is reported and ignored, so nothing
+ * invalid can price a cart. Shared by the API and the seed, so both read
+ * the owner's decision the same way.
+ */
+export function resolvePricingConfig(
+  rows: readonly { key: string; value: unknown }[],
+  onInvalid: (key: PricingConfigKey, reason: string) => void = () => undefined,
+): PricingConfig {
+  const merged: Record<string, unknown> = { ...PRICING_DEFAULTS };
+  for (const row of rows) {
+    if (!row.key.startsWith(PRICING_SETTING_PREFIX)) {
+      continue;
+    }
+    const key = row.key.slice(PRICING_SETTING_PREFIX.length) as PricingConfigKey;
+    if (!PRICING_CONFIG_KEYS.includes(key)) {
+      continue;
+    }
+    try {
+      merged[key] = sanitizePricingSetting(key, row.value);
+    } catch (error) {
+      onInvalid(key, error instanceof Error ? error.message : 'unknown');
+    }
+  }
+  return merged as unknown as PricingConfig;
 }
 
 export function sanitizePricingSetting(key: PricingConfigKey, value: unknown): PricingConfig[PricingConfigKey] {
