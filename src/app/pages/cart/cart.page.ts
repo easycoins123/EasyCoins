@@ -305,6 +305,13 @@ export class CartPage {
 
   constructor() {
     this.analytics.pageView('/cart', 'Cart');
+    // The server's stacking decision (a first-order benefit, a reward) and
+    // the coins the customer will receive are only known after a re-price.
+    // Adding a line does not produce one, so the cart asks on entry; the
+    // checkout would otherwise be the first place the customer sees them.
+    if (this.cart.items().length > 0 && this.cart.benefits() === undefined) {
+      this.cart.validate().subscribe();
+    }
   }
 
   /** Base plus bonus equals received, for a coin line with a bonus. Per unit. */

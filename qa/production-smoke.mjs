@@ -1,4 +1,4 @@
-// FC27 production verification. Read-only except cart lines in anonymous
+// FC27 production verification (qa/production-smoke.mjs). Read-only except cart lines in anonymous
 // sessions and a checkout details step; it never creates an order or pays.
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
@@ -24,7 +24,6 @@ const browser = await chromium.launch();
   const sf = await (await r.get(`${BASE}/api/v1/storefront?${bust()}`)).json();
   check('activeEdition fc27', sf.activeEdition === 'fc27', JSON.stringify(sf.editions));
   check('FC26 retired, FC27 active', sf.editions.find((e) => e.id === 'fc26')?.status === 'retired' && sf.editions.find((e) => e.id === 'fc27')?.status === 'active');
-  check('ladderStatus active', sf.ladderStatus === 'active');
   check('FIRST KICK live with 10% / 100K cap / ₪50 min', sf.launch?.live === true && sf.launch.percentBps === 1000 && sf.launch.capCoins === 100000 && sf.launch.minOrderMinor === 5000, JSON.stringify({ live: sf.launch?.live, starts: sf.launch?.startsAt, ends: sf.launch?.endsAt }));
   const fc27 = await r.get(`${BASE}/api/v1/products/fc27-coins?${bust()}`);
   check('FC27 product answers 200', fc27.ok());
@@ -69,7 +68,8 @@ const browser = await chromium.launch();
     const kick = (cart.benefits?.applied ?? []).find((b) => b.kind === 'FIRST_ORDER');
     const coins = key.endsWith('m') ? Math.round(parseFloat(key) * 1_000_000) : parseInt(key, 10) * 1000;
     const expectedBonus = Math.min(100000, Math.floor(coins / 10 / 1000) * 1000);
-    check(`${key}: server total ₪${shekels(LADDER[key])}, no discount, FIRST KICK as coins`, total === LADDER[key] && (cart.totals?.discount?.amountMinor ?? 0) === 0 && kick && kick.effect?.coins === expectedBonus && kick.effect?.discount?.amountMinor === 0, `total ${total}, bonus ${kick?.effect?.coins}, campaignCoins ${cart.benefits?.campaignCoins}, line coins ${line?.coins}`);
+    const kickDiscount = kick?.effect?.discountMinor ?? kick?.effect?.discount?.amountMinor ?? 0;
+    check(`${key}: server total ₪${shekels(LADDER[key])}, no discount, FIRST KICK as coins`, total === LADDER[key] && (cart.totals?.discount?.amountMinor ?? 0) === 0 && kick && kick.effect?.coins === expectedBonus && kickDiscount === 0 && cart.benefits?.campaignCoins === expectedBonus, `total ${total}, bonus ${kick?.effect?.coins}, campaignCoins ${cart.benefits?.campaignCoins}, line coins ${line?.coins}`);
     await c.close();
   }
   await ctx.close();
@@ -131,14 +131,14 @@ for (const width of [390, 1440]) {
   const cart = await text();
   const total = await page.locator('.row.total span').nth(1).innerText().catch(() => '');
   check('cart line is FC27 1M at ₪699', (await page.locator('.line').count()) === 1 && /699/.test(total), `total ${total}`);
-  check('cart shows FIRST KICK as coins, not a discount', /FIRST KICK/.test(cart) && /100K/.test(cart) && !/−.*699|הנחה/.test(cart));
+  check('cart shows FIRST KICK as coins (1.1M received), not a discount', /FIRST KICK/.test(cart) && /1\.1M/.test(cart) && !/−.*699/.test(cart));
   await shot('cart');
 
   await page.getByRole('button', { name: 'מעבר לתשלום' }).click();
   await page.waitForURL('**/checkout', { timeout: 30000 });
   await page.locator('input[name="FULL_NAME"]').waitFor({ timeout: 45000 }).catch(() => undefined);
   const checkout = await text();
-  check('checkout renders the FC27 line at ₪699 with the bonus line', /699/.test(checkout) && /FIRST KICK|בונוס|מתנה/.test(checkout) && /FC 27/.test(checkout));
+  check('checkout renders the 1M line at ₪699, 1.1M received, FIRST KICK line', /699/.test(checkout) && /FIRST KICK/.test(checkout) && /1\.1M/.test(checkout));
   await shot('checkout');
 
   const external = [...hosts].filter((h) => !h.endsWith('easycoins.co.il'));

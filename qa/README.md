@@ -13,6 +13,7 @@ be running beforehand.
 | `a11y.mjs` | Keyboard reachability, focus visibility, skip link, heading structure, contrast, reduced motion, touch targets, RTL rendering |
 | `perf.mjs` | Bundle sizes, FCP/LCP/CLS per route, duplicate requests, lazy-chunk behaviour |
 | `security-scan.mjs` | Static credential/secret scan plus runtime checks of browser storage, cookies, third-party requests and analytics payloads |
+| `production-smoke.mjs` | Read-only verification of the LIVE site (www.easycoins.co.il): API readiness and edition state, every FC27 rung and platform at the authorised price, server-priced carts for five packages with FIRST KICK as coins, sitemap, then the home, store, product, cart and checkout journey at 390 and 1440. Adds a cart line in an anonymous session and never creates an order or pays. Screenshots in `qa/screenshots/production-fc27/` |
 | `growth-flow.mjs` | The growth journey at 390 and 1440 in mock mode: sign-up, store custom coins and player goal, first order, EASYDROP reveal (and its idempotence across refresh), EASYCLUB, reward chosen in the cart, referral landing. Screenshots in `qa/screenshots/growth-flow/` |
 
 Results land in `qa/out/*.json`; screenshots in `qa/screenshots/`.

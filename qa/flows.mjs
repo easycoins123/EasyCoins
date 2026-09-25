@@ -274,8 +274,10 @@ await page.getByRole('button', { name: 'מעבר לתשלום' }).click();
 await page.waitForURL('**/checkout');
 await page.waitForTimeout(1200);
 const repricedTotal = await page.locator('aside .row.total span').nth(1).innerText();
-check('server re-pricing overrides a tampered localStorage price',
-  !repricedTotal.includes('0.01') && repricedTotal !== tamperedShown,
+// The cart re-prices on entry, so the tampered ₪0.01 never reaches the screen;
+// the checkout then agrees with the cart.
+check('server re-pricing overrides a tampered localStorage price on entry and at checkout',
+  !tamperedShown.includes('0.01') && !repricedTotal.includes('0.01') && repricedTotal === tamperedShown,
   `stored=${tamperedShown} → validated=${repricedTotal}`);
 
 group('empty cart protection');
