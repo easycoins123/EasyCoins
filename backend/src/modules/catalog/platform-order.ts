@@ -13,11 +13,25 @@
  */
 const PLATFORM_DISPLAY_ORDER: readonly string[] = ['plat-ps5', 'plat-ps4', 'plat-xbox', 'plat-pc'];
 
+function platformRank(id: string): number {
+  const index = PLATFORM_DISPLAY_ORDER.indexOf(id);
+  return index === -1 ? PLATFORM_DISPLAY_ORDER.length : index;
+}
+
 /** Sorts platform ids into the canonical display order; an id outside the list keeps its relative order, last. */
 export function sortByPlatformOrder(platformIds: readonly string[]): string[] {
-  const rank = (id: string): number => {
-    const index = PLATFORM_DISPLAY_ORDER.indexOf(id);
-    return index === -1 ? PLATFORM_DISPLAY_ORDER.length : index;
-  };
-  return [...platformIds].sort((a, b) => rank(a) - rank(b));
+  return [...platformIds].sort((a, b) => platformRank(a) - platformRank(b));
+}
+
+/**
+ * Sorts any row carrying a `platformId` into the canonical display order.
+ *
+ * This is the one that matters most: the product detail response's `offers`
+ * array is what the frontend's "which platform is selected by default"
+ * logic reads (`detail.offers[0]`, after filtering to the selected variant),
+ * so an unordered `offers` array picked the default platform, not just the
+ * summary `platformIds` list derived from it.
+ */
+export function sortOffersByPlatform<T extends { readonly platformId: string }>(offers: readonly T[]): T[] {
+  return [...offers].sort((a, b) => platformRank(a.platformId) - platformRank(b.platformId));
 }

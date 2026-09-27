@@ -9,7 +9,7 @@ import type {
 } from '@prisma/client';
 
 import { sanitizeRequirements } from '../../../common/checkout/requirement-keys';
-import { sortByPlatformOrder } from '../platform-order';
+import { sortByPlatformOrder, sortOffersByPlatform } from '../platform-order';
 
 /**
  * Prisma rows to wire DTOs.
@@ -222,8 +222,13 @@ export function toProductDto(product: ProductWithRelations) {
 
 export function toProductDetailDto(product: ProductWithRelations) {
   const customVariantIds = new Set(product.variants.filter((variant) => isCustomVariant(variant.metadata)).map((variant) => variant.id));
+  const offers = product.offers.filter((offer) => offer.active && !customVariantIds.has(offer.variantId));
   return {
     product: toProductDto(product),
-    offers: product.offers.filter((offer) => offer.active && !customVariantIds.has(offer.variantId)).map(toOfferDto),
+    // Sorted: the frontend picks its default platform as the first offer of
+    // the selected variant (`detail.offers[0]`), so this order is not
+    // cosmetic — an unordered array here silently decided which platform a
+    // first-time visitor bought on.
+    offers: sortOffersByPlatform(offers).map(toOfferDto),
   };
 }

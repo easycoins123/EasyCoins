@@ -1,4 +1,4 @@
-import { sortByPlatformOrder } from './platform-order';
+import { sortByPlatformOrder, sortOffersByPlatform } from './platform-order';
 
 /**
  * A customer's default platform must be deterministic and PS5-first.
@@ -36,5 +36,36 @@ describe('sortByPlatformOrder', () => {
     const input = ['plat-ps4', 'plat-ps5'];
     sortByPlatformOrder(input);
     expect(input).toEqual(['plat-ps4', 'plat-ps5']);
+  });
+});
+
+/**
+ * `sortOffersByPlatform` is the fix that mattered most in production: the
+ * frontend's default-platform logic reads `detail.offers[0]` (the product
+ * detail response's raw offer list, filtered to the selected variant), not
+ * the summary `platformIds` field. Sorting only the derived list left this
+ * array unordered, so the live site kept defaulting to PS4 even after
+ * `sortByPlatformOrder` shipped.
+ */
+describe('sortOffersByPlatform', () => {
+  const offer = (platformId: string) => ({ platformId, id: `o-${platformId}` });
+
+  it('puts the PS5 offer first regardless of database row order', () => {
+    const sorted = sortOffersByPlatform([offer('plat-ps4'), offer('plat-xbox'), offer('plat-pc'), offer('plat-ps5')]);
+    expect(sorted.map((o) => o.platformId)).toEqual(['plat-ps5', 'plat-ps4', 'plat-xbox', 'plat-pc']);
+  });
+
+  it('preserves every other field on the row, only reordering', () => {
+    const rows = [{ platformId: 'plat-pc', priceAmountMinor: 100 }, { platformId: 'plat-ps5', priceAmountMinor: 200 }];
+    expect(sortOffersByPlatform(rows)).toEqual([
+      { platformId: 'plat-ps5', priceAmountMinor: 200 },
+      { platformId: 'plat-pc', priceAmountMinor: 100 },
+    ]);
+  });
+
+  it('does not mutate its input array', () => {
+    const input = [offer('plat-pc'), offer('plat-ps5')];
+    sortOffersByPlatform(input);
+    expect(input.map((o) => o.platformId)).toEqual(['plat-pc', 'plat-ps5']);
   });
 });

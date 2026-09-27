@@ -157,6 +157,13 @@ describe('FC27 pricing', () => {
     const product = await api().get('/api/v1/products/fc27-coins').expect(200);
     expect(product.body.product.metadata.edition).toBe('fc27');
     expect(product.body.offers.length).toBe(active.length * 4);
+    // Real defect: this order was never guaranteed by the database, so the
+    // frontend's "which platform is selected by default" logic (it reads
+    // `offers[0]` of the chosen variant) picked whatever Postgres happened to
+    // return, not PS5. `platformIds` on the product and the raw `offers`
+    // array must both lead with PS5.
+    expect(product.body.product.platformIds[0]).toBe('plat-ps5');
+    expect(product.body.offers[0].platformId).toBe('plat-ps5');
     await api().get('/api/v1/products?gameIds=game-ea-fc&page=1&pageSize=24').expect(200).then((response) => {
       const slugs = response.body.items.map((item: { slug: string }) => item.slug);
       expect(slugs).toContain('fc27-coins');
