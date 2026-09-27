@@ -1,7 +1,7 @@
 import {
   Offer, Platform, PlatformFamily, PlatformKind, Price, Product, ProductDetail, ProductVariant,
 } from '../../domain';
-import { TIER_ORDER, TIER_THRESHOLDS, coinPlatformOf, coinProductsFrom, tierForAmount } from './coin-products';
+import { TIER_ORDER, TIER_THRESHOLDS, coinPlatformOf, coinProductsFrom, per100KMinor, tierForAmount } from './coin-products';
 
 const variant = (id: string, quantityValue?: number): ProductVariant => ({
   id, productId: 'p1', name: { he: id }, sku: id, quantityValue,
@@ -134,5 +134,22 @@ describe('coin product value labels', () => {
     expect(products[1].per100KMinor).toBe(6_990);
     expect(products[0].savingVsStarterPercent).toBe(0);
     expect(products[1].savingVsStarterPercent).toBe(17); // (8500 - 6990) / 8500 = 17.7%, floored
+  });
+});
+
+describe('per100KMinor', () => {
+  it('matches the FC27 ladder to the agora, for every package', () => {
+    expect(per100KMinor(8_500, 100_000)).toBe(8_500);
+    expect(per100KMinor(69_900, 1_000_000)).toBe(6_990);
+    expect(per100KMinor(619_900, 10_000_000)).toBe(6_199);
+  });
+
+  it('rounds up, never in the customer\'s favor, when the division is not exact', () => {
+    // 1 agora over 3 coins: 100,000/3 = 33,333.33..., must round up to 33,334.
+    expect(per100KMinor(1, 3)).toBe(33_334);
+  });
+
+  it('is undefined for a zero or unknown quantity, never a division by zero', () => {
+    expect(per100KMinor(1_000, 0)).toBeUndefined();
   });
 });

@@ -8,7 +8,7 @@ import { catchError, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 
 import { AnalyticsEvent, AnalyticsService } from '../../core/analytics';
 import { LocalizePipe } from '../../core/i18n';
-import { formatQuantity } from '../../core/value';
+import { formatQuantity, per100KMinor } from '../../core/value';
 import { launchBonusOf } from '../../core/commerce';
 import {
   AppError, AppErrorKind, FulfillmentMethod, Money, Offer, Platform, Product, ProductDetail, ProductType, ProductVariant, Region,
@@ -119,16 +119,21 @@ interface ProductViewModel {
                           [style.--mat]="tierColor(variant)"
                           class="chip"
                           [class.on]="variant.id === variantId()"
+                          [class.chip--recommended]="isRecommended(variant)"
                           [attr.aria-checked]="variant.id === variantId()"
                           [attr.tabindex]="variant.id === variantId() ? 0 : -1"
                           (click)="selectVariant(variant)"
                           (keydown)="onVariantKeydown($event, vm)">
+                    <span class="chip__badge" *ngIf="isRecommended(variant)">מומלץ</span>
                     <span class="chip__main">
                       <span class="chip__dot" aria-hidden="true"></span>
                       <span class="chip__name">{{ variantTitle(variant) }}</span>
                       <span class="chip__check" aria-hidden="true"><tt-icon name="check" [size]="12"></tt-icon></span>
                     </span>
-                    <small class="chip__sub" *ngIf="variantSub(variant) as sub">{{ sub }}</small>
+                    <small class="chip__sub" *ngIf="variantSub(variant) as sub; else rateLine">{{ sub }}</small>
+                    <ng-template #rateLine>
+                      <small class="chip__sub chip__sub--rate tt-numeric" *ngIf="variantRate(vm, variant) as rate">{{ rate | money }} ל-100K</small>
+                    </ng-template>
                     <small class="chip__price tt-numeric" *ngIf="priceFor(vm, variant) as price">{{ price | money }}</small>
                   </button>
                 </div>
@@ -358,9 +363,21 @@ interface ProductViewModel {
     .chip:focus-visible { outline: 2px solid var(--tt-gold-400); outline-offset: 2px; }
     .chip.on { border-color: var(--tt-gold-500); background: var(--tt-gold-tint); box-shadow: inset 0 0 0 1px var(--tt-gold-500); }
     .chip--row { min-block-size: 44px; justify-content: center; }
+    /* The ladder's value anchor stands out even before it is chosen, so a
+       visitor who never reads a paragraph still lands on the package the
+       price is built around. */
+    .chip--recommended { border-color: var(--tt-gold-600); padding-block-start: calc(var(--tt-space-2) + 10px); }
+    .chip--recommended.on { border-color: var(--tt-gold-500); }
+    .chip__badge {
+      position: absolute; inset-block-start: -1px; inset-inline-start: var(--tt-space-3);
+      padding: 1px 8px; border-radius: 0 0 var(--tt-radius-sm) var(--tt-radius-sm);
+      background: var(--tt-gold-500); color: var(--tt-text-on-gold);
+      font-size: 10px; font-weight: 800; letter-spacing: 0.02em;
+    }
     .chip__main { display: flex; align-items: center; gap: 8px; inline-size: 100%; }
     .chip__name { font-weight: 800; font-size: var(--tt-text-md); line-height: 1.1; }
     .chip__sub { color: var(--tt-text-muted); font-size: var(--tt-caption); font-weight: 700; }
+    .chip__sub--rate { color: var(--tt-gold-400); }
     .chip.on .chip__sub { color: var(--tt-gold-400); }
     .chip__price { color: var(--tt-text); font-weight: 800; font-size: var(--tt-text-sm); }
     .chip.on .chip__price { color: var(--tt-gold-400); }
@@ -540,6 +557,27 @@ export class ProductDetailPage implements AfterViewInit {
       (offer) => offer.platformId === this.platformId() && offer.regionId === this.regionId(),
     ) ?? candidates.find((offer) => offer.platformId === this.platformId()) ?? candidates[0];
     return match?.price.current;
+  }
+
+  /**
+   * ₪ per 100K coins for this one package, bonus included: the same rate the
+   * home shelf and store cards show, from the same formula (`per100KMinor`).
+   * Shown only where there is no bonus line to show instead (an edition
+   * without a launch bonus has nothing else in that slot).
+   */
+  variantRate(vm: ProductViewModel, variant: ProductVariant): Money | undefined {
+    const price = this.priceFor(vm, variant);
+    if (!price || !variant.quantityValue) {
+      return undefined;
+    }
+    const totalCoins = variant.quantityValue + launchBonusOf(variant);
+    const rateMinor = per100KMinor(price.amountMinor, totalCoins);
+    return rateMinor === undefined ? undefined : { amountMinor: rateMinor, currency: price.currency };
+  }
+
+  /** The one package the pricing configuration marks as the value anchor to lead with. */
+  isRecommended(variant: ProductVariant): boolean {
+    return variant.metadata['recommended'] === true;
   }
 
   selectVariant(variant: ProductVariant): void {

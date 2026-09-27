@@ -9,6 +9,7 @@ import type {
 } from '@prisma/client';
 
 import { sanitizeRequirements } from '../../../common/checkout/requirement-keys';
+import { sortByPlatformOrder } from '../platform-order';
 
 /**
  * Prisma rows to wire DTOs.
@@ -198,7 +199,7 @@ export function toProductDto(product: ProductWithRelations) {
     name: localized(product.name),
     shortDescription: localized(product.shortDescription),
     description: localized(product.description),
-    platformIds: [...new Set(sellable.map((offer) => offer.platformId))],
+    platformIds: sortByPlatformOrder([...new Set(sellable.map((offer) => offer.platformId))]),
     regionIds: [...new Set(sellable.map((offer) => offer.regionId))],
     images: Array.isArray(product.images) ? product.images : [],
     metadata: (product.metadata ?? {}) as Record<string, string | number | boolean>,

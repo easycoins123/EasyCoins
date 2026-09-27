@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 
 import { notFoundError } from '../../common/errors/api-error';
 import { PrismaService } from '../../database/prisma.service';
+import { sortByPlatformOrder } from './platform-order';
 import {
   OfferWithRelations,
   ProductWithRelations,
@@ -100,7 +101,7 @@ export class CatalogService {
       distinct: ['platformId'],
     });
 
-    return toGameDto({ ...game, platformIds: platforms.map((row) => row.platformId) });
+    return toGameDto({ ...game, platformIds: sortByPlatformOrder(platforms.map((row) => row.platformId)) });
   }
 
   async listPlatforms() {
@@ -139,7 +140,7 @@ export class CatalogService {
 
     return {
       gameIds: [...new Set(products.map((product) => product.gameId))],
-      platformIds: [...new Set(offers.map((offer) => offer.platformId))],
+      platformIds: sortByPlatformOrder([...new Set(offers.map((offer) => offer.platformId))]),
       regionIds: [...new Set(offers.map((offer) => offer.regionId))],
       types: [...new Set(products.map((product) => product.type))],
       tags: [...new Set(products.flatMap((product) => product.tags))].sort(),

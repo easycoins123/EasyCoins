@@ -44,6 +44,16 @@ export function tierForAmount(amount: number | undefined): CoinTier {
   return TIER_THRESHOLDS.find((entry) => value >= entry.minAmount)?.tier ?? 'starter';
 }
 
+/**
+ * ₪-per-100K, in agorot, rounded up so the rate never reads more generous
+ * than the real price. The one place this arithmetic happens: the shelf, the
+ * product page's package chips and the ladder all read from here, so a
+ * customer never sees two different rates for the same offer.
+ */
+export function per100KMinor(priceMinor: number, coins: number): number | undefined {
+  return coins > 0 ? Math.ceil((priceMinor * 100_000) / coins) : undefined;
+}
+
 /** The four tiers in ascending order, for legends, filters and tests. */
 export const TIER_ORDER: readonly CoinTier[] = ['starter', 'pro', 'elite', 'legend'];
 
@@ -108,7 +118,7 @@ export function coinProductsFrom(
         bonus,
         totalCoins,
         effectivePerMillionIls: totalCoins > 0 ? Math.round((priceIls / totalCoins) * 1_000_000) : undefined,
-        per100KMinor: totalCoins > 0 ? Math.ceil((row.offer.price.current.amountMinor * 100_000) / totalCoins) : undefined,
+        per100KMinor: per100KMinor(row.offer.price.current.amountMinor, totalCoins),
         savingVsStarterPercent: 0,
         tier,
         artKey: bundleArtKey(amount),
